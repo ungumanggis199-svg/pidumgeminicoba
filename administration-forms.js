@@ -276,8 +276,8 @@
             { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName", sourceLabel: "Data perkara" },
             { key: "allegedArticle", label: "Pasal yang disangkakan", type: "textarea", required: true, source: "case:allegedArticle", sourceLabel: "Data perkara", full: true },
             // PERBAIKAN: Menghapus tanda kutip berlebih dan menyesuaikan source ke "case:namaKolom"
-            { key: "dossierNumber", label: "Nomor Berkas Perkara", type: "text", required: true, source: "case:nomorBerkas", sourceLabel: "Data perkara" },
-            { key: "dossierDate", label: "Tanggal Berkas Perkara", type: "date", required: true, source: "case:tanggalBerkas", sourceLabel: "Data perkara" },
+            { key: "dossierNumber", label: "Nomor Berkas Perkara", type: "text", required: true, source: "case:spdpNumber", sourceLabel: "Data perkara" },
+            { key: "dossierDate", label: "Tanggal Berkas Perkara", type: "date", required: true, source: "case:spdpDate", sourceLabel: "Data perkara" },
             { key: "dossierReceivedDate", label: "Tanggal berkas diterima", type: "date", required: true, source: "case:receivedDate", sourceLabel: "Data perkara" }
           ]
         },
