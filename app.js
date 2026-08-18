@@ -1082,9 +1082,7 @@
   function renderAdministrationPanel(item) {
     const administrations = Array.isArray(item.administrations) ? item.administrations : [];
     const completedMap = new Map(administrations.map((record) => [String(record.type || "").toUpperCase(), record]));
-    const completedCount = ADMINISTRATION_STAGES.filter((stage) => completedMap.has(stage.code)).length;
-    const p19ResolvedByP21 = completedMap.has("P-21") && !completedMap.has("P-19");
-    const resolvedCount = completedCount + (p19ResolvedByP21 ? 1 : 0);
+    const resolvedCount = completedMap.size;
     const percentage = Math.round((resolvedCount / ADMINISTRATION_STAGES.length) * 100);
 
     return `
@@ -1102,17 +1100,9 @@
         <div class="administration-list">
           ${ADMINISTRATION_STAGES.map((stage) => {
             const record = completedMap.get(stage.code);
-            const missing = stage.prerequisites.filter((code) => !completedMap.has(code));
-            const blockedByP21 = stage.code === "P-19" && completedMap.has("P-21");
-            const locked = !record && (missing.length > 0 || blockedByP21);
-            const lockMessage = blockedByP21
-              ? "Tidak tersedia karena P-21 sudah dibuat."
-              : missing.length
-                ? `Buat ${missing.join(", ")} terlebih dahulu.`
-                : "";
 
             return `
-              <article class="administration-card ${record ? "completed" : locked ? "locked" : "pending"}">
+              <article class="administration-card ${record ? "completed" : "pending"}">
                 <div class="administration-code">${escapeHtml(stage.code)}</div>
                 <div class="administration-content">
                   <div class="administration-title-row">
@@ -1120,8 +1110,9 @@
                       <strong>${escapeHtml(stage.title)}</strong>
                       <p>${escapeHtml(stage.detail)}</p>
                     </div>
-                    <span class="status-badge ${record ? "green" : locked ? "gray" : "amber"}">
-                      ${record ? "Sudah dibuat" : blockedByP21 ? "Tidak diperlukan" : locked ? "Menunggu" : "Belum dibuat"}
+                    <!-- Label Text: "Telah dibuat" -->
+                    <span class="status-badge ${record ? "green" : "amber"}">
+                      ${record ? "Telah dibuat" : "Belum dibuat"}
                     </span>
                   </div>
                   ${record ? `
@@ -1131,18 +1122,19 @@
                       <span><b>Penanggung jawab:</b> ${escapeHtml(record.responsibleOfficer || "-")}</span>
                     </div>
                     ${record.notes ? `<p class="administration-notes">${escapeHtml(record.notes)}</p>` : ""}
-                    ${record.fileUrl ? `<a class="document-link" href="${escapeAttr(record.fileUrl)}" target="_blank" rel="noopener noreferrer">Buka lampiran administrasi →</a>` : ""}
+                    
+                    <!-- Ubah menjadi style button untuk download -->
+                    <div class="administration-action-row">
+                      ${record.fileUrl ? `<a class="primary-button administration-create-button" style="text-decoration:none;" href="${escapeAttr(record.fileUrl)}" target="_blank" rel="noopener noreferrer">Download File</a>` : "<small>Tidak ada lampiran file.</small>"}
+                    </div>
                   ` : `
                     <div class="administration-action-row">
-                      <small>${escapeHtml(lockMessage || "Administrasi siap dibuat.")}</small>
-                      ${blockedByP21 ? "" : `
-                        <button
-                          class="${locked ? "ghost-button" : "primary-button"} administration-create-button"
-                          data-create-administration="${escapeAttr(stage.code)}"
-                          type="button"
-                          ${locked ? "disabled" : ""}
-                        >Buat</button>
-                      `}
+                      <small>Administrasi siap dibuat.</small>
+                      <button
+                        class="primary-button administration-create-button"
+                        data-create-administration="${escapeAttr(stage.code)}"
+                        type="button"
+                      >Buat</button>
                     </div>
                   `}
                 </div>
