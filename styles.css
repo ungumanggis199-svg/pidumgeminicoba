@@ -1722,3 +1722,20 @@ textarea:focus {
     min-height: 100px;
   }
 }
+.form-select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  background-color: #fff;
+  color: var(--gray-950);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-select:focus {
+  border-color: var(--green-700);
+  box-shadow: 0 0 0 3px rgba(14, 117, 74, 0.15);
+}
