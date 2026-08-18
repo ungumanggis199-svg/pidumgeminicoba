@@ -1082,7 +1082,9 @@
   function renderAdministrationPanel(item) {
     const administrations = Array.isArray(item.administrations) ? item.administrations : [];
     const completedMap = new Map(administrations.map((record) => [String(record.type || "").toUpperCase(), record]));
-    const resolvedCount = completedMap.size;
+    const completedCount = ADMINISTRATION_STAGES.filter((stage) => completedMap.has(stage.code)).length;
+    const p19ResolvedByP21 = completedMap.has("P-21") && !completedMap.has("P-19");
+    const resolvedCount = completedCount + (p19ResolvedByP21 ? 1 : 0);
     const percentage = Math.round((resolvedCount / ADMINISTRATION_STAGES.length) * 100);
 
     return `
@@ -1100,9 +1102,17 @@
         <div class="administration-list">
           ${ADMINISTRATION_STAGES.map((stage) => {
             const record = completedMap.get(stage.code);
+            const missing = stage.prerequisites.filter((code) => !completedMap.has(code));
+            const blockedByP21 = stage.code === "P-19" && completedMap.has("P-21");
+            const locked = !record && (missing.length > 0 || blockedByP21);
+            const lockMessage = blockedByP21
+              ? "Tidak tersedia karena P-21 sudah dibuat."
+              : missing.length
+                ? `Buat ${missing.join(", ")} terlebih dahulu.`
+                : "";
 
             return `
-              <article class="administration-card ${record ? "completed" : "pending"}">
+              <article class="administration-card ${record ? "completed" : locked ? "locked" : "pending"}">
                 <div class="administration-code">${escapeHtml(stage.code)}</div>
                 <div class="administration-content">
                   <div class="administration-title-row">
@@ -1110,8 +1120,8 @@
                       <strong>${escapeHtml(stage.title)}</strong>
                       <p>${escapeHtml(stage.detail)}</p>
                     </div>
-                    <span class="status-badge ${record ? "green" : "amber"}">
-                      ${record ? "Telah dibuat" : "Belum dibuat"}
+                    <span class="status-badge ${record ? "green" : locked ? "gray" : "amber"}">
+                      ${record ? "Sudah dibuat" : blockedByP21 ? "Tidak diperlukan" : locked ? "Menunggu" : "Belum dibuat"}
                     </span>
                   </div>
                   ${record ? `
@@ -1121,22 +1131,18 @@
                       <span><b>Penanggung jawab:</b> ${escapeHtml(record.responsibleOfficer || "-")}</span>
                     </div>
                     ${record.notes ? `<p class="administration-notes">${escapeHtml(record.notes)}</p>` : ""}
-                    
-                    <div class="administration-action-row" style="margin-top: 12px;">
-                      ${record.fileUrl ? `
-                        <a href="${escapeAttr(record.fileUrl)}" target="_blank" rel="noopener noreferrer" class="primary-button" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; padding: 8px 16px; background-color: var(--green-800); color: #fff; border-radius: 6px; font-weight: 600; font-size: 14px;">
-                          Download File
-                        </a>
-                      ` : "<small class='form-hint'>Tidak ada berkas fisik yang diunggah.</small>"}
-                    </div>
+                    ${record.fileUrl ? `<a class="document-link" href="${escapeAttr(record.fileUrl)}" target="_blank" rel="noopener noreferrer">Buka lampiran administrasi →</a>` : ""}
                   ` : `
                     <div class="administration-action-row">
-                      <small>Administrasi siap dibuat.</small>
-                      <button
-                        class="primary-button administration-create-button"
-                        data-create-administration="${escapeAttr(stage.code)}"
-                        type="button"
-                      >Buat Berkas</button>
+                      <small>${escapeHtml(lockMessage || "Administrasi siap dibuat.")}</small>
+                      ${blockedByP21 ? "" : `
+                        <button
+                          class="${locked ? "ghost-button" : "primary-button"} administration-create-button"
+                          data-create-administration="${escapeAttr(stage.code)}"
+                          type="button"
+                          ${locked ? "disabled" : ""}
+                        >Buat</button>
+                      `}
                     </div>
                   `}
                 </div>
@@ -1237,20 +1243,18 @@
     }).join("");
   }
 
-function getAdministrationAvailability(item, stage) {
+  function getAdministrationAvailability(item, stage) {
     const administrations = Array.isArray(item.administrations) ? item.administrations : [];
     const completed = new Set(administrations.map((record) => String(record.type || "").toUpperCase()));
-    
-    // Status teks diganti menjadi "Telah dibuat" sesuai instruksi
-    if (completed.has(stage.code)) {
-      return { completed: true, locked: false, message: "Telah dibuat" };
+    if (completed.has(stage.code)) return { completed: true, locked: false, message: "Sudah dibuat" };
+    if (stage.code === "P-19" && completed.has("P-21")) {
+      return { completed: false, locked: true, message: "P-21 sudah dibuat" };
     }
-    
-    // Logika prerequisite/kuncian urutan dihilangkan total
+    const missing = stage.prerequisites.filter((code) => !completed.has(code));
     return {
       completed: false,
-      locked: false,
-      message: "Siap dibuat"
+      locked: missing.length > 0,
+      message: missing.length ? `buat ${missing.join(", ")} terlebih dahulu` : ""
     };
   }
 
@@ -1428,39 +1432,20 @@ function getAdministrationAvailability(item, stage) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
   }
 
-function bindDynamicAdministrationForm(item, stage) {
+  function bindDynamicAdministrationForm(item, stage) {
     if (!item || !stage || !document.getElementById("administration-create-form")) return;
-
-    // --- TAMBAHAN FETCH DATA JAKSA ---
-    (async () => {
-      const selects = document.querySelectorAll('.prosecutor-dropdown');
-      if (selects.length > 0) {
-        try {
-          // Mengambil data jaksa dari backend menggunakan fungsi bawaan aplikasi Anda
-          const res = await gasRequest("listProsecutors", {}, { silent: true });
-          if (res && res.prosecutors) {
-            selects.forEach(select => {
-              const currentValue = select.value;
-              select.innerHTML = '<option value="">-- Pilih Jaksa Penandatangan --</option>';
-              res.prosecutors.forEach(jaksa => {
-                const option = document.createElement('option');
-                option.value = jaksa.name;
-                option.textContent = jaksa.nip ? `${jaksa.name} (NIP: ${jaksa.nip})` : jaksa.name;
-                // Jika data otomatis (user login/tersimpan) cocok dengan nama jaksa, pilih otomatis
-                if (jaksa.name === currentValue) option.selected = true;
-                select.appendChild(option);
-              });
-            });
-          }
-        } catch (err) {
-          console.error("Gagal memuat jaksa:", err);
-        }
-      }
-    })();
-    // --- AKHIR TAMBAHAN ---
-
     document.getElementById("choose-administration-file")?.addEventListener("click", () => document.getElementById("administration-file")?.click());
     document.getElementById("administration-file")?.addEventListener("change", (event) => setAdministrationFile(event.target.files?.[0] || null));
+    document.getElementById("builder-reset-form")?.addEventListener("click", () => {
+      state.selectedAdministrationFile = null;
+      renderAdministrationBuilderPage();
+      toast("info", "Data dimuat ulang", "Isian otomatis dikembalikan ke data perkara terbaru.");
+    });
+    document.getElementById("administration-create-form")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      createAdministrationFromBuilder(item.caseId, stage.code);
+    });
+  }
 
   function setAdministrationFile(file) {
     const label = document.getElementById("administration-file-name");
