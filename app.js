@@ -1153,6 +1153,48 @@
     state.administrationBuilder.caseId = caseId;
     state.administrationBuilder.type = type;
     navigate("administration-builder");
+    modalRoot.innerHTML = modalHtml;
+    initModalEvents(modalRoot);
+
+    // --- TAMBAHKAN KODE BARU INI DI SINI ---
+    (async () => {
+      try {
+        // Mencari elemen select responsibleOfficer yang baru saja dirender di layar
+        const selectElement = modalRoot.querySelector('select[name="responsibleOfficer"]');
+        if (!selectElement) return;
+
+        // Memanggil endpoint API Apps Script untuk mengambil data Jaksa
+        // Pastikan fungsi 'apiRequest' sesuai dengan fungsi AJAX/Fetch di app.js Anda
+        const response = await apiRequest("listProsecutors", {}); 
+
+        if (response && response.success && response.data && response.data.prosecutors) {
+          selectElement.innerHTML = '<option value="">-- Pilih Jaksa Penandatangan --</option>';
+          
+          response.data.prosecutors.forEach(prosecutor => {
+            const option = document.createElement('option');
+            option.value = prosecutor.name; // Nama Jaksa yang akan disimpan ke database
+            
+            // Format teks di dropdown: "Nama Jaksa (NIP: ...)"
+            const nipLabel = prosecutor.nip ? ` (NIP: ${prosecutor.nip})` : '';
+            option.textContent = `${prosecutor.name}${nipLabel}`;
+            
+            // Jika data default bawaan (dari user login) sama dengan nama jaksa ini, otomatis pilih (selected)
+            if (field.value === prosecutor.name) {
+              option.selected = true;
+            }
+
+            selectElement.appendChild(option);
+          });
+        } else {
+          selectElement.innerHTML = '<option value="">Gagal memuat daftar Jaksa.</option>';
+        }
+      } catch (err) {
+        console.error("Gagal mengambil list jaksa:", err);
+        const selectElement = modalRoot.querySelector('select[name="responsibleOfficer"]');
+        if (selectElement) selectElement.innerHTML = '<option value="">Gagal memuat data.</option>';
+      }
+    })();
+    // --- AKHIR KODE BARU ---
   }
 
   function renderAdministrationBuilderPage() {
@@ -1342,37 +1384,66 @@ function getAdministrationAvailability(item, stage) {
       </div>`;
   }
 
-  function renderAdministrationField(definition, item, sortOrder) {
-    const resolved = resolveAdministrationFieldValue(definition, item);
-    const hasAutoValue = Boolean(definition.source && String(resolved.value ?? "").trim() !== "");
-    const lockedAuto = hasAutoValue && !definition.editableAuto;
-    const classes = ["form-field", definition.full ? "full-span" : "", definition.source ? "auto-populated-field" : ""].filter(Boolean).join(" ");
-    const required = definition.required ? "required" : "";
-    const readonly = lockedAuto && definition.type !== "select" ? "readonly" : "";
-    const disabled = lockedAuto && definition.type === "select" ? "disabled" : "";
-    const value = resolved.value ?? definition.defaultValue ?? "";
-    const sourceText = definition.source
-      ? hasAutoValue
-        ? `Terisi otomatis dari ${definition.sourceLabel || "data sistem"}${definition.editableAuto ? " · dapat disunting" : ""}`
-        : `Data otomatis belum tersedia · lengkapi secara manual`
-      : "Diisi administrator";
+ function renderAdminFormField(field, index) {
+    const isRequired = field.required ? "required" : "";
+    const reqStar = field.required ? ' <span class="required">*</span>' : "";
+    const value = field.value !== undefined && field.value !== null ? field.value : "";
+    const placeholder = field.placeholder ? field.placeholder : "";
+    const isReadOnly = field.readOnly ? "readonly" : "";
+    const fullClass = field.full ? "form-group-full" : "";
 
-    let control;
-    if (definition.type === "textarea") {
-      control = `<textarea id="admin-field-${escapeAttr(definition.key)}" name="field__${escapeAttr(definition.key)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(definition.source || "manual")}" data-sort-order="${sortOrder}" placeholder="${escapeAttr(definition.placeholder || "")}" ${required} ${readonly}>${escapeHtml(value)}</textarea>`;
-    } else if (definition.type === "select") {
-      const options = Array.isArray(definition.options) ? definition.options : [];
-      control = `<select id="admin-field-${escapeAttr(definition.key)}" name="field__${escapeAttr(definition.key)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(definition.source || "manual")}" data-sort-order="${sortOrder}" ${required} ${disabled}><option value="">Pilih...</option>${options.map((option) => `<option value="${escapeAttr(option)}" ${String(value) === String(option) ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>`;
-    } else {
-      const normalizedValue = definition.type === "date" ? toDateInputValue(value) : value;
-      control = `<input id="admin-field-${escapeAttr(definition.key)}" name="field__${escapeAttr(definition.key)}" type="${escapeAttr(definition.type || "text")}" value="${escapeAttr(normalizedValue)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(definition.source || "manual")}" data-sort-order="${sortOrder}" placeholder="${escapeAttr(definition.placeholder || "")}" ${required} ${readonly} />`;
+    // --- PERUBAHAN DI SINI: Deteksi khusus untuk kolom Pejabat Penandatangan ---
+    if (field.key === "responsibleOfficer") {
+      return `
+        <div class="form-group ${fullClass}">
+          <label for="field-${index}" class="form-label">${escapeHtml(field.label)}${reqStar}</label>
+          <select
+            id="field-${index}"
+            name="${escapeAttr(field.key)}"
+            class="form-select"
+            ${isRequired}
+          >
+            <option value="">-- Memuat Daftar Jaksa... --</option>
+          </select>
+          ${field.sourceLabel ? `<small class="form-hint">Sumber: ${escapeHtml(field.sourceLabel)}</small>` : ""}
+        </div>
+      `;
     }
 
-    return `<div class="${classes}">
-      <label for="admin-field-${escapeAttr(definition.key)}">${escapeHtml(definition.label)} ${definition.required ? '<span class="required">*</span>' : ""}</label>
-      ${control}
-      <small class="admin-field-source ${definition.source ? (hasAutoValue ? "resolved" : "missing") : "manual"}">${definition.source ? '<span class="auto-field-badge">AUTO</span>' : '<span class="manual-field-badge">MANUAL</span>'} ${escapeHtml(sourceText)}</small>
-    </div>`;
+    if (field.type === "textarea") {
+      return `
+        <div class="form-group ${fullClass}">
+          <label for="field-${index}" class="form-label">${escapeHtml(field.label)}${reqStar}</label>
+          <textarea
+            id="field-${index}"
+            name="${escapeAttr(field.key)}"
+            class="form-control"
+            placeholder="${escapeAttr(placeholder)}"
+            ${isRequired}
+            ${isReadOnly}
+            rows="3"
+          >${escapeHtml(value)}</textarea>
+          ${field.sourceLabel ? `<small class="form-hint">Sumber: ${escapeHtml(field.sourceLabel)}</small>` : ""}
+        </div>
+      `;
+    }
+
+    return `
+      <div class="form-group ${fullClass}">
+        <label for="field-${index}" class="form-label">${escapeHtml(field.label)}${reqStar}</label>
+        <input
+          id="field-${index}"
+          type="${escapeAttr(field.type || "text")}"
+          name="${escapeAttr(field.key)}"
+          class="form-control"
+          value="${escapeAttr(value)}"
+          placeholder="${escapeAttr(placeholder)}"
+          ${isRequired}
+          ${isReadOnly}
+        />
+        ${field.sourceLabel ? `<small class="form-hint">Sumber: ${escapeHtml(field.sourceLabel)}</small>` : ""}
+      </div>
+    `;
   }
 
   function resolveAdministrationFieldValue(definition, item) {
