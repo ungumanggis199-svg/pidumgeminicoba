@@ -625,9 +625,6 @@
   }
 
   function renderDeadlinesPage() {
-    // Semua perkara aktif tetap ditampilkan. Versi sebelumnya hanya memasukkan
-    // perkara yang sudah mempunyai deadlineDate dan menyembunyikan perkara aman
-    // ketika ada satu perkara yang mendesak.
     const items = [...state.cases].sort(compareDeadlinePriority);
     const withDeadline = items.filter((item) => Boolean(item.deadlineDate));
     const withoutDeadline = items.filter((item) => !item.deadlineDate).length;
@@ -1110,7 +1107,6 @@
                       <strong>${escapeHtml(stage.title)}</strong>
                       <p>${escapeHtml(stage.detail)}</p>
                     </div>
-                    <!-- Label Text: "Telah dibuat" -->
                     <span class="status-badge ${record ? "green" : "amber"}">
                       ${record ? "Telah dibuat" : "Belum dibuat"}
                     </span>
@@ -1123,7 +1119,6 @@
                     </div>
                     ${record.notes ? `<p class="administration-notes">${escapeHtml(record.notes)}</p>` : ""}
                     
-                    <!-- Ubah menjadi style button untuk download -->
                     <div class="administration-action-row">
                       ${record.fileUrl ? `<a class="primary-button administration-create-button" style="text-decoration:none;" href="${escapeAttr(record.fileUrl)}" target="_blank" rel="noopener noreferrer">Download File</a>` : "<small>Tidak ada lampiran file.</small>"}
                     </div>
@@ -1153,48 +1148,6 @@
     state.administrationBuilder.caseId = caseId;
     state.administrationBuilder.type = type;
     navigate("administration-builder");
-    modalRoot.innerHTML = modalHtml;
-    initModalEvents(modalRoot);
-
-    // --- TAMBAHKAN KODE BARU INI DI SINI ---
-    (async () => {
-      try {
-        // Mencari elemen select responsibleOfficer yang baru saja dirender di layar
-        const selectElement = modalRoot.querySelector('select[name="responsibleOfficer"]');
-        if (!selectElement) return;
-
-        // Memanggil endpoint API Apps Script untuk mengambil data Jaksa
-        // Pastikan fungsi 'apiRequest' sesuai dengan fungsi AJAX/Fetch di app.js Anda
-        const response = await apiRequest("listProsecutors", {}); 
-
-        if (response && response.success && response.data && response.data.prosecutors) {
-          selectElement.innerHTML = '<option value="">-- Pilih Jaksa Penandatangan --</option>';
-          
-          response.data.prosecutors.forEach(prosecutor => {
-            const option = document.createElement('option');
-            option.value = prosecutor.name; // Nama Jaksa yang akan disimpan ke database
-            
-            // Format teks di dropdown: "Nama Jaksa (NIP: ...)"
-            const nipLabel = prosecutor.nip ? ` (NIP: ${prosecutor.nip})` : '';
-            option.textContent = `${prosecutor.name}${nipLabel}`;
-            
-            // Jika data default bawaan (dari user login) sama dengan nama jaksa ini, otomatis pilih (selected)
-            if (field.value === prosecutor.name) {
-              option.selected = true;
-            }
-
-            selectElement.appendChild(option);
-          });
-        } else {
-          selectElement.innerHTML = '<option value="">Gagal memuat daftar Jaksa.</option>';
-        }
-      } catch (err) {
-        console.error("Gagal mengambil list jaksa:", err);
-        const selectElement = modalRoot.querySelector('select[name="responsibleOfficer"]');
-        if (selectElement) selectElement.innerHTML = '<option value="">Gagal memuat data.</option>';
-      }
-    })();
-    // --- AKHIR KODE BARU ---
   }
 
   function renderAdministrationBuilderPage() {
@@ -1277,14 +1230,12 @@
     }).join("");
   }
 
-function getAdministrationAvailability(item, stage) {
+  function getAdministrationAvailability(item, stage) {
     const administrations = Array.isArray(item.administrations) ? item.administrations : [];
     const completed = new Set(administrations.map((record) => String(record.type || "").toUpperCase()));
     
-    // Mengubah response message menjadi "Telah dibuat"
     if (completed.has(stage.code)) return { completed: true, locked: false, message: "Telah dibuat" };
     
-    // Hapus logika prerequisites agar administrasi tidak harus urut
     return {
       completed: false,
       locked: false,
@@ -1384,64 +1335,44 @@ function getAdministrationAvailability(item, stage) {
       </div>`;
   }
 
- function renderAdminFormField(field, index) {
-    const isRequired = field.required ? "required" : "";
-    const reqStar = field.required ? ' <span class="required">*</span>' : "";
-    const value = field.value !== undefined && field.value !== null ? field.value : "";
-    const placeholder = field.placeholder ? field.placeholder : "";
-    const isReadOnly = field.readOnly ? "readonly" : "";
-    const fullClass = field.full ? "form-group-full" : "";
+  function renderAdministrationField(definition, item, sortOrder) {
+    const { value, source } = resolveAdministrationFieldValue(definition, item);
+    const isRequired = definition.required ? "required" : "";
+    const reqStar = definition.required ? ' <span class="required">*</span>' : "";
+    const isReadOnly = definition.readOnly ? "readonly" : "";
+    const fullClass = definition.full ? "full-span" : "";
+    const placeholder = definition.placeholder || "";
+    
+    let control = "";
 
-    // --- PERUBAHAN DI SINI: Deteksi khusus untuk kolom Pejabat Penandatangan ---
-    if (field.key === "responsibleOfficer") {
-      return `
-        <div class="form-group ${fullClass}">
-          <label for="field-${index}" class="form-label">${escapeHtml(field.label)}${reqStar}</label>
-          <select
-            id="field-${index}"
-            name="${escapeAttr(field.key)}"
-            class="form-select"
-            ${isRequired}
-          >
-            <option value="">-- Memuat Daftar Jaksa... --</option>
-          </select>
-          ${field.sourceLabel ? `<small class="form-hint">Sumber: ${escapeHtml(field.sourceLabel)}</small>` : ""}
-        </div>
-      `;
-    }
-
-    if (field.type === "textarea") {
-      return `
-        <div class="form-group ${fullClass}">
-          <label for="field-${index}" class="form-label">${escapeHtml(field.label)}${reqStar}</label>
-          <textarea
-            id="field-${index}"
-            name="${escapeAttr(field.key)}"
-            class="form-control"
-            placeholder="${escapeAttr(placeholder)}"
-            ${isRequired}
-            ${isReadOnly}
-            rows="3"
-          >${escapeHtml(value)}</textarea>
-          ${field.sourceLabel ? `<small class="form-hint">Sumber: ${escapeHtml(field.sourceLabel)}</small>` : ""}
-        </div>
-      `;
+    // --- TAMBAHAN KHUSUS UNTUK DROPDOWN JAKSA ---
+    if (definition.key === "responsibleOfficer" || definition.key === "prosecutorName") {
+      control = `<select id="admin-field-${escapeAttr(definition.key)}" name="${escapeAttr(definition.key)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(source)}" data-sort-order="${sortOrder}" class="prosecutor-dropdown" ${isRequired}>
+        <option value="${escapeAttr(value)}">${value ? escapeHtml(value) : "-- Memuat daftar Jaksa --"}</option>
+      </select>`;
+    } 
+    // --- AKHIR TAMBAHAN ---
+    else if (definition.type === "textarea") {
+      control = `<textarea id="admin-field-${escapeAttr(definition.key)}" name="${escapeAttr(definition.key)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(source)}" data-sort-order="${sortOrder}" placeholder="${escapeAttr(placeholder)}" ${isRequired} ${isReadOnly} rows="3">${escapeHtml(value)}</textarea>`;
+    } else if (definition.type === "select") {
+      const options = (definition.options || []).map((opt) => {
+        const optVal = typeof opt === "string" ? opt : opt.value;
+        const optLbl = typeof opt === "string" ? opt : opt.label;
+        return `<option value="${escapeAttr(optVal)}" ${String(value) === String(optVal) ? "selected" : ""}>${escapeHtml(optLbl)}</option>`;
+      }).join("");
+      control = `<select id="admin-field-${escapeAttr(definition.key)}" name="${escapeAttr(definition.key)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(source)}" data-sort-order="${sortOrder}" ${isRequired} ${isReadOnly}>
+        <option value="">Pilih...</option>
+        ${options}
+      </select>`;
+    } else {
+      control = `<input id="admin-field-${escapeAttr(definition.key)}" type="${escapeAttr(definition.type || "text")}" name="${escapeAttr(definition.key)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(source)}" data-sort-order="${sortOrder}" value="${escapeAttr(definition.type === 'date' ? toDateInputValue(value) : value)}" placeholder="${escapeAttr(placeholder)}" ${isRequired} ${isReadOnly} />`;
     }
 
     return `
-      <div class="form-group ${fullClass}">
-        <label for="field-${index}" class="form-label">${escapeHtml(field.label)}${reqStar}</label>
-        <input
-          id="field-${index}"
-          type="${escapeAttr(field.type || "text")}"
-          name="${escapeAttr(field.key)}"
-          class="form-control"
-          value="${escapeAttr(value)}"
-          placeholder="${escapeAttr(placeholder)}"
-          ${isRequired}
-          ${isReadOnly}
-        />
-        ${field.sourceLabel ? `<small class="form-hint">Sumber: ${escapeHtml(field.sourceLabel)}</small>` : ""}
+      <div class="form-field ${fullClass}">
+        <label for="admin-field-${escapeAttr(definition.key)}">${escapeHtml(definition.label)}${reqStar}</label>
+        ${control}
+        ${definition.sourceLabel ? `<small class="form-hint">Sumber: ${escapeHtml(definition.sourceLabel)}</small>` : ""}
       </div>
     `;
   }
@@ -1497,6 +1428,41 @@ function getAdministrationAvailability(item, stage) {
 
   function bindDynamicAdministrationForm(item, stage) {
     if (!item || !stage || !document.getElementById("administration-create-form")) return;
+
+    // --- TAMBAHAN FETCH DATA JAKSA SECARA DINAMIS ---
+    (async () => {
+      const selects = document.querySelectorAll('.prosecutor-dropdown');
+      if (selects.length > 0) {
+        try {
+          // Fungsi request bawaan aplikasi untuk menarik data Google Apps Script
+          const res = await gasRequest("listProsecutors", {}, { silent: true });
+          if (res && res.prosecutors) {
+            selects.forEach(select => {
+              const currentValue = select.value; // Menyimpan value hasil generate otomatis
+              select.innerHTML = '<option value="">-- Pilih Jaksa Penandatangan --</option>';
+              res.prosecutors.forEach(jaksa => {
+                const option = document.createElement('option');
+                option.value = jaksa.name;
+                option.textContent = jaksa.nip ? `${jaksa.name} (NIP: ${jaksa.nip})` : jaksa.name;
+                
+                // Menyamakan nilai otomatis dengan nilai di daftar (jika cocok, pilih otomatis)
+                if (jaksa.name === currentValue) option.selected = true;
+                
+                select.appendChild(option);
+              });
+            });
+          }
+        } catch (err) {
+          console.error("Gagal memuat jaksa:", err);
+          selects.forEach(select => {
+            const cv = select.value;
+            select.innerHTML = `<option value="${escapeAttr(cv)}">${escapeHtml(cv || "Gagal memuat daftar")}</option>`;
+          });
+        }
+      }
+    })();
+    // --- AKHIR TAMBAHAN ---
+
     document.getElementById("choose-administration-file")?.addEventListener("click", () => document.getElementById("administration-file")?.click());
     document.getElementById("administration-file")?.addEventListener("change", (event) => setAdministrationFile(event.target.files?.[0] || null));
     document.getElementById("builder-reset-form")?.addEventListener("click", () => {
@@ -1896,7 +1862,6 @@ function getAdministrationAvailability(item, stage) {
         try {
           await gasRequest("deleteTikReminderDraft", { reminderId }, { silent: true, timeout: 120000 });
         } catch {
-          // Draft mungkin sudah berubah menjadi SENT/PARTIAL/FAILED sehingga tidak boleh dihapus.
         }
       }
       toast("error", "Reminder Kartu TIK gagal", error.message || "Proses upload atau pengiriman belum berhasil.");
@@ -1977,8 +1942,6 @@ function getAdministrationAvailability(item, stage) {
       ? state.reminders.find((item) => String(item.reminderId) === String(state.reminderBuilder.reminderId))
       : null;
     const selectedCaseId = editingReminder?.caseId || state.reminderBuilder.caseId;
-    // Saat mode edit, pilihan terbaru dari dropdown harus didahulukan.
-    // Jika editingReminder didahulukan, jenis administrasi akan kembali ke nilai lama.
     const selectedType = state.reminderBuilder.type || editingReminder?.administrationType || "P-16";
     const selectedCase = findReminderCaseSource(selectedCaseId);
     const existing = editingReminder || (selectedCase ? findReminderForSelection(selectedCase.caseId, selectedType) : null);
@@ -2225,8 +2188,6 @@ function getAdministrationAvailability(item, stage) {
       if (item?.caseId) sources.set(String(item.caseId), item);
     });
 
-    // SPDP yang dibuat langsung dari menu reminder tetap muncul kembali
-    // agar administrasi berikutnya dapat memakai referensi yang sama.
     [...state.reminders]
       .sort((a, b) => dateValue(b.updatedAt || b.createdAt) - dateValue(a.updatedAt || a.createdAt))
       .forEach((item) => {
@@ -2407,7 +2368,6 @@ function getAdministrationAvailability(item, stage) {
     document.getElementById("reminder-administration-type")?.addEventListener("change", (event) => {
       const nextType = event.target.value;
 
-      // Cegah dua reminder dengan jenis yang sama pada perkara yang sama.
       const duplicate = selectedCase
         ? state.reminders.find((item) =>
             String(item.caseId) === String(selectedCase.caseId) &&
@@ -2424,7 +2384,6 @@ function getAdministrationAvailability(item, stage) {
 
       state.reminderBuilder.type = nextType;
 
-      // Pertahankan reminderId saat edit agar submit tetap memanggil updateReminder.
       if (!existing) state.reminderBuilder.reminderId = "";
 
       renderRemindersPage();
