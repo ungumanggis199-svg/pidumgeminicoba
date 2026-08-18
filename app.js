@@ -1349,7 +1349,7 @@
 if (
       definition.key === "responsibleOfficer" || 
       definition.key === "prosecutorName" || 
-      String(definition.label).toLowerCase().includes("penuntut umum")
+      definition.label === "Nama Penuntut Umum penandatangan"
     ) {
       control = `<select id="admin-field-${escapeAttr(definition.key)}" name="${escapeAttr(definition.key)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(source)}" data-sort-order="${sortOrder}" class="prosecutor-dropdown" ${isRequired}>
         <option value="${escapeAttr(value)}">${value ? escapeHtml(value) : "-- Memuat daftar Jaksa --"}</option>
@@ -1444,13 +1444,25 @@ if (
             selects.forEach(select => {
               const currentValue = select.value; // Menyimpan value hasil generate otomatis
               select.innerHTML = '<option value="">-- Pilih Jaksa Penandatangan --</option>';
-              res.prosecutors.forEach(jaksa => {
+res.prosecutors.forEach(jaksa => {
                 const option = document.createElement('option');
-                option.value = jaksa.name;
-                option.textContent = jaksa.nip ? `${jaksa.name} (NIP: ${jaksa.nip})` : jaksa.name;
                 
-                // Menyamakan nilai otomatis dengan nilai di daftar (jika cocok, pilih otomatis)
-                if (jaksa.name === currentValue) option.selected = true;
+                // 1. DATA YANG DISIMPAN KE DATABASE (Contoh: Menggunakan Kolom G)
+                // Jika Kolom G kosong, dia akan memakai nama.
+                option.value = jaksa.kolomG || jaksa.name; 
+                
+                // 2. TEKS YANG TAMPIL DI DROPDOWN (Contoh: Menampilkan Nama + Kolom F + Kolom G)
+                // Anda bisa menyesuaikan format ini sesuai selera.
+                let labelText = jaksa.name;
+                if (jaksa.kolomF) labelText += ` - ${jaksa.kolomF}`;
+                if (jaksa.kolomG) labelText += ` (${jaksa.kolomG})`;
+                
+                option.textContent = labelText;
+                
+                // Cek apakah nilai otomatis cocok dengan value option ini
+                if (jaksa.name === currentValue || option.value === currentValue) {
+                  option.selected = true;
+                }
                 
                 select.appendChild(option);
               });
