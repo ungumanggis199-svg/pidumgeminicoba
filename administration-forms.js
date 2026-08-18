@@ -275,9 +275,9 @@
           fields: [
             { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName", sourceLabel: "Data perkara" },
             { key: "allegedArticle", label: "Pasal yang disangkakan", type: "textarea", required: true, source: "case:allegedArticle", sourceLabel: "Data perkara", full: true },
-            { key: "dossierNumber", label: "Nomor Berkas Perkara", type: "text", required: true, source: "admin:P-1B:field:dossierNumber", sourceLabel: "Administrasi P-1B" },
-            { key: "dossierDate", label: "Tanggal Berkas Perkara", type: "date", required: true, source: "admin:P-1B:field:dossierDate", sourceLabel: "Administrasi P-1B" },
-            { key: "dossierReceivedDate", label: "Tanggal berkas diterima", type: "date", required: true, source: "admin:P-1B:field:receiptDate", sourceLabel: "Administrasi P-1B" }
+            { key: "dossierNumber", label: "Nomor Berkas Perkara", type: "text", required: true, source: "case:nomorBerkas"", sourceLabel: "Administrasi P-1B" },
+            { key: "dossierDate", label: "Tanggal Berkas Perkara", type: "date", required: true, source: "case:tanggalBerkas", sourceLabel: "Administrasi P-1B" },
+            { key: "dossierReceivedDate", label: "Tanggal berkas diterima", type: "date", required: true, source: "case:receivedDate", sourceLabel: "Administrasi P-1B" }
           ]
         },
         {
