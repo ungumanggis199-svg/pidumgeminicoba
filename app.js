@@ -1243,18 +1243,18 @@
     }).join("");
   }
 
-  function getAdministrationAvailability(item, stage) {
+function getAdministrationAvailability(item, stage) {
     const administrations = Array.isArray(item.administrations) ? item.administrations : [];
     const completed = new Set(administrations.map((record) => String(record.type || "").toUpperCase()));
-    if (completed.has(stage.code)) return { completed: true, locked: false, message: "Sudah dibuat" };
-    if (stage.code === "P-19" && completed.has("P-21")) {
-      return { completed: false, locked: true, message: "P-21 sudah dibuat" };
-    }
-    const missing = stage.prerequisites.filter((code) => !completed.has(code));
+    
+    // Mengubah response message menjadi "Telah dibuat"
+    if (completed.has(stage.code)) return { completed: true, locked: false, message: "Telah dibuat" };
+    
+    // Hapus logika prerequisites agar administrasi tidak harus urut
     return {
       completed: false,
-      locked: missing.length > 0,
-      message: missing.length ? `buat ${missing.join(", ")} terlebih dahulu` : ""
+      locked: false,
+      message: "Siap dibuat"
     };
   }
 
