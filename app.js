@@ -1346,7 +1346,11 @@
     let control = "";
 
     // --- TAMBAHAN KHUSUS UNTUK DROPDOWN JAKSA ---
-if (definition.key === "responsibleOfficer" || definition.key === "prosecutorName" || definition.key === "signingProsecutor") {
+if (
+      definition.key === "responsibleOfficer" || 
+      definition.key === "prosecutorName" || 
+      String(definition.label).toLowerCase().includes("penuntut umum")
+    ) {
       control = `<select id="admin-field-${escapeAttr(definition.key)}" name="${escapeAttr(definition.key)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(source)}" data-sort-order="${sortOrder}" class="prosecutor-dropdown" ${isRequired}>
         <option value="${escapeAttr(value)}">${value ? escapeHtml(value) : "-- Memuat daftar Jaksa --"}</option>
       </select>`;
