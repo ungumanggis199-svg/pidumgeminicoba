@@ -1363,16 +1363,19 @@
         : `Data otomatis belum tersedia · lengkapi secara manual`
       : "Diisi administrator";
 
-    let control;
-    if (definition.type === "textarea") {
+   let control;
+    
+    // --- TAMBAHAN KHUSUS UNTUK DROPDOWN JAKSA ---
+    if (definition.key === "responsibleOfficer" || definition.key === "prosecutorName") {
+      control = `<select id="admin-field-${escapeAttr(definition.key)}" name="field__${escapeAttr(definition.key)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(definition.source || "manual")}" data-sort-order="${sortOrder}" class="prosecutor-dropdown" ${required}>
+        <option value="${escapeAttr(value)}">${value ? escapeHtml(value) : "-- Memuat daftar Jaksa --"}</option>
+      </select>`;
+    }
+    // --- AKHIR TAMBAHAN ---
+    
+    else if (definition.type === "textarea") {
       control = `<textarea id="admin-field-${escapeAttr(definition.key)}" name="field__${escapeAttr(definition.key)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(definition.source || "manual")}" data-sort-order="${sortOrder}" placeholder="${escapeAttr(definition.placeholder || "")}" ${required} ${readonly}>${escapeHtml(value)}</textarea>`;
     } else if (definition.type === "select") {
-      const options = Array.isArray(definition.options) ? definition.options : [];
-      control = `<select id="admin-field-${escapeAttr(definition.key)}" name="field__${escapeAttr(definition.key)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(definition.source || "manual")}" data-sort-order="${sortOrder}" ${required} ${disabled}><option value="">Pilih...</option>${options.map((option) => `<option value="${escapeAttr(option)}" ${String(value) === String(option) ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>`;
-    } else {
-      const normalizedValue = definition.type === "date" ? toDateInputValue(value) : value;
-      control = `<input id="admin-field-${escapeAttr(definition.key)}" name="field__${escapeAttr(definition.key)}" type="${escapeAttr(definition.type || "text")}" value="${escapeAttr(normalizedValue)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(definition.source || "manual")}" data-sort-order="${sortOrder}" placeholder="${escapeAttr(definition.placeholder || "")}" ${required} ${readonly} />`;
-    }
 
     return `<div class="${classes}">
       <label for="admin-field-${escapeAttr(definition.key)}">${escapeHtml(definition.label)} ${definition.required ? '<span class="required">*</span>' : ""}</label>
