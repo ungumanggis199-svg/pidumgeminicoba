@@ -1432,20 +1432,39 @@
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
   }
 
-  function bindDynamicAdministrationForm(item, stage) {
+function bindDynamicAdministrationForm(item, stage) {
     if (!item || !stage || !document.getElementById("administration-create-form")) return;
+
+    // --- TAMBAHAN FETCH DATA JAKSA ---
+    (async () => {
+      const selects = document.querySelectorAll('.prosecutor-dropdown');
+      if (selects.length > 0) {
+        try {
+          // Mengambil data jaksa dari backend menggunakan fungsi bawaan aplikasi Anda
+          const res = await gasRequest("listProsecutors", {}, { silent: true });
+          if (res && res.prosecutors) {
+            selects.forEach(select => {
+              const currentValue = select.value;
+              select.innerHTML = '<option value="">-- Pilih Jaksa Penandatangan --</option>';
+              res.prosecutors.forEach(jaksa => {
+                const option = document.createElement('option');
+                option.value = jaksa.name;
+                option.textContent = jaksa.nip ? `${jaksa.name} (NIP: ${jaksa.nip})` : jaksa.name;
+                // Jika data otomatis (user login/tersimpan) cocok dengan nama jaksa, pilih otomatis
+                if (jaksa.name === currentValue) option.selected = true;
+                select.appendChild(option);
+              });
+            });
+          }
+        } catch (err) {
+          console.error("Gagal memuat jaksa:", err);
+        }
+      }
+    })();
+    // --- AKHIR TAMBAHAN ---
+
     document.getElementById("choose-administration-file")?.addEventListener("click", () => document.getElementById("administration-file")?.click());
     document.getElementById("administration-file")?.addEventListener("change", (event) => setAdministrationFile(event.target.files?.[0] || null));
-    document.getElementById("builder-reset-form")?.addEventListener("click", () => {
-      state.selectedAdministrationFile = null;
-      renderAdministrationBuilderPage();
-      toast("info", "Data dimuat ulang", "Isian otomatis dikembalikan ke data perkara terbaru.");
-    });
-    document.getElementById("administration-create-form")?.addEventListener("submit", (event) => {
-      event.preventDefault();
-      createAdministrationFromBuilder(item.caseId, stage.code);
-    });
-  }
 
   function setAdministrationFile(file) {
     const label = document.getElementById("administration-file-name");
