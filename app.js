@@ -3019,6 +3019,10 @@ res.prosecutors.forEach(jaksa => {
  * SIAP PIDUM - AUTO REDIRECT & TOMBOL LIHAT FILE INTERCEPTOR
  * Script ini diletakkan di bawah untuk memantau keberhasilan pembuatan administrasi.
  */
+/** 
+ * SIAP PIDUM - AUTO REDIRECT & 3 TOMBOL AKSI 
+ * (Lihat File, Lihat di Drive, Buat Ulang)
+ */
 (function() {
   const originalFetch = window.fetch;
   window.fetch = async function(...args) {
@@ -3026,49 +3030,143 @@ res.prosecutors.forEach(jaksa => {
     const clonedResponse = response.clone();
     
     clonedResponse.json().then(data => {
-      // Jika respons dari backend mengatakan sukses dan membawa data fileUrl
+      // Jika respons dari backend sukses dan membawa data fileUrl
       if (data && data.success && data.data && data.data.fileUrl) {
         
         // 1. OTOMATIS BUKA GOOGLE DOCS DI TAB BARU
-        // Memberi sedikit jeda 1 detik agar notifikasi UI terlihat dulu
         setTimeout(() => {
           window.open(data.data.fileUrl, '_blank');
         }, 1000);
 
-        // 2. MENCARI TEMPAT UNTUK MENAMBAH TOMBOL "LIHAT FILE"
-        // Mencari tombol "Simpan" yang ada di form
+        // 2. MENCARI TEMPAT UNTUK MENAMBAH TOMBOL (Di bawah form)
         const submitButton = document.querySelector('form button[type="submit"]');
         if (submitButton && submitButton.parentNode) {
           
-          // Cek apakah tombol sudah ada agar tidak ganda
-          const existingBtn = document.getElementById('btn-lihat-file-admin');
-          if (!existingBtn) {
-            const btnLihat = document.createElement('button');
-            btnLihat.id = 'btn-lihat-file-admin';
-            btnLihat.type = 'button';
-            btnLihat.className = 'primary-button';
-            btnLihat.style.marginTop = '15px';
-            btnLihat.style.backgroundColor = '#107c41'; // Warna hijau Docs
-            
-            btnLihat.innerHTML = `
-              <span class="button-label">Lihat Dokumen Google Docs</span>
-            `;
-            
-            btnLihat.onclick = function() {
-              window.open(data.data.fileUrl, '_blank');
-            };
-            
-            submitButton.parentNode.insertBefore(btnLihat, submitButton.nextSibling);
-          } else {
-            // Update link jika tombol sudah ada
-            existingBtn.onclick = function() {
-              window.open(data.data.fileUrl, '_blank');
-            };
+          // Hapus wadah tombol lama jika pengguna sebelumnya sudah pernah submit
+          const existingContainer = document.getElementById('action-buttons-container');
+          if (existingContainer) {
+            existingContainer.remove();
           }
+
+          // Buat wadah baru untuk menampung ketiga tombol
+          const btnContainer = document.createElement('div');
+          btnContainer.id = 'action-buttons-container';
+          btnContainer.style.display = 'flex';
+          btnContainer.style.gap = '10px'; // Jarak antar tombol
+          btnContainer.style.marginTop = '20px';
+          btnContainer.style.flexWrap = 'wrap'; // Agar rapi di layar HP
+
+          // --- TOMBOL 1: LIHAT FILE DOCS ---
+          const btnLihatFile = document.createElement('button');
+          btnLihatFile.type = 'button';
+          btnLihatFile.className = 'primary-button';
+          btnLihatFile.style.backgroundColor = '#107c41'; // Hijau khas Docs
+          btnLihatFile.innerHTML = '<span class="button-label">Lihat File Docs</span>';
+          btnLihatFile.onclick = function() {
+            window.open(data.data.fileUrl, '_blank');
+          };
+
+          // --- TOMBOL 2: LIHAT DI DRIVE ---
+          // Mengambil URL folder Drive perkara dari database
+          let folderUrl = 'https://drive.google.com/drive/recent'; // Fallback aman
+          if (data.data.case && data.data.case.caseFolderUrl) {
+            folderUrl = data.data.case.caseFolderUrl;
+          }
+
+          const btnLihatDrive = document.createElement('button');
+          btnLihatDrive.type = 'button';
+          btnLihatDrive.className = 'primary-button';
+          btnLihatDrive.style.backgroundColor = '#4285F4'; // Biru khas Google Drive
+          btnLihatDrive.innerHTML = '<span class="button-label">Lihat di Drive</span>';
+          btnLihatDrive.onclick = function() {
+            window.open(folderUrl, '_blank');
+          };
+
+          // --- TOMBOL 3: BUAT ULANG (RESET FORM) ---
+          const btnBuatUlang = document.createElement('button');
+          btnBuatUlang.type = 'button';
+          btnBuatUlang.className = 'primary-button';
+          btnBuatUlang.style.backgroundColor = '#6f1d32'; // Merah maroon SIAP PIDUM
+          btnBuatUlang.innerHTML = '<span class="button-label">Buat Ulang / Reset</span>';
+          btnBuatUlang.onclick = function() {
+            const form = submitButton.closest('form');
+            if (form) {
+              form.reset(); // Mengosongkan semua isian form
+            }
+            btnContainer.remove(); // Menyembunyikan ketiga tombol aksi ini
+            submitButton.style.display = 'block'; // Memastikan tombol simpan asli muncul kembali
+            window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll kembali ke atas layar
+          };
+
+          // Memasukkan ketiga tombol ke dalam wadah
+          btnContainer.appendChild(btnLihatFile);
+          btnContainer.appendChild(btnLihatDrive);
+          btnContainer.appendChild(btnBuatUlang);
+
+          // Menempelkan wadah ke layar, tepat setelah tombol Simpan
+          submitButton.parentNode.insertBefore(btnContainer, submitButton.nextSibling);
+          
+          // Opsional: Sembunyikan tombol Simpan asli agar user tidak menekan 2 kali untuk data yang sama
+          submitButton.style.display = 'none';
         }
       }
     }).catch(err => {
-      // Abaikan error parsing agar tidak mengganggu request lain
+      // Mengabaikan error parsing agar tidak mengganggu request lain
+    });
+    
+    return response;
+  };
+})();
+/** 
+ * SIAP PIDUM - PENAMBAHAN TOMBOL LIHAT FILE
+ * Script ini memantau keberhasilan penyimpanan dan memunculkan tombol.
+ */
+(function() {
+  const originalFetch = window.fetch;
+  window.fetch = async function(...args) {
+    const response = await originalFetch.apply(this, args);
+    const clonedResponse = response.clone();
+    
+    clonedResponse.json().then(data => {
+      // Pastikan respons sukses dan memiliki tautan file Google Docs
+      if (data && data.success && data.data && data.data.fileUrl) {
+        
+        // Opsional: Langsung membuka file di tab baru dalam 1 detik
+        setTimeout(() => {
+          window.open(data.data.fileUrl, '_blank');
+        }, 1000);
+
+        // Cari tombol 'Simpan' di form yang sedang aktif
+        const submitButton = document.querySelector('form button[type="submit"]');
+        if (submitButton && submitButton.parentNode) {
+          
+          // Bersihkan tombol lama jika pengguna sebelumnya sudah pernah menekan simpan
+          const existingBtn = document.getElementById('btn-lihat-file-otomatis');
+          if (existingBtn) {
+            existingBtn.remove();
+          }
+
+          // Buat elemen tombol "Lihat File"
+          const btnLihatFile = document.createElement('button');
+          btnLihatFile.id = 'btn-lihat-file-otomatis';
+          btnLihatFile.type = 'button';
+          btnLihatFile.className = 'primary-button'; // Mengikuti gaya CSS bawaan aplikasi Anda
+          btnLihatFile.style.backgroundColor = '#107c41'; // Warna hijau khas Google Docs
+          btnLihatFile.style.marginTop = '15px';
+          btnLihatFile.style.width = '100%';
+          btnLihatFile.innerHTML = '<span class="button-label">Lihat File (Google Docs)</span>';
+          
+          // Tambahkan fungsi klik untuk membuka file
+          btnLihatFile.onclick = function() {
+            window.open(data.data.fileUrl, '_blank');
+          };
+
+          // Tempelkan tombol ini tepat setelah tombol Simpan
+          submitButton.parentNode.insertBefore(btnLihatFile, submitButton.nextSibling);
+        }
+      }
+    }).catch(err => {
+      // Abaikan error parsing agar tidak mengganggu sistem utama
     });
     
     return response;
