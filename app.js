@@ -3015,3 +3015,62 @@ res.prosecutors.forEach(jaksa => {
     return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
   }
 })();
+/** 
+ * SIAP PIDUM - AUTO REDIRECT & TOMBOL LIHAT FILE INTERCEPTOR
+ * Script ini diletakkan di bawah untuk memantau keberhasilan pembuatan administrasi.
+ */
+(function() {
+  const originalFetch = window.fetch;
+  window.fetch = async function(...args) {
+    const response = await originalFetch.apply(this, args);
+    const clonedResponse = response.clone();
+    
+    clonedResponse.json().then(data => {
+      // Jika respons dari backend mengatakan sukses dan membawa data fileUrl
+      if (data && data.success && data.data && data.data.fileUrl) {
+        
+        // 1. OTOMATIS BUKA GOOGLE DOCS DI TAB BARU
+        // Memberi sedikit jeda 1 detik agar notifikasi UI terlihat dulu
+        setTimeout(() => {
+          window.open(data.data.fileUrl, '_blank');
+        }, 1000);
+
+        // 2. MENCARI TEMPAT UNTUK MENAMBAH TOMBOL "LIHAT FILE"
+        // Mencari tombol "Simpan" yang ada di form
+        const submitButton = document.querySelector('form button[type="submit"]');
+        if (submitButton && submitButton.parentNode) {
+          
+          // Cek apakah tombol sudah ada agar tidak ganda
+          const existingBtn = document.getElementById('btn-lihat-file-admin');
+          if (!existingBtn) {
+            const btnLihat = document.createElement('button');
+            btnLihat.id = 'btn-lihat-file-admin';
+            btnLihat.type = 'button';
+            btnLihat.className = 'primary-button';
+            btnLihat.style.marginTop = '15px';
+            btnLihat.style.backgroundColor = '#107c41'; // Warna hijau Docs
+            
+            btnLihat.innerHTML = `
+              <span class="button-label">Lihat Dokumen Google Docs</span>
+            `;
+            
+            btnLihat.onclick = function() {
+              window.open(data.data.fileUrl, '_blank');
+            };
+            
+            submitButton.parentNode.insertBefore(btnLihat, submitButton.nextSibling);
+          } else {
+            // Update link jika tombol sudah ada
+            existingBtn.onclick = function() {
+              window.open(data.data.fileUrl, '_blank');
+            };
+          }
+        }
+      }
+    }).catch(err => {
+      // Abaikan error parsing agar tidak mengganggu request lain
+    });
+    
+    return response;
+  };
+})();
