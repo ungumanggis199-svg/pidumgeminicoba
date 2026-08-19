@@ -275,10 +275,10 @@
           fields: [
             { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName", sourceLabel: "Data perkara" },
             { key: "allegedArticle", label: "Pasal yang disangkakan", type: "textarea", required: true, source: "case:allegedArticle", sourceLabel: "Data perkara", full: true },
-            // PERBAIKAN: Menghapus tanda kutip berlebih dan menyesuaikan source ke "case:namaKolom"
-            { key: "dossierNumber", label: "Nomor Berkas Perkara", type: "text", required: true, source: "case:spdpNumber", sourceLabel: "Data perkara" },
-            { key: "dossierDate", label: "Tanggal Berkas Perkara", type: "date", required: true, source: "case:spdpDate", sourceLabel: "Data perkara" },
-            { key: "dossierReceivedDate", label: "Tanggal berkas diterima", type: "date", required: true, source: "case:receivedDate", sourceLabel: "Data perkara" }
+            // PERBAIKAN: Mengambil Nomor Berkas dan Tanggal dari inputan saat P-1B
+            { key: "dossierNumber", label: "Nomor Berkas Perkara", type: "text", required: true, source: "admin:P-1B:field:dossierNumber", sourceLabel: "Administrasi P-1B" },
+            { key: "dossierDate", label: "Tanggal Berkas Perkara", type: "date", required: true, source: "admin:P-1B:field:dossierDate", sourceLabel: "Administrasi P-1B" },
+            { key: "dossierReceivedDate", label: "Tanggal berkas diterima", type: "date", required: true, source: "admin:P-1B:field:receiptDate", sourceLabel: "Administrasi P-1B" }
           ]
         },
         {
@@ -295,6 +295,7 @@
         }
       ]
     },
+    
     "P-21": {
       title: "Pemberitahuan Hasil Penyidikan Sudah Lengkap",
       subtitle: "Pemberitahuan berkas lengkap dan jadwal Tahap II",
