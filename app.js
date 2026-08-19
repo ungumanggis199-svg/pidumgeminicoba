@@ -1061,7 +1061,7 @@
               ${item.spdpFileUrl ? `<div class="detail-item full-span"><span>Dokumen SPDP</span><a class="document-link" href="${escapeAttr(item.spdpFileUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.spdpFileName || "Buka dokumen")}</a></div>` : ""}
             </div>
 
-            <h3 class="modal-section-title">Informasi administrasi yang belum dibuat</h3>
+            <h3 class="modal-section-title">Informasi administrasi</h3>
             ${renderAdministrationPanel(item)}
           </div>
           <div class="modal-footer">
@@ -1119,8 +1119,9 @@
                     </div>
                     ${record.notes ? `<p class="administration-notes">${escapeHtml(record.notes)}</p>` : ""}
                     
-                    <div class="administration-action-row">
-                      ${record.fileUrl ? `<a class="primary-button administration-create-button" style="text-decoration:none;" href="${escapeAttr(record.fileUrl)}" target="_blank" rel="noopener noreferrer">Download File</a>` : "<small>Tidak ada lampiran file.</small>"}
+                    <div class="administration-action-row" style="display:flex; gap:10px; margin-top:10px;">
+                      ${record.fileUrl ? `<a class="primary-button administration-create-button" style="text-decoration:none; background-color: #107c41; color: white;" href="${escapeAttr(record.fileUrl)}" target="_blank" rel="noopener noreferrer">Lihat File</a>` : "<small>Tidak ada lampiran file.</small>"}
+                      <button type="button" class="secondary-button" data-create-administration="${escapeAttr(stage.code)}">Buat Ulang</button>
                     </div>
                   ` : `
                     <div class="administration-action-row">
@@ -1222,11 +1223,11 @@
     return ADMINISTRATION_STAGES.map((stage) => {
       const availability = getAdministrationAvailability(item, stage);
       const suffix = availability.completed
-        ? " — sudah dibuat"
+        ? " — (Buat ulang)"
         : availability.locked
           ? ` — terkunci: ${availability.message}`
           : " — siap dibuat";
-      return `<option value="${escapeAttr(stage.code)}" ${selectedType === stage.code ? "selected" : ""} ${availability.completed || availability.locked ? "disabled" : ""}>${escapeHtml(stage.code + " — " + stage.title + suffix)}</option>`;
+      return `<option value="${escapeAttr(stage.code)}" ${selectedType === stage.code ? "selected" : ""} ${availability.locked ? "disabled" : ""}>${escapeHtml(stage.code + " — " + stage.title + suffix)}</option>`;
     }).join("");
   }
 
@@ -1234,7 +1235,7 @@
     const administrations = Array.isArray(item.administrations) ? item.administrations : [];
     const completed = new Set(administrations.map((record) => String(record.type || "").toUpperCase()));
     
-    if (completed.has(stage.code)) return { completed: true, locked: false, message: "Telah dibuat" };
+    if (completed.has(stage.code)) return { completed: true, locked: false, message: "Telah dibuat (Akan menimpa file lama)" };
     
     return {
       completed: false,
@@ -1275,8 +1276,8 @@
 
   function renderDynamicAdministrationForm(item, stage, schema) {
     const availability = getAdministrationAvailability(item, stage);
-    if (availability.completed || availability.locked) {
-      return `<div class="panel">${emptyState("!", availability.completed ? `${stage.code} sudah dibuat` : `${stage.code} belum dapat dibuat`, availability.message || "Pilih administrasi lain.")}</div>`;
+    if (availability.locked) {
+      return `<div class="panel">${emptyState("!", `${stage.code} belum dapat dibuat`, availability.message || "Pilih administrasi lain.")}</div>`;
     }
 
     let sortOrder = 0;
@@ -1345,7 +1346,6 @@
     
     let control = "";
 
-    // --- TAMBAHAN KHUSUS UNTUK DROPDOWN JAKSA ---
 if (
       definition.key === "responsibleOfficer" || 
       definition.key === "prosecutorName" || 
@@ -1355,7 +1355,6 @@ if (
         <option value="${escapeAttr(value)}">${value ? escapeHtml(value) : "-- Memuat daftar Jaksa --"}</option>
       </select>`;
     } 
-    // --- AKHIR TAMBAHAN ---
     else if (definition.type === "textarea") {
       control = `<textarea id="admin-field-${escapeAttr(definition.key)}" name="${escapeAttr(definition.key)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(source)}" data-sort-order="${sortOrder}" placeholder="${escapeAttr(placeholder)}" ${isRequired} ${isReadOnly} rows="3">${escapeHtml(value)}</textarea>`;
     } else if (definition.type === "select") {
@@ -1433,33 +1432,23 @@ if (
   function bindDynamicAdministrationForm(item, stage) {
     if (!item || !stage || !document.getElementById("administration-create-form")) return;
 
-    // --- TAMBAHAN FETCH DATA JAKSA SECARA DINAMIS ---
     (async () => {
       const selects = document.querySelectorAll('.prosecutor-dropdown');
       if (selects.length > 0) {
         try {
-          // Fungsi request bawaan aplikasi untuk menarik data Google Apps Script
           const res = await gasRequest("listProsecutors", {}, { silent: true });
           if (res && res.prosecutors) {
             selects.forEach(select => {
-              const currentValue = select.value; // Menyimpan value hasil generate otomatis
+              const currentValue = select.value;
               select.innerHTML = '<option value="">-- Pilih Jaksa Penandatangan --</option>';
-res.prosecutors.forEach(jaksa => {
+              res.prosecutors.forEach(jaksa => {
                 const option = document.createElement('option');
-                
-                // 1. DATA YANG DISIMPAN KE DATABASE (Contoh: Menggunakan Kolom G)
-                // Jika Kolom G kosong, dia akan memakai nama.
                 option.value = jaksa.kolomG || jaksa.name; 
-                
-                // 2. TEKS YANG TAMPIL DI DROPDOWN (Contoh: Menampilkan Nama + Kolom F + Kolom G)
-                // Anda bisa menyesuaikan format ini sesuai selera.
                 let labelText = jaksa.name;
                 if (jaksa.kolomF) labelText += ` - ${jaksa.kolomF}`;
                 if (jaksa.kolomG) labelText += ` (${jaksa.kolomG})`;
                 
                 option.textContent = labelText;
-                
-                // Cek apakah nilai otomatis cocok dengan value option ini
                 if (jaksa.name === currentValue || option.value === currentValue) {
                   option.selected = true;
                 }
@@ -1477,7 +1466,6 @@ res.prosecutors.forEach(jaksa => {
         }
       }
     })();
-    // --- AKHIR TAMBAHAN ---
 
     document.getElementById("choose-administration-file")?.addEventListener("click", () => document.getElementById("administration-file")?.click());
     document.getElementById("administration-file")?.addEventListener("change", (event) => setAdministrationFile(event.target.files?.[0] || null));
@@ -1559,12 +1547,57 @@ res.prosecutors.forEach(jaksa => {
       const result = await gasRequest("createAdministration", payload);
       const index = state.cases.findIndex((caseItem) => caseItem.caseId === caseId);
       if (index >= 0) state.cases[index] = result.case;
-      state.selectedAdministrationFile = null;
-      state.administrationBuilder.type = "";
 
       toast("success", `${type} berhasil dibuat`, `Data form tersimpan dan status perkara menjadi ${getStatus(result.case.status).label}.`);
       renderSidebar();
-      renderAdministrationBuilderPage();
+      
+      // Auto open file jika URL ter-generate
+      if (result.fileUrl) {
+          setTimeout(() => { window.open(result.fileUrl, '_blank'); }, 1000);
+      }
+
+      // Sembunyikan tombol simpan asli dan tampilkan deretan action button
+      if (button && button.parentNode) {
+          button.style.display = 'none';
+
+          const btnContainer = document.createElement('div');
+          btnContainer.style.display = 'flex';
+          btnContainer.style.gap = '10px';
+          btnContainer.style.marginTop = '15px';
+          btnContainer.style.flexWrap = 'wrap';
+
+          if (result.fileUrl) {
+              const btnLihat = document.createElement('button');
+              btnLihat.type = 'button';
+              btnLihat.className = 'primary-button';
+              btnLihat.style.backgroundColor = '#107c41'; // Hijau
+              btnLihat.innerHTML = 'Lihat File (Docs)';
+              btnLihat.onclick = () => window.open(result.fileUrl, '_blank');
+              btnContainer.appendChild(btnLihat);
+          }
+
+          const folderUrl = result.case && result.case.caseFolderUrl ? result.case.caseFolderUrl : 'https://drive.google.com';
+          const btnDrive = document.createElement('button');
+          btnDrive.type = 'button';
+          btnDrive.className = 'primary-button';
+          btnDrive.style.backgroundColor = '#4285F4'; // Biru Drive
+          btnDrive.innerHTML = 'Buka Folder Drive';
+          btnDrive.onclick = () => window.open(folderUrl, '_blank');
+          btnContainer.appendChild(btnDrive);
+
+          const btnUlang = document.createElement('button');
+          btnUlang.type = 'button';
+          btnUlang.className = 'secondary-button';
+          btnUlang.innerHTML = 'Buat Ulang / Form Baru';
+          btnUlang.onclick = () => {
+              state.administrationBuilder.type = "";
+              renderAdministrationBuilderPage();
+          };
+          btnContainer.appendChild(btnUlang);
+
+          button.parentNode.insertBefore(btnContainer, button.nextSibling);
+      }
+
     } catch (error) {
       toast("error", "Administrasi gagal dibuat", error.message || "Data administrasi belum berhasil disimpan.");
     } finally {
@@ -3014,161 +3047,4 @@ res.prosecutors.forEach(jaksa => {
     let timer;
     return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
   }
-})();
-/** 
- * SIAP PIDUM - AUTO REDIRECT & TOMBOL LIHAT FILE INTERCEPTOR
- * Script ini diletakkan di bawah untuk memantau keberhasilan pembuatan administrasi.
- */
-/** 
- * SIAP PIDUM - AUTO REDIRECT & 3 TOMBOL AKSI 
- * (Lihat File, Lihat di Drive, Buat Ulang)
- */
-(function() {
-  const originalFetch = window.fetch;
-  window.fetch = async function(...args) {
-    const response = await originalFetch.apply(this, args);
-    const clonedResponse = response.clone();
-    
-    clonedResponse.json().then(data => {
-      // Jika respons dari backend sukses dan membawa data fileUrl
-      if (data && data.success && data.data && data.data.fileUrl) {
-        
-        // 1. OTOMATIS BUKA GOOGLE DOCS DI TAB BARU
-        setTimeout(() => {
-          window.open(data.data.fileUrl, '_blank');
-        }, 1000);
-
-        // 2. MENCARI TEMPAT UNTUK MENAMBAH TOMBOL (Di bawah form)
-        const submitButton = document.querySelector('form button[type="submit"]');
-        if (submitButton && submitButton.parentNode) {
-          
-          // Hapus wadah tombol lama jika pengguna sebelumnya sudah pernah submit
-          const existingContainer = document.getElementById('action-buttons-container');
-          if (existingContainer) {
-            existingContainer.remove();
-          }
-
-          // Buat wadah baru untuk menampung ketiga tombol
-          const btnContainer = document.createElement('div');
-          btnContainer.id = 'action-buttons-container';
-          btnContainer.style.display = 'flex';
-          btnContainer.style.gap = '10px'; // Jarak antar tombol
-          btnContainer.style.marginTop = '20px';
-          btnContainer.style.flexWrap = 'wrap'; // Agar rapi di layar HP
-
-          // --- TOMBOL 1: LIHAT FILE DOCS ---
-          const btnLihatFile = document.createElement('button');
-          btnLihatFile.type = 'button';
-          btnLihatFile.className = 'primary-button';
-          btnLihatFile.style.backgroundColor = '#107c41'; // Hijau khas Docs
-          btnLihatFile.innerHTML = '<span class="button-label">Lihat File Docs</span>';
-          btnLihatFile.onclick = function() {
-            window.open(data.data.fileUrl, '_blank');
-          };
-
-          // --- TOMBOL 2: LIHAT DI DRIVE ---
-          // Mengambil URL folder Drive perkara dari database
-          let folderUrl = 'https://drive.google.com/drive/recent'; // Fallback aman
-          if (data.data.case && data.data.case.caseFolderUrl) {
-            folderUrl = data.data.case.caseFolderUrl;
-          }
-
-          const btnLihatDrive = document.createElement('button');
-          btnLihatDrive.type = 'button';
-          btnLihatDrive.className = 'primary-button';
-          btnLihatDrive.style.backgroundColor = '#4285F4'; // Biru khas Google Drive
-          btnLihatDrive.innerHTML = '<span class="button-label">Lihat di Drive</span>';
-          btnLihatDrive.onclick = function() {
-            window.open(folderUrl, '_blank');
-          };
-
-          // --- TOMBOL 3: BUAT ULANG (RESET FORM) ---
-          const btnBuatUlang = document.createElement('button');
-          btnBuatUlang.type = 'button';
-          btnBuatUlang.className = 'primary-button';
-          btnBuatUlang.style.backgroundColor = '#6f1d32'; // Merah maroon SIAP PIDUM
-          btnBuatUlang.innerHTML = '<span class="button-label">Buat Ulang / Reset</span>';
-          btnBuatUlang.onclick = function() {
-            const form = submitButton.closest('form');
-            if (form) {
-              form.reset(); // Mengosongkan semua isian form
-            }
-            btnContainer.remove(); // Menyembunyikan ketiga tombol aksi ini
-            submitButton.style.display = 'block'; // Memastikan tombol simpan asli muncul kembali
-            window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll kembali ke atas layar
-          };
-
-          // Memasukkan ketiga tombol ke dalam wadah
-          btnContainer.appendChild(btnLihatFile);
-          btnContainer.appendChild(btnLihatDrive);
-          btnContainer.appendChild(btnBuatUlang);
-
-          // Menempelkan wadah ke layar, tepat setelah tombol Simpan
-          submitButton.parentNode.insertBefore(btnContainer, submitButton.nextSibling);
-          
-          // Opsional: Sembunyikan tombol Simpan asli agar user tidak menekan 2 kali untuk data yang sama
-          submitButton.style.display = 'none';
-        }
-      }
-    }).catch(err => {
-      // Mengabaikan error parsing agar tidak mengganggu request lain
-    });
-    
-    return response;
-  };
-})();
-/** 
- * SIAP PIDUM - PENAMBAHAN TOMBOL LIHAT FILE
- * Script ini memantau keberhasilan penyimpanan dan memunculkan tombol.
- */
-(function() {
-  const originalFetch = window.fetch;
-  window.fetch = async function(...args) {
-    const response = await originalFetch.apply(this, args);
-    const clonedResponse = response.clone();
-    
-    clonedResponse.json().then(data => {
-      // Pastikan respons sukses dan memiliki tautan file Google Docs
-      if (data && data.success && data.data && data.data.fileUrl) {
-        
-        // Opsional: Langsung membuka file di tab baru dalam 1 detik
-        setTimeout(() => {
-          window.open(data.data.fileUrl, '_blank');
-        }, 1000);
-
-        // Cari tombol 'Simpan' di form yang sedang aktif
-        const submitButton = document.querySelector('form button[type="submit"]');
-        if (submitButton && submitButton.parentNode) {
-          
-          // Bersihkan tombol lama jika pengguna sebelumnya sudah pernah menekan simpan
-          const existingBtn = document.getElementById('btn-lihat-file-otomatis');
-          if (existingBtn) {
-            existingBtn.remove();
-          }
-
-          // Buat elemen tombol "Lihat File"
-          const btnLihatFile = document.createElement('button');
-          btnLihatFile.id = 'btn-lihat-file-otomatis';
-          btnLihatFile.type = 'button';
-          btnLihatFile.className = 'primary-button'; // Mengikuti gaya CSS bawaan aplikasi Anda
-          btnLihatFile.style.backgroundColor = '#107c41'; // Warna hijau khas Google Docs
-          btnLihatFile.style.marginTop = '15px';
-          btnLihatFile.style.width = '100%';
-          btnLihatFile.innerHTML = '<span class="button-label">Lihat File (Google Docs)</span>';
-          
-          // Tambahkan fungsi klik untuk membuka file
-          btnLihatFile.onclick = function() {
-            window.open(data.data.fileUrl, '_blank');
-          };
-
-          // Tempelkan tombol ini tepat setelah tombol Simpan
-          submitButton.parentNode.insertBefore(btnLihatFile, submitButton.nextSibling);
-        }
-      }
-    }).catch(err => {
-      // Abaikan error parsing agar tidak mengganggu sistem utama
-    });
-    
-    return response;
-  };
 })();
