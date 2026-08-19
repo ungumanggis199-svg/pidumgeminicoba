@@ -1395,14 +1395,34 @@ if (
     if (source === "user:fullName") return state.session?.user?.fullName || state.session?.user?.username || "";
     if (source.startsWith("case:")) return getNestedValue(item, source.slice(5));
     if (source.startsWith("computed:")) return resolveComputedAdministrationValue(source.slice(9), item);
+    
     if (source.startsWith("admin:")) {
       const parts = source.split(":");
       const type = parts[1];
       const record = (Array.isArray(item.administrations) ? item.administrations : []).find((administration) => String(administration.type || "").toUpperCase() === type.toUpperCase());
+      
       if (!record) return "";
-      if (parts[2] === "field") return record.formData?.[parts.slice(3).join(":")] || "";
+      
+      if (parts[2] === "field") {
+        // --- PERBAIKAN PARSING JSON ---
+        let formData = record.formData;
+        
+        // Jika data dari spreadsheet terbaca sebagai teks string, ubah menjadi object
+        if (typeof formData === "string") {
+          try {
+            formData = JSON.parse(formData);
+          } catch (e) {
+            formData = {};
+            console.error("Gagal membaca format JSON dari formData:", e);
+          }
+        }
+        // ------------------------------
+        
+        return formData?.[parts.slice(3).join(":")] || "";
+      }
       return record[parts.slice(2).join(":")] || "";
     }
+    
     return "";
   }
 
