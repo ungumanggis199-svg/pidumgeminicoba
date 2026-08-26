@@ -3069,27 +3069,30 @@ if (
   }
 })();
 /* =========================================================
-   PENGATURAN DROPDOWN CHOICES.JS (DYNAMIC OBSERVER)
+   PENGATURAN DROPDOWN CHOICES.JS
    ========================================================= */
 const observer = new MutationObserver(function(mutations) {
-    // Mencari elemen select yang muncul di layar tapi belum diterapkan Choices.js
-    const selects = document.querySelectorAll('select:not(.choices-applied)');
+    // Mencari elemen dropdown yang baru dirender, belum dimodifikasi, dan bukan filter tabel kecil
+    const selects = document.querySelectorAll('select:not(.choices-applied):not(.compact-select):not(.pidum-dashboard-select)');
     
     if (selects.length > 0) {
         selects.forEach(function(select) {
-            // Beri tanda agar sistem tidak merender ulang dropdown yang sama
+            // Tandai elemen agar tidak diproses berulang kali
             select.classList.add('choices-applied'); 
             
-            // Terapkan library dropdown elegan
-            new Choices(select, {
-                searchEnabled: true, // Memunculkan kolom pencarian di dalam dropdown
-                itemSelectText: '',  // Menghilangkan teks bawaan bahasa Inggris
-                shouldSort: false,   // Mempertahankan urutan asli dari HTML
-                allowHTML: true
-            });
+            try {
+                // Terapkan library agar dropdown lega dan memiliki fitur pencarian
+                new Choices(select, {
+                    searchEnabled: true,
+                    itemSelectText: '',
+                    shouldSort: false
+                });
+            } catch (error) {
+                console.warn("Menunggu modul dropdown siap...", error);
+            }
         });
     }
 });
 
-// Jalankan pengawas ini ke seluruh halaman aplikasi
+// Jalankan pengawas ke seluruh area halaman
 observer.observe(document.body, { childList: true, subtree: true });
