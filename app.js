@@ -1164,9 +1164,9 @@
     els.pageContent.innerHTML = `
       <section class="administration-builder-shell">
         <div class="panel builder-controls-panel">
-          <div class="panel-heading">
+          <div class="panel-header">
             <div>
-              <h2>Pembuatan Administrasi Otomatis</h2>
+              <h3>Pembuatan Administrasi Otomatis</h3>
               <p>Pilih nama tersangka. Data perkara dan administrasi sebelumnya akan dimasukkan ke form secara otomatis.</p>
             </div>
           </div>
@@ -3068,31 +3068,3 @@ if (
     return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
   }
 })();
-/* =========================================================
-   PENGATURAN DROPDOWN CHOICES.JS
-   ========================================================= */
-const observer = new MutationObserver(function(mutations) {
-    // Mencari elemen dropdown yang baru dirender, belum dimodifikasi, dan bukan filter tabel kecil
-    const selects = document.querySelectorAll('select:not(.choices-applied):not(.compact-select):not(.pidum-dashboard-select)');
-    
-    if (selects.length > 0) {
-        selects.forEach(function(select) {
-            // Tandai elemen agar tidak diproses berulang kali
-            select.classList.add('choices-applied'); 
-            
-            try {
-                // Terapkan library agar dropdown lega dan memiliki fitur pencarian
-                new Choices(select, {
-                    searchEnabled: true,
-                    itemSelectText: '',
-                    shouldSort: false
-                });
-            } catch (error) {
-                console.warn("Menunggu modul dropdown siap...", error);
-            }
-        });
-    }
-});
-
-// Jalankan pengawas ke seluruh area halaman
-observer.observe(document.body, { childList: true, subtree: true });
