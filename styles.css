@@ -1739,3 +1739,56 @@ textarea:focus {
   border-color: var(--green-700);
   box-shadow: 0 0 0 3px rgba(14, 117, 74, 0.15);
 }
+/* 1. Memberikan ruang napas pada label agar tidak mepet dengan kotak input */
+label {
+    display: block;
+    margin-bottom: 8px; /* Jarak antara teks label dan dropdown */
+    font-weight: 500;
+    color: #374151; /* Warna teks yang lebih lembut (abu-abu gelap) */
+    font-size: 14px;
+}
+
+/* 2. Styling Dropdown yang Elegan */
+select {
+    width: 100%;
+    padding: 12px 16px; /* [SOLUSI MEPET] Memberikan jarak bagian dalam (Atas-bawah 12px, Kiri-kanan 16px) */
+    font-size: 15px;
+    color: #1f2937;
+    background-color: #f9fafb; /* Warna latar belakang abu-abu sangat terang */
+    border: 1px solid #d1d5db; /* Garis tepi abu-abu lembut */
+    border-radius: 8px; /* Membuat ujung kotak membulat (rounded) */
+    
+    /* Menghilangkan panah dropdown bawaan browser yang kaku */
+    appearance: none; 
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    
+    /* Membuat panah dropdown kustom yang lebih modern (SVG) */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 16px center; /* Posisi panah di kanan */
+    background-size: 16px;
+    
+    cursor: pointer;
+    transition: all 0.2s ease-in-out; /* Animasi mulus saat di-hover/klik */
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* Bayangan tipis */
+}
+
+/* 3. Efek saat kursor berada di atas dropdown (Hover) */
+select:hover {
+    border-color: #9ca3af;
+    background-color: #ffffff;
+}
+
+/* 4. Efek saat dropdown diklik (Focus) */
+select:focus {
+    outline: none;
+    background-color: #ffffff;
+    border-color: #0b5d3b; /* Warna hijau khas Kejaksaan (sesuai tema SIAP PIDUM) */
+    box-shadow: 0 0 0 4px rgba(11, 93, 59, 0.15); /* Efek cahaya (glow) hijau di sekitar kotak */
+}
+
+/* 5. Mengatur warna placeholder pada opsi pertama ("Pilih nama tersangka...") */
+select option[value=""][disabled] {
+    color: #9ca3af;
+}
