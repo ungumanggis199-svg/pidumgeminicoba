@@ -1234,7 +1234,12 @@
     }).join("");
   }
 
-  function getAdministrationAvailability(item, stage) {
+function getAdministrationAvailability(item, stage) {
+    // Mode manual selalu membuka akses ke semua form
+    if (item.caseId === "__NEW_ADMIN__") {
+      return { completed: false, locked: false, message: "Siap dibuat secara manual" };
+    }
+
     const administrations = Array.isArray(item.administrations) ? item.administrations : [];
     const completed = new Set(administrations.map((record) => String(record.type || "").toUpperCase()));
     
@@ -1248,6 +1253,21 @@
   }
 
   function renderBuilderCaseSnapshot(item) {
+    // Tampilan khusus untuk mode administrasi manual
+    if (item.caseId === "__NEW_ADMIN__") {
+      return `
+        <div class="panel builder-case-card" style="border-left: 4px solid var(--gray-400);">
+          <div class="builder-case-heading">
+            <div>
+              <span class="case-secondary">Mode Manual</span>
+              <h3>Pembuatan Administrasi Tanpa Perkara</h3>
+              <p>Isi seluruh data form secara manual. Dokumen akan dibuat namun tidak ditautkan ke riwayat data perkara tertentu.</p>
+            </div>
+            <span class="status-badge gray">Manual</span>
+          </div>
+        </div>`;
+    }
+
     const administrations = Array.isArray(item.administrations) ? item.administrations : [];
     const completedCodes = administrations.map((record) => String(record.type || "").toUpperCase());
     const p19ResolvedByP21 = completedCodes.includes("P-21") && !completedCodes.includes("P-19");
