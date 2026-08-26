@@ -3068,14 +3068,28 @@ if (
     return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
   }
 })();
-// Memaksa dropdown dirender ulang agar bisa dimodifikasi desain dan jaraknya
-document.addEventListener('DOMContentLoaded', function() {
-    const selects = document.querySelectorAll('select');
-    selects.forEach(function(select) {
-        new Choices(select, {
-            searchEnabled: true,
-            itemSelectText: '',
-            shouldSort: false
+/* =========================================================
+   PENGATURAN DROPDOWN CHOICES.JS (DYNAMIC OBSERVER)
+   ========================================================= */
+const observer = new MutationObserver(function(mutations) {
+    // Mencari elemen select yang muncul di layar tapi belum diterapkan Choices.js
+    const selects = document.querySelectorAll('select:not(.choices-applied)');
+    
+    if (selects.length > 0) {
+        selects.forEach(function(select) {
+            // Beri tanda agar sistem tidak merender ulang dropdown yang sama
+            select.classList.add('choices-applied'); 
+            
+            // Terapkan library dropdown elegan
+            new Choices(select, {
+                searchEnabled: true, // Memunculkan kolom pencarian di dalam dropdown
+                itemSelectText: '',  // Menghilangkan teks bawaan bahasa Inggris
+                shouldSort: false,   // Mempertahankan urutan asli dari HTML
+                allowHTML: true
+            });
         });
-    });
+    }
 });
+
+// Jalankan pengawas ini ke seluruh halaman aplikasi
+observer.observe(document.body, { childList: true, subtree: true });
