@@ -1152,12 +1152,14 @@
   }
 
   function renderAdministrationBuilderPage() {
-    if (!state.cases.length) {
-      els.pageContent.innerHTML = `<div class="panel">${emptyState("▧", "Belum ada data perkara", "Kirim dan verifikasi SPDP terlebih dahulu sebelum membuat administrasi.")}</div>`;
-      return;
-    }
+    const selectedCaseId = state.administrationBuilder.caseId;
+    const isManual = selectedCaseId === "__NEW_ADMIN__";
+    
+    // Jika manual dipilih, buat dummy object perkara. Jika tidak, cari dari list perkara.
+    const selectedCase = isManual 
+      ? { caseId: "__NEW_ADMIN__", suspectName: "Administrasi Manual (Tanpa Perkara)", spdpNumber: "-", status: "", administrations: [] }
+      : state.cases.find((item) => item.caseId === selectedCaseId) || null;
 
-    const selectedCase = state.cases.find((item) => item.caseId === state.administrationBuilder.caseId) || null;
     const selectedStage = ADMINISTRATION_STAGES.find((stage) => stage.code === state.administrationBuilder.type) || null;
     const selectedSchema = selectedStage ? ADMIN_FORM_SCHEMAS[selectedStage.code] : null;
 
@@ -1175,8 +1177,9 @@
               <label for="builder-case-select">Nama tersangka <span class="required">*</span></label>
               <select id="builder-case-select">
                 <option value="">Pilih nama tersangka...</option>
+                <option value="__NEW_ADMIN__" ${isManual ? "selected" : ""} style="font-weight: 600; color: var(--blue-700);">＋ Buat administrasi baru (Tanpa Perkara)</option>
                 ${[...state.cases].sort((a, b) => String(a.suspectName || "").localeCompare(String(b.suspectName || ""), "id")).map((item) => `
-                  <option value="${escapeAttr(item.caseId)}" ${selectedCase?.caseId === item.caseId ? "selected" : ""}>
+                  <option value="${escapeAttr(item.caseId)}" ${selectedCase?.caseId === item.caseId && !isManual ? "selected" : ""}>
                     ${escapeHtml(item.suspectName || "Nama belum tersedia")} — ${escapeHtml(item.caseId)}
                   </option>`).join("")}
               </select>
