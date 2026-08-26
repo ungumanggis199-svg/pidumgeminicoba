@@ -1734,45 +1734,55 @@ textarea:focus {
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
+/* -----------------------------------------------------------
+   PENGATURAN DROPDOWN ELEGAN (Mengatasi Teks Mepet)
+   ----------------------------------------------------------- */
 
-.form-select:focus {
-  border-color: var(--green-700);
-  box-shadow: 0 0 0 3px rgba(14, 117, 74, 0.15);
-}
-/* 1. Memberikan ruang napas pada label agar tidak mepet dengan kotak input */
-label {
-    display: block;
-    margin-bottom: 8px; /* Jarak antara teks label dan dropdown */
-    font-weight: 500;
-    color: #374151; /* Warna teks yang lebih lembut (abu-abu gelap) */
-    font-size: 14px;
-}
-
-/* 2. Styling Dropdown yang Elegan (Versi Paksa/Override) */
+/* 1. Kotak Luar Dropdown */
 select, .form-select, .compact-select {
     padding: 12px 16px !important;
-    font-size: 15px !important;
+    font-size: 14px !important;
     color: #1f2937 !important;
     background-color: #f9fafb !important;
     border: 1px solid #d1d5db !important;
     border-radius: 8px !important;
     
+    /* Menghilangkan panah bawaan */
     appearance: none !important; 
     -webkit-appearance: none !important;
     -moz-appearance: none !important;
     
+    /* Panah SVG kustom */
     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
     background-repeat: no-repeat !important;
     background-position: right 16px center !important;
     background-size: 16px !important;
     
     cursor: pointer !important;
-    transition: all 0.2s ease-in-out !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+    line-height: 1.5 !important;
 }
 
+/* 2. Efek Fokus pada Dropdown */
 select:focus, .form-select:focus, .compact-select:focus {
     outline: none !important;
     background-color: #ffffff !important;
-    border-color: #0b5d3b !important;
+    border-color: #0b5d3b !important; /* Warna hijau SIAP PIDUM */
     box-shadow: 0 0 0 4px rgba(11, 93, 59, 0.15) !important;
+}
+
+/* 3. Pengaturan Ruang pada Opsi di Dalam Daftar (Daftar Menu yang Turun) */
+/* Penting: Beberapa browser tidak merender padding pada <option>, 
+   jadi kita gunakan font-size dan margin sebagai kompensasi. */
+select option, .form-select option, .compact-select option {
+    padding: 10px 16px !important;
+    font-size: 14px !important;
+    color: #1f2937 !important;
+    background-color: #ffffff !important;
+}
+
+select option:checked {
+    background-color: #e7f4ed !important; /* Latar belakang hijau muda SIAP PIDUM saat dipilih */
+    color: #0b5d3b !important;
+    font-weight: 600 !important;
 }
