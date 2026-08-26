@@ -3068,3 +3068,14 @@ if (
     return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
   }
 })();
+// Memaksa dropdown dirender ulang agar bisa dimodifikasi desain dan jaraknya
+document.addEventListener('DOMContentLoaded', function() {
+    const selects = document.querySelectorAll('select');
+    selects.forEach(function(select) {
+        new Choices(select, {
+            searchEnabled: true,
+            itemSelectText: '',
+            shouldSort: false
+        });
+    });
+});
