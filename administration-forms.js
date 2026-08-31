@@ -20,6 +20,135 @@
   ];
 
   const schemas = {
+    "SOP FORM 1": {
+      title: "Pemantauan Perkembangan Penyidikan",
+      subtitle: "Surat pemantauan tindak lanjut SPDP",
+      sections: [
+        ...commonDocument,
+        {
+          title: "Tujuan dan Data SPDP",
+          description: "Tujuan surat dan identitas perkara.",
+          fields: [
+            { key: "recipientTitle", label: "Yth. Pimpinan Instansi Penyidik", type: "text", required: true, defaultValue: "Kepala Kepolisian Resor Muna" },
+            { key: "spdpNumber", label: "Nomor SPDP", type: "text", required: true, source: "case:spdpNumber" },
+            { key: "spdpDate", label: "Tanggal SPDP", type: "date", required: true, source: "case:spdpDate" },
+            { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName" },
+            { key: "allegedArticle", label: "Pasal yang disangkakan", type: "textarea", required: true, source: "case:allegedArticle", full: true }
+          ]
+        }
+      ]
+    },
+
+    "SOP FORM 2": {
+      title: "Permintaan Perkembangan Hasil Penyidikan",
+      subtitle: "Penagihan hasil penyidikan setelah 30 hari",
+      sections: [
+        ...commonDocument,
+        {
+          title: "Tujuan dan Data Surat Sebelumnya",
+          description: "Data surat SOP 1 dan SPDP.",
+          fields: [
+            { key: "recipientTitle", label: "Yth. Pimpinan Instansi Penyidik", type: "text", required: true, defaultValue: "Kepala Kepolisian Resor Muna" },
+            { key: "sop1Number", label: "Nomor SOP FORM 1", type: "text", required: true },
+            { key: "sop1Date", label: "Tanggal SOP FORM 1", type: "date", required: true },
+            { key: "spdpNumber", label: "Nomor SPDP", type: "text", required: true, source: "case:spdpNumber" },
+            { key: "spdpDate", label: "Tanggal SPDP", type: "date", required: true, source: "case:spdpDate" },
+            { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName" }
+          ]
+        }
+      ]
+    },
+
+    "SOP FORM 3": {
+      title: "Pengembalian SPDP",
+      subtitle: "Pengembalian SPDP karena penyidikan belum diterima",
+      sections: [
+        ...commonDocument,
+        {
+          title: "Dasar Pengembalian",
+          description: "Data tagihan penyidikan (SOP Form 2) sebelumnya.",
+          fields: [
+            { key: "recipientTitle", label: "Yth. Pimpinan Instansi Penyidik", type: "text", required: true, defaultValue: "Kepala Kepolisian Resor Muna" },
+            { key: "sop2Number", label: "Nomor Surat Permintaan (SOP Form 2)", type: "text", required: true },
+            { key: "sop2Date", label: "Tanggal Surat Permintaan (SOP Form 2)", type: "date", required: true },
+            { key: "spdpNumber", label: "Nomor SPDP yang dikembalikan", type: "text", required: true, source: "case:spdpNumber" },
+            { key: "spdpDate", label: "Tanggal SPDP", type: "date", required: true, source: "case:spdpDate" },
+            { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName" },
+            { key: "allegedArticle", label: "Pasal yang disangkakan", type: "textarea", required: true, source: "case:allegedArticle", full: true }
+          ]
+        }
+      ]
+    },
+
+    "SOP FORM 4": {
+      title: "Nota Pendapat Perpanjangan Penahanan",
+      subtitle: "Analisis usulan perpanjangan penahanan dari penyidik",
+      sections: [
+        ...commonDocument,
+        {
+          title: "Tim Jaksa Penuntut Umum",
+          description: "Data tim JPU berdasarkan P-16.",
+          fields: [
+            { key: "p16Number", label: "Nomor P-16", type: "text", required: true, source: "admin:P-16:documentNumber" },
+            { key: "p16Date", label: "Tanggal P-16", type: "date", required: true, source: "admin:P-16:documentDate" },
+            { key: "prosecutor1Name", label: "Nama JPU 1", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true },
+            { key: "prosecutor1Rank", label: "Pangkat JPU 1", type: "text", required: true },
+            { key: "prosecutor2Name", label: "Nama JPU 2", type: "text" },
+            { key: "prosecutor2Rank", label: "Pangkat JPU 2", type: "text" },
+            { key: "prosecutor3Name", label: "Nama JPU 3", type: "text" },
+            { key: "prosecutor3Rank", label: "Pangkat JPU 3", type: "text" }
+          ]
+        },
+        {
+          title: "Identitas Tersangka",
+          description: "Data identitas tersangka ditarik otomatis.",
+          fields: [
+            { key: "suspectName", label: "Nama Lengkap", type: "text", required: true, source: "case:suspectName" },
+            { key: "suspectIdentityNumber", label: "Nomor Identitas (NIK)", type: "text", required: true, source: "case:suspectIdentityNumber" },
+            { key: "birthPlace", label: "Tempat Lahir", type: "text", required: true, source: "case:birthPlace" },
+            { key: "birthDate", label: "Tanggal Lahir", type: "date", required: true, source: "case:birthDate" },
+            { key: "age", label: "Umur", type: "number", required: true, source: "case:age" },
+            { key: "address", label: "Tempat Tinggal", type: "textarea", required: true, source: "case:address", full: true },
+            { key: "religion", label: "Agama", type: "text", required: true, source: "case:religion" },
+            { key: "occupation", label: "Pekerjaan", type: "text", required: true, source: "case:occupation" },
+            { key: "allegedArticle", label: "Pasal yang disangkakan", type: "textarea", required: true, source: "case:allegedArticle", full: true }
+          ]
+        },
+        {
+          title: "Dasar Permintaan dan Usulan",
+          description: "Rincian surat penyidik dan durasi perpanjangan.",
+          fields: [
+            { key: "requestLetterNumber", label: "Nomor Surat Permintaan Penyidik", type: "text", required: true },
+            { key: "requestLetterDate", label: "Tanggal Surat Permintaan", type: "date", required: true },
+            { key: "extensionDuration", label: "Lama perpanjangan (hari)", type: "number", required: true, defaultValue: "40" },
+            { key: "extensionStartDate", label: "Mulai tanggal", type: "date", required: true },
+            { key: "extensionEndDate", label: "Sampai dengan tanggal", type: "date", required: true },
+            { key: "detentionLocation", label: "Lokasi Penahanan", type: "text", required: true, defaultValue: "Rutan Polres Muna" },
+            { key: "additionalReasons", label: "Alasan lain yang dipertimbangkan", type: "textarea", placeholder: "Contoh: Proses penyidikan belum selesai...", full: true }
+          ]
+        }
+      ]
+    },
+
+    "SOP FORM 5": {
+      title: "Persetujuan / Penolakan Penahanan",
+      subtitle: "Tindak lanjut dari Nota Pendapat Perpanjangan",
+      sections: [
+        ...commonDocument,
+        {
+          title: "Keputusan Pimpinan",
+          description: "Penerbitan T-4 atau T-5.",
+          fields: [
+            { key: "decisionType", label: "Jenis Surat", type: "select", required: true, options: ["Persetujuan (T-4)", "Penolakan (T-5)"] },
+            { key: "requestLetterNumber", label: "Nomor Surat Permintaan Penyidik", type: "text", required: true, source: "admin:SOP FORM 4:field:requestLetterNumber" },
+            { key: "requestLetterDate", label: "Tanggal Surat Permintaan", type: "date", required: true, source: "admin:SOP FORM 4:field:requestLetterDate" },
+            { key: "extensionDuration", label: "Lama perpanjangan (hari)", type: "number", required: true, source: "admin:SOP FORM 4:field:extensionDuration" },
+            { key: "extensionStartDate", label: "Mulai tanggal", type: "date", required: true, source: "admin:SOP FORM 4:field:extensionStartDate" },
+            { key: "extensionEndDate", label: "Sampai dengan tanggal", type: "date", required: true, source: "admin:SOP FORM 4:field:extensionEndDate" }
+          ]
+        }
+      ]
+    },
     "P-1A": {
       title: "Tanda Terima Penerimaan SPDP",
       subtitle: "Penerimaan dan verifikasi SPDP",
