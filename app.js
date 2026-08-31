@@ -104,6 +104,49 @@
       detail: "Mencatat surat dakwaan setelah berkas dinyatakan lengkap.",
       status: "PENUNTUTAN",
       prerequisites: ["P-21"]
+    },
+    // --- SOP FORM BEBAS DIAKSES (TANPA PRASYARAT) ---
+    {
+      code: "SOP FORM 1",
+      title: "SOP Form 1",
+      detail: "Mencatat kelengkapan administrasi untuk SOP Form 1.",
+      status: "MENUNGGU_BERKAS_TAHAP_I", 
+      prerequisites: [] 
+    },
+    {
+      code: "SOP FORM 2",
+      title: "SOP Form 2",
+      detail: "Mencatat kelengkapan administrasi untuk SOP Form 2.",
+      status: "MENUNGGU_BERKAS_TAHAP_I",
+      prerequisites: []
+    },
+    {
+      code: "SOP FORM 3",
+      title: "SOP Form 3",
+      detail: "Mencatat kelengkapan administrasi untuk SOP Form 3.",
+      status: "SPDP_DIKEMBALIKAN",
+      prerequisites: []
+    },
+    {
+      code: "SOP FORM 4",
+      title: "SOP Form 4",
+      detail: "Mencatat kelengkapan administrasi untuk SOP Form 4.",
+      status: "PENELITIAN_BERKAS",
+      prerequisites: []
+    },
+    {
+      code: "SOP FORM 5",
+      title: "SOP Form 5",
+      detail: "Mencatat kelengkapan administrasi untuk SOP Form 5.",
+      status: "PENELITIAN_BERKAS",
+      prerequisites: []
+    },
+    {
+      code: "SOP FORM 6",
+      title: "SOP Form 6",
+      detail: "Mencatat kelengkapan administrasi untuk SOP Form 6.",
+      status: "PENELITIAN_BERKAS",
+      prerequisites: []
     }
   ]);
 
@@ -113,11 +156,14 @@
     { code: "P-18", label: "P-18 — Pengantar pengembalian berkas", defaultDays: null, base: "received" },
     { code: "P-19", label: "P-19 — Petunjuk berkas belum lengkap", defaultDays: 7, base: "received" },
     { code: "P-21", label: "P-21 — Berkas lengkap", defaultDays: 7, base: "received" },
+    { code: "TAHAP 2", label: "Tahap 2 — Penyerahan tersangka dan barang bukti", defaultDays: null, base: "received" },
+    { code: "P-29", label: "P-29 — Surat dakwaan", defaultDays: null, base: "received" },
     { code: "SOP FORM 1", label: "SOP Form 1", defaultDays: null, base: "received" },
     { code: "SOP FORM 2", label: "SOP Form 2", defaultDays: null, base: "received" },
     { code: "SOP FORM 3", label: "SOP Form 3", defaultDays: null, base: "received" },
-    { code: "TAHAP 2", label: "Tahap 2 — Penyerahan tersangka dan barang bukti", defaultDays: null, base: "received" },
-    { code: "P-29", label: "P-29 — Surat dakwaan", defaultDays: null, base: "received" }
+    { code: "SOP FORM 4", label: "SOP Form 4", defaultDays: null, base: "received" },
+    { code: "SOP FORM 5", label: "SOP Form 5", defaultDays: null, base: "received" },
+    { code: "SOP FORM 6", label: "SOP Form 6", defaultDays: null, base: "received" }
   ]);
 
   const REMINDER_PROGRESS_STAGES = Object.freeze([
@@ -126,11 +172,14 @@
     { code: "P-18", label: "Pengantar pengembalian berkas" },
     { code: "P-19", label: "Petunjuk berkas belum lengkap" },
     { code: "P-21", label: "Pemberitahuan berkas lengkap" },
+    { code: "TAHAP 2", label: "Penyerahan tersangka dan barang bukti" },
+    { code: "P-29", label: "Surat dakwaan" },
     { code: "SOP FORM 1", label: "SOP Form 1" },
     { code: "SOP FORM 2", label: "SOP Form 2" },
     { code: "SOP FORM 3", label: "SOP Form 3" },
-    { code: "TAHAP 2", label: "Penyerahan tersangka dan barang bukti" },
-    { code: "P-29", label: "Surat dakwaan" }
+    { code: "SOP FORM 4", label: "SOP Form 4" },
+    { code: "SOP FORM 5", label: "SOP Form 5" },
+    { code: "SOP FORM 6", label: "SOP Form 6" }
   ]);
 
   const state = {
