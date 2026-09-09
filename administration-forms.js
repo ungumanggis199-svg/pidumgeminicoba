@@ -78,11 +78,13 @@
       title: "Pengembalian SPDP",
       subtitle: "Pengembalian SPDP karena penyidikan belum diterima",
       sections: [
+        // Ganti ...commonDocument dengan blok kustom ini
         {
           title: "Identitas dokumen",
           description: "Data utama administrasi yang sedang dibuat.",
           fields: [
             { key: "sop3Date", label: "Tanggal administrasi", type: "date", required: true, source: "today", editableAuto: true },
+            { key: "sop3Number", label: "Nomor Administrasi (SOP 3)", type: "text", required: true },
             { key: "responsibleOfficer", label: "Pejabat / Jaksa penanggung jawab", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true }
           ]
         },
@@ -92,7 +94,7 @@
           fields: [
             { key: "recipientTitle", label: "Yth. Pimpinan Instansi Penyidik", type: "text", required: true, defaultValue: "Kepala Kepolisian Resor Muna" },
             { key: "sop2Number", label: "Nomor Surat Permintaan (SOP Form 2)", type: "text", required: true, source: "case:sop2Number" },
-            { key: "sop2Date", label: "Tanggal Surat Permintaan (SOP Form 2)", type: "date", required: true,source: "case:sop2Date" },
+            { key: "sop2Date", label: "Tanggal Surat Permintaan (SOP Form 2)", type: "date", required: true, source: "case:sop2Date" },
             { key: "spdpNumber", label: "Nomor SPDP yang dikembalikan", type: "text", required: true, source: "case:spdpNumber" },
             { key: "spdpDate", label: "Tanggal SPDP", type: "date", required: true, source: "case:spdpDate" },
             { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName" },
