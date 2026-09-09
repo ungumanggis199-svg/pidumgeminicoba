@@ -3140,3 +3140,57 @@ if (
     return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
   }
 })();
+/**
+ * Mengisi form otomatis berdasarkan data historis dari administrasi sebelumnya
+ * @param {Object} currentCase - Objek case yang didapat dari response getCase_ backend
+ */
+function autoFillHistoricalData(currentCase) {
+  // Pastikan data perkara dan riwayat administrasinya ada
+  if (!currentCase || !currentCase.administrations) return;
+
+  // 1. Kumpulkan semua data historis terbaru ke dalam satu objek
+  const historicalData = {};
+  
+  // Looping dari administrasi pertama hingga terakhir agar data paling baru menimpa yang lama
+  currentCase.administrations.forEach(function(admin) {
+    if (admin.formData) {
+      Object.keys(admin.formData).forEach(function(key) {
+        if (admin.formData[key]) {
+          historicalData[key] = admin.formData[key];
+        }
+      });
+    }
+  });
+
+  // 2. Cari elemen input di layar dan isi nilainya
+  Object.keys(historicalData).forEach(function(key) {
+    const historicalValue = historicalData[key];
+    
+    // Strategi pencarian elemen (Sesuaikan dengan cara Anda memberi ID/Name di form JS Anda)
+    // Coba cari berdasarkan atribut name="Nomor P-17" atau id="nomorP17"
+    
+    // A. Format Name persis dengan Key/Label (misal: name="Nomor P-17")
+    let inputElement = document.querySelector(`input[name="${key}"]`);
+    
+    // B. Format ID dengan camelCase (misal: "Nomor P-17" menjadi "nomorP17")
+    if (!inputElement) {
+      const camelCaseId = key.replace(/(?:^\w|[A-Z]|\b\w)/g, function(word, index) {
+        return index === 0 ? word.toLowerCase() : word.toUpperCase();
+      }).replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, ''); 
+      
+      inputElement = document.getElementById(camelCaseId) || document.querySelector(`input[name="${camelCaseId}"]`);
+    }
+
+    // C. Jika input ditemukan dan saat ini masih KOSONG, maka isi otomatis
+    if (inputElement && !inputElement.value) {
+      inputElement.value = historicalValue;
+      
+      // Beri efek animasi/tanda bahwa field ini diisi otomatis (opsional)
+      inputElement.style.backgroundColor = '#e8f0fe'; // Warna biru muda tipis
+      
+      // Trigger event change/input agar state framework (seperti React/Alpine/Vue) jika ada ikut terupdate
+      inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+      inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+}
