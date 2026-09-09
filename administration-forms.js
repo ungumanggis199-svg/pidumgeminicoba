@@ -67,8 +67,8 @@
           description: "Data tagihan penyidikan (SOP Form 2) sebelumnya.",
           fields: [
             { key: "recipientTitle", label: "Yth. Pimpinan Instansi Penyidik", type: "text", required: true, defaultValue: "Kepala Kepolisian Resor Muna" },
-            { key: "sop2Number", label: "Nomor Surat Permintaan (SOP Form 2)", type: "text", required: true },
-            { key: "sop2Date", label: "Tanggal Surat Permintaan (SOP Form 2)", type: "date", required: true },
+            { key: "sop2Number", label: "Nomor Surat Permintaan (SOP Form 2)", type: "text", required: true, source: "case:sop2Number" },
+            { key: "sop2Date", label: "Tanggal Surat Permintaan (SOP Form 2)", type: "date", required: true,source: "case:sop2Date" },
             { key: "spdpNumber", label: "Nomor SPDP yang dikembalikan", type: "text", required: true, source: "case:spdpNumber" },
             { key: "spdpDate", label: "Tanggal SPDP", type: "date", required: true, source: "case:spdpDate" },
             { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName" },
