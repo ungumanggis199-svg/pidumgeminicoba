@@ -49,8 +49,8 @@
           description: "Data surat SOP 1 dan SPDP.",
           fields: [
             { key: "recipientTitle", label: "Yth. Pimpinan Instansi Penyidik", type: "text", required: true, defaultValue: "Kepala Kepolisian Resor Muna" },
-            { key: "sop1Number", label: "Nomor SOP FORM 1", type: "text", required: true },
-            { key: "sop1Date", label: "Tanggal SOP FORM 1", type: "date", required: true },
+            { key: "p17Number", label: "Nomor P-17", type: "text", required: true },
+            { key: "p17Date", label: "Tanggal P-17", type: "date", required: true },
             { key: "spdpNumber", label: "Nomor SPDP", type: "text", required: true, source: "case:spdpNumber" },
             { key: "spdpDate", label: "Tanggal SPDP", type: "date", required: true, source: "case:spdpDate" },
             { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName" }
