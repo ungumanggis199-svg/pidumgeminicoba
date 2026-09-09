@@ -78,7 +78,14 @@
       title: "Pengembalian SPDP",
       subtitle: "Pengembalian SPDP karena penyidikan belum diterima",
       sections: [
-        ...commonDocument,
+        {
+          title: "Identitas dokumen",
+          description: "Data utama administrasi yang sedang dibuat.",
+          fields: [
+            { key: "sop2Date", label: "Tanggal administrasi", type: "date", required: true, source: "today", editableAuto: true },
+            { key: "responsibleOfficer", label: "Pejabat / Jaksa penanggung jawab", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true }
+          ]
+        },
         {
           title: "Dasar Pengembalian",
           description: "Data tagihan penyidikan (SOP Form 2) sebelumnya.",
