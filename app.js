@@ -71,6 +71,13 @@
       prerequisites: ["P-1A"]
     },
     {
+      code: "P-17",
+      title: "Permintaan perkembangan hasil penyidikan",
+      detail: "Penagihan hasil penyidikan setelah 30 hari.",
+      status: "MENUNGGU_BERKAS_TAHAP_I",
+      prerequisites: ["P-16"]
+    },
+    {
       code: "P-1B",
       title: "Penerimaan berkas Tahap I",
       detail: "Mencatat tanda terima berkas perkara hasil penyidikan.",
