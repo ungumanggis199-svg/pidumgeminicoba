@@ -1262,13 +1262,23 @@
       renderAdministrationBuilderPage();
     });
 
-    document.getElementById("builder-type-select")?.addEventListener("change", (event) => {
+document.getElementById("builder-type-select")?.addEventListener("change", (event) => {
       state.administrationBuilder.type = event.target.value;
       state.selectedAdministrationFile = null;
       renderAdministrationBuilderPage();
     });
 
     bindDynamicAdministrationForm(selectedCase, selectedStage);
+
+    // PANGGIL FUNGSI AUTO-FILL DI SINI
+    // Beri jeda 100ms agar DOM HTML form selesai di-render sepenuhnya oleh browser
+    if (selectedCase && selectedCase.caseId !== "__NEW_ADMIN__") {
+      setTimeout(() => {
+        if (typeof autoFillHistoricalData === "function") {
+          autoFillHistoricalData(selectedCase);
+        }
+      }, 100);
+    }
   }
 
   function renderAdministrationTypeOptions(item, selectedType) {
