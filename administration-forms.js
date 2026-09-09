@@ -12,7 +12,6 @@
       description: "Data utama administrasi yang sedang dibuat.",
       fields: [
         { key: "documentDate", label: "Tanggal administrasi", type: "date", required: true, source: "today", editableAuto: true },
-        { key: "documentPlace", label: "Tempat dikeluarkan / dibuat", type: "text", placeholder: "Contoh: Raha" },
         { key: "responsibleOfficer", label: "Pejabat / Jaksa penanggung jawab", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true }
       ]
     }
