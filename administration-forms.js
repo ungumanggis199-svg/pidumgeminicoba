@@ -82,7 +82,7 @@
           title: "Identitas dokumen",
           description: "Data utama administrasi yang sedang dibuat.",
           fields: [
-            { key: "sop2Date", label: "Tanggal administrasi", type: "date", required: true, source: "today", editableAuto: true },
+            { key: "sop3Date", label: "Tanggal administrasi", type: "date", required: true, source: "today", editableAuto: true },
             { key: "responsibleOfficer", label: "Pejabat / Jaksa penanggung jawab", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true }
           ]
         },
