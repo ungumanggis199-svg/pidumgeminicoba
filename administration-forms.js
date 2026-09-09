@@ -22,7 +22,16 @@
       title: "Pemantauan Perkembangan Penyidikan",
       subtitle: "Surat pemantauan tindak lanjut SPDP",
       sections: [
-        ...commonDocument,
+        // Ganti ...commonDocument dengan blok kustom ini
+        {
+          title: "Identitas dokumen",
+          description: "Data utama administrasi yang sedang dibuat.",
+          fields: [
+            { key: "sop1Date", label: "Tanggal administrasi", type: "date", required: true, source: "today", editableAuto: true },
+            { key: "sop1Number", label: "Nomor Administrasi (SOP 1)", type: "text", required: true },
+            { key: "responsibleOfficer", label: "Pejabat / Jaksa penanggung jawab", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true }
+          ]
+        },
         {
           title: "Tujuan dan Data SPDP",
           description: "Tujuan surat dan identitas perkara.",
@@ -41,7 +50,16 @@
       title: "Permintaan Perkembangan Hasil Penyidikan",
       subtitle: "Penagihan hasil penyidikan setelah 30 hari",
       sections: [
-        ...commonDocument,
+        // Ganti ...commonDocument dengan blok kustom ini
+        {
+          title: "Identitas dokumen",
+          description: "Data utama administrasi yang sedang dibuat.",
+          fields: [
+            { key: "sop2Date", label: "Tanggal administrasi", type: "date", required: true, source: "today", editableAuto: true },
+            { key: "sop2Number", label: "Nomor Administrasi (SOP 2)", type: "text", required: true },
+            { key: "responsibleOfficer", label: "Pejabat / Jaksa penanggung jawab", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true }
+          ]
+        },
         {
           title: "Tujuan dan Data Surat Sebelumnya",
           description: "Data surat SOP 1 dan SPDP.",
