@@ -301,7 +301,34 @@
         }
       ]
     },
-
+"P-17": {
+      title: "Permintaan Perkembangan Hasil Penyidikan",
+      subtitle: "Penagihan hasil penyidikan setelah 30 hari (P-17)",
+      referencePages: "Berdasarkan Template P-17",
+      sections: [
+        {
+          title: "Identitas dokumen",
+          description: "Data utama administrasi yang sedang dibuat.",
+          fields: [
+            { key: "p17Date", label: "Tanggal administrasi", type: "date", required: true, source: "today", editableAuto: true },
+            { key: "p17Number", label: "Nomor Administrasi (P-17)", type: "text", required: true },
+            { key: "responsibleOfficer", label: "Pejabat / Jaksa penanggung jawab", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true }
+          ]
+        },
+        {
+          title: "Tujuan dan Data SPDP",
+          description: "Data instansi penyidik dan detail perkara.",
+          fields: [
+            { key: "investigatorInstitution", label: "Yth. Kepala (Instansi Penyidik)", type: "text", required: true, source: "case:investigatorInstitution", editableAuto: true },
+            { key: "spdpNumber", label: "Nomor SPDP", type: "text", required: true, source: "case:spdpNumber", editableAuto: true },
+            { key: "spdpDate", label: "Tanggal SPDP", type: "date", required: true, source: "case:spdpDate", editableAuto: true },
+            { key: "receivedDate", label: "Tanggal Terima SPDP", type: "date", required: true, source: "case:receivedDate", editableAuto: true },
+            { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName", editableAuto: true },
+            { key: "allegedArticle", label: "Pasal yang disangkakan", type: "textarea", required: true, source: "case:allegedArticle", full: true }
+          ]
+        }
+      ]
+    },
     "P-1B": {
       title: "Tanda Terima Penerimaan Berkas Perkara",
       subtitle: "Penerimaan berkas hasil penyidikan/Tahap I",
