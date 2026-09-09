@@ -87,16 +87,17 @@
             { key: "responsibleOfficer", label: "Pejabat / Jaksa penanggung jawab", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true }
           ]
         },
-        {
+{
           title: "Dasar Pengembalian",
           description: "Data tagihan penyidikan (SOP Form 2) sebelumnya.",
           fields: [
             { key: "recipientTitle", label: "Yth. Pimpinan Instansi Penyidik", type: "text", required: true, defaultValue: "Kepala Kepolisian Resor Muna" },
-            { key: "sop2Number", label: "Nomor Surat Permintaan (SOP Form 2)", type: "text", required: true, source: "case:sop2Number" },
-            { key: "sop2Date", label: "Tanggal Surat Permintaan (SOP Form 2)", type: "date", required: true, source: "case:sop2Date" },
-            { key: "spdpNumber", label: "Nomor SPDP yang dikembalikan", type: "text", required: true, source: "case:spdpNumber" },
-            { key: "spdpDate", label: "Tanggal SPDP", type: "date", required: true, source: "case:spdpDate" },
-            { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName" },
+            // Tambahkan editableAuto: true di bawah ini
+            { key: "sop2Number", label: "Nomor Surat Permintaan (SOP Form 2)", type: "text", required: true, source: "case:sop2Number", editableAuto: true },
+            { key: "sop2Date", label: "Tanggal Surat Permintaan (SOP Form 2)", type: "date", required: true, source: "case:sop2Date", editableAuto: true },
+            { key: "spdpNumber", label: "Nomor SPDP yang dikembalikan", type: "text", required: true, source: "case:spdpNumber", editableAuto: true },
+            { key: "spdpDate", label: "Tanggal SPDP", type: "date", required: true, source: "case:spdpDate", editableAuto: true },
+            { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName", editableAuto: true },
             { key: "allegedArticle", label: "Pasal yang disangkakan", type: "textarea", required: true, source: "case:allegedArticle", full: true }
           ]
         }
