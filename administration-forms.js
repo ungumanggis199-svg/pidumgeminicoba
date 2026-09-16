@@ -256,30 +256,36 @@
           title: "Data Surat dan Tersangka",
           description: "Detail surat permintaan perpanjangan penahanan dan identitas",
           fields: [
-            { key: "documentDate", label: "Tanggal Dikeluarkan Surat T-4", type: "date", required: true },
-            { key: "allegedArticle", label: "Pasal yang disangkakan", type: "text", required: true },
+            { key: "documentDate", label: "Tanggal Dikeluarkan Surat T-4", type: "date", required: true, source: "today" },
+            // Menarik data "Pasal" dari sheet cases
+            { key: "allegedArticle", label: "Pasal yang disangkakan", type: "text", required: true, source: "case:allegedArticle" },
+            
+            // Field administrasi penyidik (biasanya diisi manual karena spesifik per surat)
             { key: "investigatorInstitution", label: "Nomor Surat Permintaan Perpanjangan (Polres)", type: "text", required: true },
             { key: "suratPermintaanPenahananNomor", label: "Tanggal Surat Permintaan Perpanjangan", type: "date", required: true },
             { key: "suratPerintahPenahananNomor", label: "Nomor Surat Perintah Penahanan Penyidik", type: "text", required: true },
             { key: "suratPerintahPenahananTanggal", label: "Tanggal Surat Perintah Penahanan", type: "date", required: true },
             { key: "resumeTanggal", label: "Tanggal Resume/Laporan Perkembangan", type: "date", required: true },
-            { key: "suspectName", label: "Nama Lengkap", type: "text", required: true },
-            { key: "suspectIdentityNumber", label: "Nomor Identitas (KTP/SIM)", type: "text", required: true },
-            { key: "birthPlace", label: "Tempat Lahir", type: "text", required: true },
-            { key: "age", label: "Umur (Tahun)", type: "number", required: true },
-            { key: "birthDate", label: "Tanggal Lahir", type: "date", required: true },
-            { key: "gender", label: "Jenis Kelamin", type: "text", required: true },
-            { key: "address", label: "Tempat Tinggal", type: "textarea", required: true },
-            { key: "religion", label: "Agama", type: "text", required: true },
-            { key: "occupation", label: "Pekerjaan", type: "text", required: true },
-            { key: "education", label: "Pendidikan", type: "text", required: true }
+            
+            // Menarik data Identitas Tersangka dari sheet cases
+            { key: "suspectName", label: "Nama Lengkap", type: "text", required: true, source: "case:suspectName" },
+            { key: "suspectIdentityNumber", label: "Nomor Identitas (KTP/SIM)", type: "text", required: true, source: "case:suspectIdentityNumber" },
+            { key: "birthPlace", label: "Tempat Lahir", type: "text", required: true, source: "case:birthPlace" },
+            { key: "age", label: "Umur (Tahun)", type: "number", required: true, source: "case:age" },
+            { key: "birthDate", label: "Tanggal Lahir", type: "date", required: true, source: "case:birthDate" },
+            { key: "gender", label: "Jenis Kelamin", type: "select", options: ["Laki-laki", "Perempuan"], required: true, source: "case:gender" },
+            { key: "address", label: "Tempat Tinggal", type: "textarea", required: true, source: "case:address" },
+            { key: "religion", label: "Agama", type: "text", required: true, source: "case:religion" },
+            { key: "occupation", label: "Pekerjaan", type: "text", required: true, source: "case:occupation" },
+            { key: "education", label: "Pendidikan", type: "text", required: true, source: "case:education" }
           ]
         },
         {
           title: "Detail Waktu Penahanan",
           description: "Informasi jangka waktu perpanjangan",
           fields: [
-            { key: "penahananDays", label: "Lama Perpanjangan Penahanan (Hari)", type: "number", required: true },
+            // Bisa menggunakan defaultValue agar langsung terisi angka 40
+            { key: "penahananDays", label: "Lama Perpanjangan Penahanan (Hari)", type: "number", required: true, defaultValue: "40" },
             { key: "penahananStartDate", label: "Mulai Tanggal", type: "date", required: true },
             { key: "penahananEndDate", label: "Sampai Dengan Tanggal", type: "date", required: true }
           ]
