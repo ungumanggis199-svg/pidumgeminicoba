@@ -433,7 +433,39 @@
         }
       ]
     },
-
+"T-4": {
+    title: "T-4 — Surat Perpanjangan Penahanan",
+    fields: [
+        // --- DATA SURAT & PASAL ---
+        { id: "documentDate", label: "Tanggal Dikeluarkan Surat T-4", type: "date", required: true },
+        { id: "allegedArticle", label: "Pasal yang disangkakan", type: "text", required: true },
+        
+        // --- DASAR PERPANJANGAN PENAHANAN ---
+        // Catatan: Label disesuaikan karena penamaan variabel di template (investigatorInstitution = Nomor, suratPermintaanPenahananNomor = Tanggal)
+        { id: "investigatorInstitution", label: "Nomor Surat Permintaan Perpanjangan (Polres)", type: "text", required: true },
+        { id: "suratPermintaanPenahananNomor", label: "Tanggal Surat Permintaan Perpanjangan", type: "date", required: true },
+        { id: "suratPerintahPenahananNomor", label: "Nomor Surat Perintah Penahanan Penyidik", type: "text", required: true },
+        { id: "suratPerintahPenahananTanggal", label: "Tanggal Surat Perintah Penahanan", type: "date", required: true },
+        { id: "resumeTanggal", label: "Tanggal Resume/Laporan Perkembangan", type: "date", required: true },
+        
+        // --- DATA TERSANGKA ---
+        { id: "suspectName", label: "Nama Lengkap", type: "text", required: true },
+        { id: "suspectIdentityNumber", label: "Nomor Identitas (KTP/SIM)", type: "text", required: true },
+        { id: "birthPlace", label: "Tempat Lahir", type: "text", required: true },
+        { id: "age", label: "Umur (Tahun)", type: "number", required: true },
+        { id: "birthDate", label: "Tanggal Lahir", type: "date", required: true },
+        { id: "gender", label: "Jenis Kelamin", type: "text", required: true },
+        { id: "address", label: "Tempat Tinggal", type: "textarea", required: true },
+        { id: "religion", label: "Agama", type: "text", required: true },
+        { id: "occupation", label: "Pekerjaan", type: "text", required: true },
+        { id: "education", label: "Pendidikan", type: "text", required: true },
+        
+        // --- DETAIL WAKTU PENAHANAN ---
+        { id: "penahananDays", label: "Lama Perpanjangan Penahanan (Hari)", type: "number", required: true },
+        { id: "penahananStartDate", label: "Mulai Tanggal", type: "date", required: true },
+        { id: "penahananEndDate", label: "Sampai Dengan Tanggal", type: "date", required: true }
+    ]
+}
    "P-19": {
       title: "Petunjuk Mengenai Hal yang Harus Dilengkapi",
       subtitle: "Pengembalian berkas perkara untuk dilengkapi",
