@@ -22,7 +22,6 @@
       title: "Pemantauan Perkembangan Penyidikan",
       subtitle: "Surat pemantauan tindak lanjut SPDP",
       sections: [
-        // Ganti ...commonDocument dengan blok kustom ini
         {
           title: "Identitas dokumen",
           description: "Data utama administrasi yang sedang dibuat.",
@@ -50,7 +49,6 @@
       title: "Permintaan Perkembangan Hasil Penyidikan",
       subtitle: "Penagihan hasil penyidikan setelah 30 hari",
       sections: [
-        // Ganti ...commonDocument dengan blok kustom ini
         {
           title: "Identitas dokumen",
           description: "Data utama administrasi yang sedang dibuat.",
@@ -74,11 +72,10 @@
       ]
     },
 
-"SOP FORM 3": {
+    "SOP FORM 3": {
       title: "Pengembalian SPDP",
       subtitle: "Pengembalian SPDP karena penyidikan belum diterima",
       sections: [
-        // Ganti ...commonDocument dengan blok kustom ini
         {
           title: "Identitas dokumen",
           description: "Data utama administrasi yang sedang dibuat.",
@@ -87,12 +84,11 @@
             { key: "responsibleOfficer", label: "Pejabat / Jaksa penanggung jawab", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true }
           ]
         },
-{
+        {
           title: "Dasar Pengembalian",
           description: "Data tagihan penyidikan (SOP Form 2) sebelumnya.",
           fields: [
             { key: "recipientTitle", label: "Yth. Pimpinan Instansi Penyidik", type: "text", required: true, defaultValue: "Kepala Kepolisian Resor Muna" },
-            // Tambahkan editableAuto: true di bawah ini
             { key: "sop2Number", label: "Nomor Surat Permintaan (SOP Form 2)", type: "text", required: true, source: "case:sop2Number", editableAuto: true },
             { key: "sop2Date", label: "Tanggal Surat Permintaan (SOP Form 2)", type: "date", required: true, source: "case:sop2Date", editableAuto: true },
             { key: "spdpNumber", label: "Nomor SPDP yang dikembalikan", type: "text", required: true, source: "case:spdpNumber", editableAuto: true },
@@ -103,7 +99,7 @@
         }
       ]
     },
-     "P-16": {
+    "P-16": {
       title: "Surat Perintah Mengikuti Perkembangan Penyidikan",
       subtitle: "Penunjukan tim Penuntut Umum",
       referencePages: "Halaman 8-11",
@@ -170,7 +166,7 @@
         }
       ]
     },
-"P-17": {
+    "P-17": {
       title: "Permintaan Perkembangan Hasil Penyidikan",
       subtitle: "Penagihan hasil penyidikan setelah 30 hari (P-17)",
       referencePages: "Berdasarkan Template P-17",
@@ -250,55 +246,48 @@
         }
       ]
     },
-const schemas = {
-    // ... skema lain (SOP FORM, P-16, dll) ...
-
+    
+    // BLOK T-4 YANG SUDAH DIPERBAIKI (Ditambahkan sections dan key)
     "T-4": {
       title: "T-4 — Surat Perpanjangan Penahanan",
       subtitle: "Perpanjangan penahanan dari Penyidik",
       sections: [
         {
-          title: "Identitas dokumen dan Penyidik",
-          description: "Data surat permintaan dan waktu penahanan.",
+          title: "Data Surat dan Tersangka",
+          description: "Detail surat permintaan perpanjangan penahanan dan identitas",
           fields: [
             { key: "documentDate", label: "Tanggal Dikeluarkan Surat T-4", type: "date", required: true },
-            { key: "allegedArticle", label: "Pasal yang disangkakan", type: "text", required: true, source: "case:allegedArticle" },
-            { key: "investigatorInstitution", label: "Nomor Surat Permintaan Perpanjangan", type: "text", required: true },
-            { key: "suratPermintaanPenahananNomor", label: "Tanggal Surat Permintaan", type: "date", required: true },
-            { key: "suratPerintahPenahananNomor", label: "Nomor Surat Perintah Penahanan", type: "text", required: true },
+            { key: "allegedArticle", label: "Pasal yang disangkakan", type: "text", required: true },
+            { key: "investigatorInstitution", label: "Nomor Surat Permintaan Perpanjangan (Polres)", type: "text", required: true },
+            { key: "suratPermintaanPenahananNomor", label: "Tanggal Surat Permintaan Perpanjangan", type: "date", required: true },
+            { key: "suratPerintahPenahananNomor", label: "Nomor Surat Perintah Penahanan Penyidik", type: "text", required: true },
             { key: "suratPerintahPenahananTanggal", label: "Tanggal Surat Perintah Penahanan", type: "date", required: true },
-            { key: "resumeTanggal", label: "Tanggal Resume / Laporan", type: "date", required: true }
+            { key: "resumeTanggal", label: "Tanggal Resume/Laporan Perkembangan", type: "date", required: true },
+            { key: "suspectName", label: "Nama Lengkap", type: "text", required: true },
+            { key: "suspectIdentityNumber", label: "Nomor Identitas (KTP/SIM)", type: "text", required: true },
+            { key: "birthPlace", label: "Tempat Lahir", type: "text", required: true },
+            { key: "age", label: "Umur (Tahun)", type: "number", required: true },
+            { key: "birthDate", label: "Tanggal Lahir", type: "date", required: true },
+            { key: "gender", label: "Jenis Kelamin", type: "text", required: true },
+            { key: "address", label: "Tempat Tinggal", type: "textarea", required: true },
+            { key: "religion", label: "Agama", type: "text", required: true },
+            { key: "occupation", label: "Pekerjaan", type: "text", required: true },
+            { key: "education", label: "Pendidikan", type: "text", required: true }
           ]
         },
         {
-          title: "Data Tersangka",
-          description: "Data identitas tersangka ditarik otomatis dari perkara.",
+          title: "Detail Waktu Penahanan",
+          description: "Informasi jangka waktu perpanjangan",
           fields: [
-            { key: "suspectName", label: "Nama Lengkap", type: "text", required: true, source: "case:suspectName" },
-            { key: "suspectIdentityNumber", label: "Nomor Identitas (NIK)", type: "text", required: true, source: "case:suspectIdentityNumber" },
-            { key: "birthPlace", label: "Tempat Lahir", type: "text", required: true, source: "case:birthPlace" },
-            { key: "age", label: "Umur (Tahun)", type: "number", required: true, source: "case:age" },
-            { key: "birthDate", label: "Tanggal Lahir", type: "date", required: true, source: "case:birthDate" },
-            { key: "gender", label: "Jenis Kelamin", type: "select", required: true, options: ["Laki-laki", "Perempuan"], source: "case:gender" },
-            { key: "address", label: "Tempat Tinggal", type: "textarea", required: true, source: "case:address" },
-            { key: "religion", label: "Agama", type: "text", required: true, source: "case:religion" },
-            { key: "occupation", label: "Pekerjaan", type: "text", required: true, source: "case:occupation" },
-            { key: "education", label: "Pendidikan", type: "text", required: true, source: "case:education" }
-          ]
-        },
-        {
-          title: "Waktu Perpanjangan Penahanan",
-          description: "Detail waktu penahanan di Rutan.",
-          fields: [
-            { key: "penahananDays", label: "Lama Perpanjangan (Hari)", type: "number", required: true, defaultValue: "40" },
+            { key: "penahananDays", label: "Lama Perpanjangan Penahanan (Hari)", type: "number", required: true },
             { key: "penahananStartDate", label: "Mulai Tanggal", type: "date", required: true },
             { key: "penahananEndDate", label: "Sampai Dengan Tanggal", type: "date", required: true }
           ]
         }
       ]
     },
-    // ... lanjutkan dengan skema lainnya ...
-   "P-19": {
+
+    "P-19": {
       title: "Petunjuk Mengenai Hal yang Harus Dilengkapi",
       subtitle: "Pengembalian berkas perkara untuk dilengkapi",
       referencePages: "Halaman 99",
@@ -319,7 +308,6 @@ const schemas = {
           fields: [
             { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName" },
             { key: "allegedArticle", label: "Pasal yang disangkakan", type: "textarea", required: true, source: "case:allegedArticle", full: true },
-            // PERBAIKAN: Mengambil Nomor Berkas, Tanggal Berkas, dan Tanggal Terima dari inputan sheet Cases (Penyidik)
             { key: "dossierNumber", label: "Nomor Berkas Perkara", type: "text", required: true, source: "case:spdpNumber" },
             { key: "dossierDate", label: "Tanggal Berkas Perkara", type: "date", required: true, source: "case:spdpDate" },
             { key: "dossierReceivedDate", label: "Tanggal berkas diterima", type: "date", required: true, source: "case:receivedDate" }
@@ -354,7 +342,6 @@ const schemas = {
             { key: "destination", label: "Tempat tujuan", type: "text", required: true },
             { key: "attachment", label: "Lampiran", type: "text", required: true, defaultValue: "1 (satu) berkas" },
             { key: "letterNature", label: "Sifat surat", type: "select", required: true, defaultValue: "Rahasia", options: ["Rahasia", "Segera", "Biasa"] },
-            // PERBAIKAN: Mengambil dari sheet Cases (Penyidik)
             { key: "dossierNumber", label: "Nomor Berkas Perkara", type: "text", required: true, source: "case:spdpNumber" },
             { key: "dossierDate", label: "Tanggal Berkas Perkara", type: "date", required: true, source: "case:spdpDate" },
             { key: "dossierReceivedDate", label: "Tanggal berkas diterima", type: "date", required: true, source: "case:receivedDate" },
