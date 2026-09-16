@@ -103,138 +103,7 @@
         }
       ]
     },
-
-    "SOP FORM 4": {
-      title: "Nota Pendapat Perpanjangan Penahanan",
-      subtitle: "Analisis usulan perpanjangan penahanan dari penyidik",
-      sections: [
-        ...commonDocument,
-        {
-          title: "Tim Jaksa Penuntut Umum",
-          description: "Data tim JPU berdasarkan P-16.",
-          fields: [
-            { key: "p16Number", label: "Nomor P-16", type: "text", required: true, source: "admin:P-16:documentNumber" },
-            { key: "p16Date", label: "Tanggal P-16", type: "date", required: true, source: "admin:P-16:documentDate" },
-            { key: "prosecutor1Name", label: "Nama JPU 1", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true },
-            { key: "prosecutor1Rank", label: "Pangkat JPU 1", type: "text", required: true },
-            { key: "prosecutor2Name", label: "Nama JPU 2", type: "text" },
-            { key: "prosecutor2Rank", label: "Pangkat JPU 2", type: "text" },
-            { key: "prosecutor3Name", label: "Nama JPU 3", type: "text" },
-            { key: "prosecutor3Rank", label: "Pangkat JPU 3", type: "text" }
-          ]
-        },
-        {
-          title: "Identitas Tersangka",
-          description: "Data identitas tersangka ditarik otomatis.",
-          fields: [
-            { key: "suspectName", label: "Nama Lengkap", type: "text", required: true, source: "case:suspectName" },
-            { key: "suspectIdentityNumber", label: "Nomor Identitas (NIK)", type: "text", required: true, source: "case:suspectIdentityNumber" },
-            { key: "birthPlace", label: "Tempat Lahir", type: "text", required: true, source: "case:birthPlace" },
-            { key: "birthDate", label: "Tanggal Lahir", type: "date", required: true, source: "case:birthDate" },
-            { key: "age", label: "Umur", type: "number", required: true, source: "case:age" },
-            { key: "address", label: "Tempat Tinggal", type: "textarea", required: true, source: "case:address", full: true },
-            { key: "religion", label: "Agama", type: "text", required: true, source: "case:religion" },
-            { key: "occupation", label: "Pekerjaan", type: "text", required: true, source: "case:occupation" },
-            { key: "allegedArticle", label: "Pasal yang disangkakan", type: "textarea", required: true, source: "case:allegedArticle", full: true }
-          ]
-        },
-        {
-          title: "Dasar Permintaan dan Usulan",
-          description: "Rincian surat penyidik dan durasi perpanjangan.",
-          fields: [
-            { key: "requestLetterNumber", label: "Nomor Surat Permintaan Penyidik", type: "text", required: true },
-            { key: "requestLetterDate", label: "Tanggal Surat Permintaan", type: "date", required: true },
-            { key: "extensionDuration", label: "Lama perpanjangan (hari)", type: "number", required: true, defaultValue: "40" },
-            { key: "extensionStartDate", label: "Mulai tanggal", type: "date", required: true },
-            { key: "extensionEndDate", label: "Sampai dengan tanggal", type: "date", required: true },
-            { key: "detentionLocation", label: "Lokasi Penahanan", type: "text", required: true, defaultValue: "Rutan Polres Muna" },
-            { key: "additionalReasons", label: "Alasan lain yang dipertimbangkan", type: "textarea", placeholder: "Contoh: Proses penyidikan belum selesai...", full: true }
-          ]
-        }
-      ]
-    },
-
-    "SOP FORM 5": {
-      title: "Persetujuan / Penolakan Penahanan",
-      subtitle: "Tindak lanjut dari Nota Pendapat Perpanjangan",
-      sections: [
-        ...commonDocument,
-        {
-          title: "Keputusan Pimpinan",
-          description: "Penerbitan T-4 atau T-5.",
-          fields: [
-            { key: "decisionType", label: "Jenis Surat", type: "select", required: true, options: ["Persetujuan (T-4)", "Penolakan (T-5)"] },
-            { key: "requestLetterNumber", label: "Nomor Surat Permintaan Penyidik", type: "text", required: true, source: "admin:SOP FORM 4:field:requestLetterNumber" },
-            { key: "requestLetterDate", label: "Tanggal Surat Permintaan", type: "date", required: true, source: "admin:SOP FORM 4:field:requestLetterDate" },
-            { key: "extensionDuration", label: "Lama perpanjangan (hari)", type: "number", required: true, source: "admin:SOP FORM 4:field:extensionDuration" },
-            { key: "extensionStartDate", label: "Mulai tanggal", type: "date", required: true, source: "admin:SOP FORM 4:field:extensionStartDate" },
-            { key: "extensionEndDate", label: "Sampai dengan tanggal", type: "date", required: true, source: "admin:SOP FORM 4:field:extensionEndDate" }
-          ]
-        }
-      ]
-    },
-    "P-1A": {
-      title: "Tanda Terima Penerimaan SPDP",
-      subtitle: "Penerimaan dan verifikasi SPDP",
-      referencePages: "Halaman 2",
-      sections: [
-        ...commonDocument,
-        {
-          title: "Waktu penerimaan",
-          description: "Waktu dan zona waktu saat SPDP diterima.",
-          fields: [
-            { key: "receiptDate", label: "Tanggal SPDP diterima di PTSP", type: "date", required: true, source: "case:receivedDate", editableAuto: true },
-            { key: "receiptTime", label: "Jam penerimaan", type: "time", required: true },
-            { key: "timeZone", label: "Zona waktu", type: "select", required: true, defaultValue: "WITA", options: ["WIB", "WITA", "WIT"] }
-          ]
-        },
-        {
-          title: "Penerima SPDP",
-          description: "Petugas Kejaksaan yang menerima SPDP.",
-          fields: [
-            { key: "receiverName", label: "Nama penerima", type: "text", required: true, source: "user:fullName", editableAuto: true },
-            { key: "receiverRank", label: "Pangkat/Gol penerima", type: "text", required: true },
-            { key: "receiverNip", label: "NIP/NRP penerima", type: "text", required: true },
-            { key: "receiverPosition", label: "Jabatan penerima", type: "select", required: true, options: ["Kabag TU", "Kasubbag Bin", "Kaur Bin", "Lainnya"] }
-          ]
-        },
-        {
-          title: "Data SPDP dan Penyidik",
-          description: "Bagian ini diambil otomatis dari data perkara.",
-          fields: [
-            { key: "investigatorInstitution", label: "Instansi/Unit Penyidik", type: "text", required: true, source: "case:investigatorInstitution" },
-            { key: "spdpNumber", label: "Nomor SPDP", type: "text", required: true, source: "case:spdpNumber" },
-            { key: "spdpDate", label: "Tanggal SPDP", type: "date", required: true, source: "case:spdpDate" },
-            { key: "sprindikNumber", label: "Nomor Sprindik", type: "text", required: true, source: "case:sprindikNumber" },
-            { key: "sprindikDate", label: "Tanggal Sprindik", type: "date", required: true, source: "case:sprindikDate" },
-            { key: "suspectName", label: "Nama Tersangka/Terlapor", type: "text", required: true, source: "case:suspectName" },
-            { key: "allegedArticle", label: "Pasal yang disangkakan", type: "textarea", required: true, source: "case:allegedArticle", full: true }
-          ]
-        },
-        {
-          title: "Pihak yang menyampaikan",
-          description: "Identitas penyidik yang menyerahkan SPDP.",
-          fields: [
-            { key: "senderName", label: "Nama penyidik yang menyampaikan", type: "text", required: true, source: "case:investigatorName" },
-            { key: "senderRankNrp", label: "Pangkat/NRP penyidik", type: "text", required: true, source: "computed:investigatorRankNrp" }
-          ]
-        },
-        {
-          title: "Catatan verifikasi",
-          description: "Verifikasi waktu dan kesetaraan sebagaimana format P-1A.",
-          fields: [
-            { key: "verificationSprindikDate", label: "Tanggal Surat Perintah Penyidikan", type: "date", required: true, source: "case:sprindikDate" },
-            { key: "verificationReceivedDate", label: "Tanggal SPDP diterima", type: "date", required: true, source: "case:receivedDate" },
-            { key: "delayDays", label: "Selisih hari", type: "number", required: true, source: "case:spdpDelayDays" },
-            { key: "delayCategory", label: "Kategori selisih", type: "text", required: true, source: "computed:delayCategory" },
-            { key: "institutionEquality", label: "Sesuai dengan kesetaraan", type: "select", required: true, options: ["Ya", "Tidak"] },
-            { key: "verificationNotes", label: "Catatan verifikasi tambahan", type: "textarea", full: true }
-          ]
-        }
-      ]
-    },
-
-    "P-16": {
+     "P-16": {
       title: "Surat Perintah Mengikuti Perkembangan Penyidikan",
       subtitle: "Penunjukan tim Penuntut Umum",
       referencePages: "Halaman 8-11",
@@ -329,58 +198,6 @@
         }
       ]
     },
-    "P-1B": {
-      title: "Tanda Terima Penerimaan Berkas Perkara",
-      subtitle: "Penerimaan berkas hasil penyidikan/Tahap I",
-      referencePages: "Halaman 33",
-      sections: [
-        ...commonDocument,
-        {
-          title: "Waktu dan penerima berkas",
-          description: "Data petugas Kejaksaan yang menerima berkas.",
-          fields: [
-            { key: "receiptDate", label: "Tanggal penerimaan", type: "date", required: true, source: "today", editableAuto: true },
-            { key: "receiptTime", label: "Jam penerimaan", type: "time", required: true },
-            { key: "timeZone", label: "Zona waktu", type: "select", required: true, defaultValue: "WITA", options: ["WIB", "WITA", "WIT"] },
-            { key: "receiverName", label: "Nama penerima", type: "text", required: true, source: "user:fullName", editableAuto: true },
-            { key: "receiverRank", label: "Pangkat/Gol penerima", type: "text", required: true },
-            { key: "receiverNip", label: "NIP/NRP penerima", type: "text", required: true },
-            { key: "receiverPosition", label: "Jabatan penerima", type: "select", required: true, options: ["Kabag TU", "Kasubbag Bin", "Kaur Bin", "Lainnya"] }
-          ]
-        },
-        {
-          title: "Data penyidik",
-          description: "Terisi otomatis dari perkara dan dapat dilengkapi jika diperlukan.",
-          fields: [
-            { key: "investigatorInstitution", label: "Instansi Penyidik", type: "text", required: true, source: "case:investigatorInstitution" },
-            { key: "investigatorName", label: "Nama Penyidik", type: "text", required: true, source: "case:investigatorName" },
-            { key: "investigatorRankNrp", label: "Pangkat/NRP Penyidik", type: "text", required: true, source: "computed:investigatorRankNrp" }
-          ]
-        },
-        {
-          title: "Data berkas perkara",
-          description: "Nomor dan jenis berkas yang diterima.",
-          fields: [
-            { key: "dossierType", label: "Jenis penerimaan berkas", type: "select", required: true, options: ["Hasil Penyidikan", "Hasil Penyidikan Tambahan", "Tindak Lanjut Hasil Gelar Perkara Bersama"] },
-            { key: "copyCount", label: "Jumlah rangkap", type: "number", required: true, defaultValue: "3" },
-            { key: "dossierNumber", label: "Nomor Berkas Perkara", type: "text", required: true, source: "case:spdpNumber" },
-            { key: "dossierDate", label: "Tanggal Berkas Perkara", type: "date", required: true, source: "case:spdpDate" },
-            { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName" },
-            { key: "allegedArticle", label: "Disangka melanggar Pasal", type: "textarea", required: true, source: "case:allegedArticle", full: true }
-          ]
-        },
-        {
-          title: "Penyerahan dan tanda tangan",
-          description: "Identitas pihak yang menyerahkan dan menerima.",
-          fields: [
-            { key: "senderName", label: "Nama penyidik yang menyerahkan", type: "text", required: true, source: "case:investigatorName" },
-            { key: "senderRankNrp", label: "Pangkat/NRP penyidik", type: "text", required: true, source: "computed:investigatorRankNrp" },
-            { key: "receiptNotes", label: "Catatan penerimaan", type: "textarea", full: true }
-          ]
-        }
-      ]
-    },
-
     "P-24": {
       title: "Nota Pendapat Hasil Penelitian Berkas Perkara",
       subtitle: "Penelitian kelengkapan formil dan materil",
@@ -465,7 +282,7 @@
         { id: "penahananStartDate", label: "Mulai Tanggal", type: "date", required: true },
         { id: "penahananEndDate", label: "Sampai Dengan Tanggal", type: "date", required: true }
     ]
-}
+},
    "P-19": {
       title: "Petunjuk Mengenai Hal yang Harus Dilengkapi",
       subtitle: "Pengembalian berkas perkara untuk dilengkapi",
