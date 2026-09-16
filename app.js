@@ -3183,36 +3183,31 @@ function autoFillHistoricalData(currentCase) {
     }
   });
 }
-// --- LOGIKA PERHITUNGAN OTOMATIS WAKTU PENAHANAN ---
 document.addEventListener('change', function(e) {
-    // Mengecek apakah yang diubah adalah kolom 'Hari' atau 'Tanggal Mulai'
-    if (e.target && (e.target.id === 'penahananDays' || e.target.id === 'penahananStartDate')) {
-        
-        const daysInput = document.getElementById('penahananDays');
-        const startDateInput = document.getElementById('penahananStartDate');
-        const endDateInput = document.getElementById('penahananEndDate');
+    // Mengecek atribut id atau name dari elemen yang diubah
+    const targetKey = e.target.id || e.target.name;
+    
+    if (targetKey === 'penahananDays' || targetKey === 'penahananStartDate') {
+        // Mencari input berdasarkan name atau id agar pasti ketemu
+        const daysInput = document.querySelector('[name="penahananDays"], #penahananDays');
+        const startDateInput = document.querySelector('[name="penahananStartDate"], #penahananStartDate');
+        const endDateInput = document.querySelector('[name="penahananEndDate"], #penahananEndDate');
 
-        // Pastikan ketiga elemen tersebut ada di dalam halaman (form sedang aktif)
         if (daysInput && startDateInput && endDateInput) {
             const days = parseInt(daysInput.value, 10);
             const startDateVal = startDateInput.value;
 
             if (!isNaN(days) && startDateVal) {
-                // Konversi value input ke format Date JavaScript
                 const startDate = new Date(startDateVal);
                 
-                // Menambahkan hari. 
-                // Catatan Hukum: Biasanya dalam KUHAP, hari pertama dihitung sebagai 1 hari masa tahanan.
-                // Oleh karena itu rumusnya ditambah (days - 1). 
-                // Jika ingin murni ditambah sesuai angka, hapus "- 1".
+                // Menambahkan masa tahanan (hari pertama dihitung = dikurangi 1)
                 startDate.setDate(startDate.getDate() + (days - 1));
 
-                // Ekstrak kembali menjadi format YYYY-MM-DD agar bisa dibaca oleh input type="date"
                 const year = startDate.getFullYear();
                 const month = String(startDate.getMonth() + 1).padStart(2, '0');
                 const day = String(startDate.getDate()).padStart(2, '0');
 
-                // Isi otomatis kolom 'Sampai Dengan Tanggal'
+                // Memasukkan hasil perhitungan ke form batas akhir
                 endDateInput.value = `${year}-${month}-${day}`;
             }
         }
