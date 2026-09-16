@@ -3183,32 +3183,47 @@ function autoFillHistoricalData(currentCase) {
     }
   });
 }
+// --- LOGIKA PERHITUNGAN OTOMATIS WAKTU PENAHANAN ---
 document.addEventListener('change', function(e) {
-    // Mengecek atribut id atau name dari elemen yang diubah
     const targetKey = e.target.id || e.target.name;
     
     if (targetKey === 'penahananDays' || targetKey === 'penahananStartDate') {
-        // Mencari input berdasarkan name atau id agar pasti ketemu
         const daysInput = document.querySelector('[name="penahananDays"], #penahananDays');
         const startDateInput = document.querySelector('[name="penahananStartDate"], #penahananStartDate');
         const endDateInput = document.querySelector('[name="penahananEndDate"], #penahananEndDate');
 
         if (daysInput && startDateInput && endDateInput) {
             const days = parseInt(daysInput.value, 10);
-            const startDateVal = startDateInput.value;
+            const startDateVal = startDateInput.value; // Contoh: "16/09/2026"
 
             if (!isNaN(days) && startDateVal) {
-                const startDate = new Date(startDateVal);
+                let startDate;
                 
-                // Menambahkan masa tahanan (hari pertama dihitung = dikurangi 1)
-                startDate.setDate(startDate.getDate() + (days - 1));
+                // Deteksi dan pecah format DD/MM/YYYY atau DD-MM-YYYY
+                const matchId = startDateVal.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+                if (matchId) {
+                    // JavaScript Date: Tahun, Bulan (0-11), Tanggal
+                    startDate = new Date(matchId[3], matchId[2] - 1, matchId[1]);
+                } else {
+                    // Fallback jika format bawaan browser YYYY-MM-DD
+                    startDate = new Date(startDateVal);
+                }
+                
+                if (!isNaN(startDate.getTime())) {
+                    // Tambahkan masa tahanan (dikurangi 1 hari untuk hukum pidana)
+                    startDate.setDate(startDate.getDate() + (days - 1));
 
-                const year = startDate.getFullYear();
-                const month = String(startDate.getMonth() + 1).padStart(2, '0');
-                const day = String(startDate.getDate()).padStart(2, '0');
+                    const year = startDate.getFullYear();
+                    const month = String(startDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(startDate.getDate()).padStart(2, '0');
 
-                // Memasukkan hasil perhitungan ke form batas akhir
-                endDateInput.value = `${year}-${month}-${day}`;
+                    // Masukkan hasil (Format YYYY-MM-DD wajib untuk elemen input kalender)
+                    endDateInput.value = `${year}-${month}-${day}`;
+                    
+                    // Pemicu manual agar UI aplikasi menyadari ada perubahan nilai
+                    endDateInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    endDateInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
             }
         }
     }
