@@ -57,60 +57,53 @@
 
   const ADMINISTRATION_STAGES = Object.freeze([
     {
-      code: "P-1A",
-      title: "Penerimaan dan verifikasi SPDP",
-      detail: "Mencatat penerimaan SPDP dan hasil verifikasi awal.",
-      status: "VERIFIKASI_SPDP",
-      prerequisites: []
-    },
-    {
       code: "P-16",
       title: "Penunjukan Penuntut Umum",
       detail: "Mencatat surat perintah penunjukan Penuntut Umum.",
       status: "P16_DITERBITKAN",
-      prerequisites: ["P-1A"]
+      prerequisites: []
     },
     {
       code: "P-17",
       title: "Permintaan perkembangan hasil penyidikan",
       detail: "Penagihan hasil penyidikan setelah 30 hari.",
       status: "MENUNGGU_BERKAS_TAHAP_I",
-      prerequisites: ["P-16"]
-    },
-    {
-      code: "P-1B",
-      title: "Penerimaan berkas Tahap I",
-      detail: "Mencatat tanda terima berkas perkara hasil penyidikan.",
-      status: "BERKAS_TAHAP_I_DITERIMA",
-      prerequisites: ["P-16"]
+      prerequisites: []
     },
     {
       code: "P-24",
       title: "Nota pendapat hasil penelitian",
       detail: "Mencatat hasil penelitian formil dan materil berkas perkara.",
       status: "PENELITIAN_BERKAS",
-      prerequisites: ["P-1B"]
+      prerequisites: []
     },
     {
       code: "P-19",
       title: "Berkas belum lengkap",
       detail: "Mencatat petunjuk yang harus dilengkapi oleh penyidik.",
       status: "P19_PENGEMBALIAN_BERKAS",
-      prerequisites: ["P-24"]
+      prerequisites: []
     },
     {
       code: "P-21",
       title: "Berkas lengkap",
       detail: "Mencatat pemberitahuan bahwa hasil penyidikan sudah lengkap.",
       status: "P21_LENGKAP",
-      prerequisites: ["P-24"]
+      prerequisites: []
     },
     {
       code: "P-29",
       title: "Surat dakwaan",
       detail: "Mencatat surat dakwaan setelah berkas dinyatakan lengkap.",
       status: "PENUNTUTAN",
-      prerequisites: ["P-21"]
+      prerequisites: []
+    },
+    {
+      code: "T-4",
+      title: "Surat Perpanjangan Penahanan",
+      detail: "Mencatat perpanjangan penahanan tersangka dari penyidik.",
+      status: "PENELITIAN_BERKAS", // Sesuaikan dengan status alur yang Anda inginkan
+      prerequisites: []
     },
     // --- SOP FORM BEBAS DIAKSES (TANPA PRASYARAT) ---
     {
@@ -132,27 +125,6 @@
       title: "SOP Form 3",
       detail: "Mencatat kelengkapan administrasi untuk SOP Form 3.",
       status: "SPDP_DIKEMBALIKAN",
-      prerequisites: []
-    },
-    {
-      code: "SOP FORM 4",
-      title: "SOP Form 4",
-      detail: "Mencatat kelengkapan administrasi untuk SOP Form 4.",
-      status: "PENELITIAN_BERKAS",
-      prerequisites: []
-    },
-    {
-      code: "SOP FORM 5",
-      title: "SOP Form 5",
-      detail: "Mencatat kelengkapan administrasi untuk SOP Form 5.",
-      status: "PENELITIAN_BERKAS",
-      prerequisites: []
-    },
-    {
-      code: "SOP FORM 6",
-      title: "SOP Form 6",
-      detail: "Mencatat kelengkapan administrasi untuk SOP Form 6.",
-      status: "PENELITIAN_BERKAS",
       prerequisites: []
     }
   ]);
