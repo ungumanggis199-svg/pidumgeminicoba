@@ -102,10 +102,9 @@
       code: "T-4",
       title: "Surat Perpanjangan Penahanan",
       detail: "Mencatat perpanjangan penahanan tersangka dari penyidik.",
-      status: "PENELITIAN_BERKAS", // Sesuaikan dengan status alur yang Anda inginkan
+      status: "PENELITIAN_BERKAS",
       prerequisites: []
     },
-    // --- SOP FORM BEBAS DIAKSES (TANPA PRASYARAT) ---
     {
       code: "SOP FORM 1",
       title: "SOP Form 1",
@@ -1183,7 +1182,6 @@
     const selectedCaseId = state.administrationBuilder.caseId;
     const isManual = selectedCaseId === "__NEW_ADMIN__";
     
-    // Jika manual dipilih, buat dummy object perkara. Jika tidak, cari dari list perkara.
     const selectedCase = isManual 
       ? { caseId: "__NEW_ADMIN__", suspectName: "Administrasi Manual (Tanpa Perkara)", spdpNumber: "-", status: "", administrations: [] }
       : state.cases.find((item) => item.caseId === selectedCaseId) || null;
@@ -1241,7 +1239,7 @@
       renderAdministrationBuilderPage();
     });
 
-document.getElementById("builder-type-select")?.addEventListener("change", (event) => {
+    document.getElementById("builder-type-select")?.addEventListener("change", (event) => {
       state.administrationBuilder.type = event.target.value;
       state.selectedAdministrationFile = null;
       renderAdministrationBuilderPage();
@@ -1249,8 +1247,6 @@ document.getElementById("builder-type-select")?.addEventListener("change", (even
 
     bindDynamicAdministrationForm(selectedCase, selectedStage);
 
-    // PANGGIL FUNGSI AUTO-FILL DI SINI
-    // Beri jeda 100ms agar DOM HTML form selesai di-render sepenuhnya oleh browser
     if (selectedCase && selectedCase.caseId !== "__NEW_ADMIN__") {
       setTimeout(() => {
         if (typeof autoFillHistoricalData === "function") {
@@ -1272,12 +1268,10 @@ document.getElementById("builder-type-select")?.addEventListener("change", (even
     }).join("");
   }
 
-function getAdministrationAvailability(item, stage) {
-    // Mode manual selalu membuka akses ke semua form
+  function getAdministrationAvailability(item, stage) {
     if (item.caseId === "__NEW_ADMIN__") {
       return { completed: false, locked: false, message: "Siap dibuat secara manual" };
     }
-
     const administrations = Array.isArray(item.administrations) ? item.administrations : [];
     const completed = new Set(administrations.map((record) => String(record.type || "").toUpperCase()));
     
@@ -1291,7 +1285,6 @@ function getAdministrationAvailability(item, stage) {
   }
 
   function renderBuilderCaseSnapshot(item) {
-    // Tampilan khusus untuk mode administrasi manual
     if (item.caseId === "__NEW_ADMIN__") {
       return `
         <div class="panel builder-case-card" style="border-left: 4px solid var(--gray-400);">
@@ -1407,7 +1400,7 @@ function getAdministrationAvailability(item, stage) {
     
     let control = "";
 
-if (
+    if (
       definition.key === "responsibleOfficer" || 
       definition.key === "prosecutorName" || 
       definition.label === "Nama Penuntut Umum penandatangan"
@@ -1465,10 +1458,7 @@ if (
       if (!record) return "";
       
       if (parts[2] === "field") {
-        // --- PERBAIKAN PARSING JSON ---
         let formData = record.formData;
-        
-        // Jika data dari spreadsheet terbaca sebagai teks string, ubah menjadi object
         if (typeof formData === "string") {
           try {
             formData = JSON.parse(formData);
@@ -1477,8 +1467,6 @@ if (
             console.error("Gagal membaca format JSON dari formData:", e);
           }
         }
-        // ------------------------------
-        
         return formData?.[parts.slice(3).join(":")] || "";
       }
       return record[parts.slice(2).join(":")] || "";
@@ -1518,22 +1506,30 @@ if (
       if (selects.length > 0) {
         try {
           const res = await gasRequest("listProsecutors", {}, { silent: true });
-          if (res && res.prosecutors) {
+          // Antisipasi bentuk balikan data backend: baik list of strings maupun list of objects.
+          const jaksaList = Array.isArray(res) ? res : (res && res.prosecutors ? res.prosecutors : []);
+          
+          if (jaksaList && jaksaList.length > 0) {
             selects.forEach(select => {
               const currentValue = select.value;
               select.innerHTML = '<option value="">-- Pilih Jaksa Penandatangan --</option>';
-              res.prosecutors.forEach(jaksa => {
+              jaksaList.forEach(jaksa => {
                 const option = document.createElement('option');
-                option.value = jaksa.kolomG || jaksa.name; 
-                let labelText = jaksa.name;
-                if (jaksa.kolomF) labelText += ` - ${jaksa.kolomF}`;
-                if (jaksa.kolomG) labelText += ` (${jaksa.kolomG})`;
-                
-                option.textContent = labelText;
-                if (jaksa.name === currentValue || option.value === currentValue) {
-                  option.selected = true;
+                if (typeof jaksa === 'string') {
+                  option.value = jaksa;
+                  option.textContent = jaksa;
+                  if (jaksa === currentValue) option.selected = true;
+                } else if (jaksa && typeof jaksa === 'object') {
+                  option.value = jaksa.kolomG || jaksa.name || ""; 
+                  let labelText = jaksa.name || "Tanpa Nama";
+                  if (jaksa.kolomF) labelText += ` - ${jaksa.kolomF}`;
+                  if (jaksa.kolomG) labelText += ` (${jaksa.kolomG})`;
+                  
+                  option.textContent = labelText;
+                  if (jaksa.name === currentValue || option.value === currentValue) {
+                    option.selected = true;
+                  }
                 }
-                
                 select.appendChild(option);
               });
             });
@@ -1632,12 +1628,10 @@ if (
       toast("success", `${type} berhasil dibuat`, `Data form tersimpan dan status perkara menjadi ${getStatus(result.case.status).label}.`);
       renderSidebar();
       
-      // Auto open file jika URL ter-generate
       if (result.fileUrl) {
           setTimeout(() => { window.open(result.fileUrl, '_blank'); }, 1000);
       }
 
-      // Sembunyikan tombol simpan asli dan tampilkan deretan action button
       if (button && button.parentNode) {
           button.style.display = 'none';
 
@@ -1651,7 +1645,7 @@ if (
               const btnLihat = document.createElement('button');
               btnLihat.type = 'button';
               btnLihat.className = 'primary-button';
-              btnLihat.style.backgroundColor = '#107c41'; // Hijau
+              btnLihat.style.backgroundColor = '#107c41'; 
               btnLihat.innerHTML = 'Lihat File (Docs)';
               btnLihat.onclick = () => window.open(result.fileUrl, '_blank');
               btnContainer.appendChild(btnLihat);
@@ -1661,7 +1655,7 @@ if (
           const btnDrive = document.createElement('button');
           btnDrive.type = 'button';
           btnDrive.className = 'primary-button';
-          btnDrive.style.backgroundColor = '#4285F4'; // Biru Drive
+          btnDrive.style.backgroundColor = '#4285F4'; 
           btnDrive.innerHTML = 'Buka Folder Drive';
           btnDrive.onclick = () => window.open(folderUrl, '_blank');
           btnContainer.appendChild(btnDrive);
@@ -3129,18 +3123,16 @@ if (
     return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
   }
 })();
+
 /**
  * Mengisi form otomatis berdasarkan data historis dari administrasi sebelumnya
  * @param {Object} currentCase - Objek case yang didapat dari response getCase_ backend
  */
 function autoFillHistoricalData(currentCase) {
-  // Pastikan data perkara dan riwayat administrasinya ada
   if (!currentCase || !currentCase.administrations) return;
 
-  // 1. Kumpulkan semua data historis terbaru ke dalam satu objek
   const historicalData = {};
   
-  // Looping dari administrasi pertama hingga terakhir agar data paling baru menimpa yang lama
   currentCase.administrations.forEach(function(admin) {
     if (admin.formData) {
       Object.keys(admin.formData).forEach(function(key) {
@@ -3151,17 +3143,11 @@ function autoFillHistoricalData(currentCase) {
     }
   });
 
-  // 2. Cari elemen input di layar dan isi nilainya
   Object.keys(historicalData).forEach(function(key) {
     const historicalValue = historicalData[key];
     
-    // Strategi pencarian elemen (Sesuaikan dengan cara Anda memberi ID/Name di form JS Anda)
-    // Coba cari berdasarkan atribut name="Nomor P-17" atau id="nomorP17"
-    
-    // A. Format Name persis dengan Key/Label (misal: name="Nomor P-17")
     let inputElement = document.querySelector(`input[name="${key}"]`);
     
-    // B. Format ID dengan camelCase (misal: "Nomor P-17" menjadi "nomorP17")
     if (!inputElement) {
       const camelCaseId = key.replace(/(?:^\w|[A-Z]|\b\w)/g, function(word, index) {
         return index === 0 ? word.toLowerCase() : word.toUpperCase();
@@ -3170,19 +3156,17 @@ function autoFillHistoricalData(currentCase) {
       inputElement = document.getElementById(camelCaseId) || document.querySelector(`input[name="${camelCaseId}"]`);
     }
 
-    // C. Jika input ditemukan dan saat ini masih KOSONG, maka isi otomatis
     if (inputElement && !inputElement.value) {
       inputElement.value = historicalValue;
       
-      // Beri efek animasi/tanda bahwa field ini diisi otomatis (opsional)
-      inputElement.style.backgroundColor = '#e8f0fe'; // Warna biru muda tipis
+      inputElement.style.backgroundColor = '#e8f0fe';
       
-      // Trigger event change/input agar state framework (seperti React/Alpine/Vue) jika ada ikut terupdate
       inputElement.dispatchEvent(new Event('input', { bubbles: true }));
       inputElement.dispatchEvent(new Event('change', { bubbles: true }));
     }
   });
 }
+
 // --- LOGIKA PERHITUNGAN OTOMATIS WAKTU PENAHANAN ---
 document.addEventListener('change', function(e) {
     const targetKey = e.target.id || e.target.name;
@@ -3194,33 +3178,27 @@ document.addEventListener('change', function(e) {
 
         if (daysInput && startDateInput && endDateInput) {
             const days = parseInt(daysInput.value, 10);
-            const startDateVal = startDateInput.value; // Contoh: "16/09/2026"
+            const startDateVal = startDateInput.value;
 
             if (!isNaN(days) && startDateVal) {
                 let startDate;
                 
-                // Deteksi dan pecah format DD/MM/YYYY atau DD-MM-YYYY
                 const matchId = startDateVal.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
                 if (matchId) {
-                    // JavaScript Date: Tahun, Bulan (0-11), Tanggal
                     startDate = new Date(matchId[3], matchId[2] - 1, matchId[1]);
                 } else {
-                    // Fallback jika format bawaan browser YYYY-MM-DD
                     startDate = new Date(startDateVal);
                 }
                 
                 if (!isNaN(startDate.getTime())) {
-                    // Tambahkan masa tahanan (dikurangi 1 hari untuk hukum pidana)
                     startDate.setDate(startDate.getDate() + (days - 1));
 
                     const year = startDate.getFullYear();
                     const month = String(startDate.getMonth() + 1).padStart(2, '0');
                     const day = String(startDate.getDate()).padStart(2, '0');
 
-                    // Masukkan hasil (Format YYYY-MM-DD wajib untuk elemen input kalender)
                     endDateInput.value = `${year}-${month}-${day}`;
                     
-                    // Pemicu manual agar UI aplikasi menyadari ada perubahan nilai
                     endDateInput.dispatchEvent(new Event('input', { bubbles: true }));
                     endDateInput.dispatchEvent(new Event('change', { bubbles: true }));
                 }
