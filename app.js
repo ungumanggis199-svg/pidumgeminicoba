@@ -1606,10 +1606,13 @@
                 select.appendChild(option);
               });
 
-              if (isTeamField) {
+                  if (isTeamField) {
                 select.addEventListener('change', () => autofillTeamMemberFields(select));
-                // Form edit: kalau sudah ada nama tersimpan, langsung isi juga field terkait.
-                if (select.value) autofillTeamMemberFields(select);
+                
+                // Hilangkan 'if (select.value)' agar fungsi selalu dijalankan di awal.
+                // Ini akan memaksa sistem mengosongkan Pangkat/NIP/Jabatan secara otomatis
+                // jika dropdown nama belum dipilih atau berada di posisi default.
+                autofillTeamMemberFields(select);
               }
             });
           }
