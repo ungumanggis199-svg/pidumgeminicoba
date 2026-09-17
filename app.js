@@ -1390,6 +1390,68 @@
       </div>`;
   }
 
+  // Mendeteksi apakah sebuah field "Nama ..." termasuk anggota Tim Penuntut Umum
+  // (ketua / anggota 1 / anggota 2 / dst) berdasarkan teks labelnya, tanpa perlu
+  // bergantung pada nama key di schema. Contoh label yang cocok:
+  //   "Nama ketua/penanggung jawab tim" -> "ketua"
+  //   "Nama anggota 1"                  -> "anggota 1"
+  //   "Nama anggota 2"                  -> "anggota 2"
+  function detectTeamRoleFromLabel(label) {
+    const text = String(label || "").trim().toLowerCase();
+    if (!text.startsWith("nama")) return null;
+    const memberMatch = text.match(/anggota\s*(\d+)/);
+    if (memberMatch) return "anggota " + memberMatch[1];
+    if (text.includes("ketua")) return "ketua";
+    return null;
+  }
+
+  // Mengisi otomatis field Pangkat/NIP/Jabatan di sekitar dropdown nama anggota tim,
+  // berdasarkan data Jaksa (pangkat, nip, jabatan) yang tersimpan di setiap <option>.
+  // Pencarian field tujuan dilakukan lewat teks label (bukan lewat key), supaya tetap
+  // berfungsi walau nama field di schema P-16 berbeda-beda.
+  function autofillTeamMemberFields(selectEl) {
+    const role = selectEl?.dataset?.teamRole;
+    if (!role) return;
+
+    const option = selectEl.selectedOptions && selectEl.selectedOptions[0];
+    const pangkat = option ? (option.dataset.pangkat || "") : "";
+    const nip = option ? (option.dataset.nip || "") : "";
+    const jabatan = option ? (option.dataset.jabatan || pangkat) : "";
+
+    const section = selectEl.closest(".admin-form-section") || document.getElementById("administration-create-form");
+    if (!section) return;
+
+    if (role === "ketua") {
+      setAdministrationFieldByLabel(section, ["pangkat", "ketua"], pangkat);
+      setAdministrationFieldByLabel(section, ["nip", "ketua"], nip);
+      setAdministrationFieldByLabel(section, ["jabatan", "ketua"], jabatan);
+    } else {
+      // anggota 1, anggota 2, dst — "Pangkat/NIP anggota N" digabung jadi satu field.
+      const combined = pangkat && nip ? `${pangkat} / ${nip}` : (pangkat || nip);
+      setAdministrationFieldByLabel(section, ["pangkat", role], combined);
+      setAdministrationFieldByLabel(section, ["jabatan", role], jabatan);
+    }
+  }
+
+  // Cari <input>/<textarea> di dalam container yang labelnya memuat SEMUA kata kunci
+  // (case-insensitive), lalu isi nilainya. Dipakai oleh autofillTeamMemberFields().
+  function setAdministrationFieldByLabel(container, keywords, value) {
+    const labels = container.querySelectorAll(".form-field label");
+    for (const label of labels) {
+      const text = label.textContent.toLowerCase();
+      if (keywords.every((keyword) => text.includes(keyword))) {
+        const targetId = label.getAttribute("for");
+        const target = targetId ? document.getElementById(targetId) : null;
+        if (target && !target.matches("select")) {
+          target.value = value || "";
+          target.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
   function renderAdministrationField(definition, item, sortOrder) {
     const { value, source } = resolveAdministrationFieldValue(definition, item);
     const isRequired = definition.required ? "required" : "";
@@ -1399,13 +1461,17 @@
     const placeholder = definition.placeholder || "";
     
     let control = "";
+    const teamRole = detectTeamRoleFromLabel(definition.label);
 
     if (
       definition.key === "responsibleOfficer" || 
       definition.key === "prosecutorName" || 
-      definition.label === "Nama Penuntut Umum penandatangan"
+      definition.label === "Nama Penuntut Umum penandatangan" ||
+      teamRole
     ) {
-      control = `<select id="admin-field-${escapeAttr(definition.key)}" name="${escapeAttr(definition.key)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(source)}" data-sort-order="${sortOrder}" class="prosecutor-dropdown" ${isRequired}>
+      const dropdownClass = teamRole ? "prosecutor-dropdown team-member-dropdown" : "prosecutor-dropdown";
+      const teamRoleAttr = teamRole ? ` data-team-role="${escapeAttr(teamRole)}"` : "";
+      control = `<select id="admin-field-${escapeAttr(definition.key)}" name="${escapeAttr(definition.key)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(source)}" data-sort-order="${sortOrder}" class="${dropdownClass}"${teamRoleAttr} ${isRequired}>
         <option value="${escapeAttr(value)}">${value ? escapeHtml(value) : "-- Memuat daftar Jaksa --"}</option>
       </select>`;
     } 
@@ -1511,8 +1577,9 @@
           
           if (jaksaList && jaksaList.length > 0) {
             selects.forEach(select => {
+              const isTeamField = select.classList.contains('team-member-dropdown');
               const currentValue = select.value;
-              select.innerHTML = '<option value="">-- Pilih Jaksa Penandatangan --</option>';
+              select.innerHTML = `<option value="">-- ${isTeamField ? "Pilih Nama Jaksa" : "Pilih Jaksa Penandatangan"} --</option>`;
               jaksaList.forEach(jaksa => {
                 const option = document.createElement('option');
                 if (typeof jaksa === 'string') {
@@ -1526,12 +1593,24 @@
                   if (jaksa.kolomG) labelText += ` (${jaksa.kolomG})`;
                   
                   option.textContent = labelText;
+                  // Simpan data mentah Jaksa di dataset <option> supaya bisa dipakai untuk
+                  // autofill Pangkat/NIP/Jabatan ketika salah satu anggota tim dipilih.
+                  option.dataset.name = jaksa.name || "";
+                  option.dataset.nip = jaksa.nip || "";
+                  option.dataset.pangkat = jaksa.pangkat || jaksa.kolomF || "";
+                  option.dataset.jabatan = jaksa.jabatan || jaksa.pangkat || jaksa.kolomF || "";
                   if (jaksa.name === currentValue || option.value === currentValue) {
                     option.selected = true;
                   }
                 }
                 select.appendChild(option);
               });
+
+              if (isTeamField) {
+                select.addEventListener('change', () => autofillTeamMemberFields(select));
+                // Form edit: kalau sudah ada nama tersimpan, langsung isi juga field terkait.
+                if (select.value) autofillTeamMemberFields(select);
+              }
             });
           }
         } catch (err) {
