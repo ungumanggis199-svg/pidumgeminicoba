@@ -106,17 +106,6 @@
       sections: [
         ...commonDocument,
         {
-          title: "Penerbit surat perintah",
-          description: "Data pejabat dan dasar penerbitan P-16.",
-          fields: [
-            { key: "issuerLevel", label: "Penerbit", type: "select", required: true, options: ["Jaksa Agung Muda Tindak Pidana Umum", "Kepala Kejaksaan Tinggi", "Kepala Kejaksaan Negeri", "Kepala Cabang Kejaksaan Negeri"] },
-            { key: "issuerInstitution", label: "Nama satuan kerja", type: "text", required: true, placeholder: "Contoh: Kejaksaan Negeri Muna" },
-            { key: "issuerName", label: "Nama pejabat penerbit", type: "text", required: true },
-            { key: "issuerRank", label: "Pangkat pejabat penerbit", type: "text", required: true },
-            { key: "specialProceduralLaw", label: "Undang-undang/hukum acara khusus", type: "textarea", placeholder: "Opsional, misalnya Tipikor/TPPU", full: true }
-          ]
-        },
-        {
           title: "Dasar SPDP dan identitas tersangka",
           description: "Data dasar perkara terisi otomatis.",
           fields: [
@@ -138,30 +127,22 @@
         },
         {
           title: "Tim Penuntut Umum",
-          description: "Isi susunan tim sebagaimana lampiran P-16.",
+          description: "Pilih susunan tim penuntut umum dari daftar Jaksa.",
           fields: [
-            { key: "teamLeaderName", label: "Nama ketua/penanggung jawab tim", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true },
+            { key: "teamLeaderName", label: "Nama ketua/penanggung jawab tim", type: "select", required: true, className: "prosecutor-dropdown", options: ["Memuat daftar Jaksa..."] },
             { key: "teamLeaderRank", label: "Pangkat ketua tim", type: "text", required: true },
             { key: "teamLeaderNip", label: "NIP/NRP ketua tim", type: "text", required: true },
             { key: "teamLeaderPosition", label: "Jabatan ketua tim", type: "text", required: true },
             { key: "teamLeaderRole", label: "Kedudukan dalam tim", type: "text", required: true, defaultValue: "Penanggung Jawab Penelitian Berkas Perkara" },
-            { key: "member1Name", label: "Nama anggota 1", type: "text" },
+            { key: "member1Name", label: "Nama anggota 1", type: "select", className: "prosecutor-dropdown", options: ["Memuat daftar Jaksa..."] },
             { key: "member1RankNip", label: "Pangkat/NIP anggota 1", type: "text" },
             { key: "member1Position", label: "Jabatan anggota 1", type: "text" },
             { key: "member1Role", label: "Kedudukan anggota 1", type: "text", defaultValue: "Penuntut Umum / Jaksa Peneliti" },
-            { key: "member2Name", label: "Nama anggota 2", type: "text" },
+            { key: "member2Name", label: "Nama anggota 2", type: "select", className: "prosecutor-dropdown", options: ["Memuat daftar Jaksa..."] },
             { key: "member2RankNip", label: "Pangkat/NIP anggota 2", type: "text" },
             { key: "member2Position", label: "Jabatan anggota 2", type: "text" },
             { key: "member2Role", label: "Kedudukan anggota 2", type: "text", defaultValue: "Penuntut Umum / Jaksa Peneliti" },
             { key: "additionalTeamMembers", label: "Anggota tim tambahan", type: "textarea", placeholder: "Tuliskan satu anggota per baris: nama | pangkat/NIP | jabatan | kedudukan", full: true }
-          ]
-        },
-        {
-          title: "Keterangan tambahan",
-          description: "Catatan internal yang tidak tersedia pada data perkara.",
-          fields: [
-            { key: "additionalInstructions", label: "Perintah/keterangan tambahan", type: "textarea", full: true },
-            { key: "copies", label: "Tembusan", type: "textarea", placeholder: "Tuliskan penerima tembusan satu per baris", full: true }
           ]
         }
       ]
