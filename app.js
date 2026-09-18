@@ -1396,12 +1396,18 @@
   //   "Nama ketua/penanggung jawab tim" -> "ketua"
   //   "Nama anggota 1"                  -> "anggota 1"
   //   "Nama anggota 2"                  -> "anggota 2"
-  function detectTeamRoleFromLabel(label) {
+function detectTeamRoleFromLabel(label) {
     const text = String(label || "").trim().toLowerCase();
     if (!text.startsWith("nama")) return null;
     const memberMatch = text.match(/anggota\s*(\d+)/);
     if (memberMatch) return "anggota " + memberMatch[1];
     if (text.includes("ketua")) return "ketua";
+    
+    // --- TAMBAHAN BARU UNTUK P-19, P-21, dan P-29 ---
+    if (text.includes("penandatangan")) return "penandatangan";
+    if (text.includes("penuntut umum")) return "penuntut umum";
+    // ------------------------------------------------
+    
     return null;
   }
 
@@ -1425,14 +1431,25 @@
       setAdministrationFieldByLabel(section, ["pangkat", "ketua"], pangkat);
       setAdministrationFieldByLabel(section, ["nip", "ketua"], nip);
       setAdministrationFieldByLabel(section, ["jabatan", "ketua"], jabatan);
-    } else {
+    } 
+    // --- TAMBAHAN BARU UNTUK P-19, P-21, dan P-29 ---
+    else if (role === "penandatangan") {
+      // Mengisi field yang mengandung kata "Pangkat" di bagian (section) yang sama
+      setAdministrationFieldByLabel(section, ["pangkat"], pangkat);
+      setAdministrationFieldByLabel(section, ["nip"], nip); // Berjaga-jaga jika ada kolom NIP
+    } 
+    else if (role === "penuntut umum") {
+      setAdministrationFieldByLabel(section, ["pangkat", "penuntut umum"], pangkat);
+      setAdministrationFieldByLabel(section, ["nip", "penuntut umum"], nip);
+    }
+    // ------------------------------------------------
+    else {
       // anggota 1, anggota 2, dst — "Pangkat/NIP anggota N" digabung jadi satu field.
       const combined = pangkat && nip ? `${pangkat} / ${nip}` : (pangkat || nip);
       setAdministrationFieldByLabel(section, ["pangkat", role], combined);
       setAdministrationFieldByLabel(section, ["jabatan", role], jabatan);
     }
   }
-
   // Cari <input>/<textarea> di dalam container yang labelnya memuat SEMUA kata kunci
   // (case-insensitive), lalu isi nilainya. Dipakai oleh autofillTeamMemberFields().
   function setAdministrationFieldByLabel(container, keywords, value) {
