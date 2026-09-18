@@ -1588,12 +1588,13 @@ function detectTeamRoleFromLabel(label) {
                 } else if (jaksa && typeof jaksa === 'object') {
                   const role = select.dataset.teamRole || "";
                   const isTeamMember = role.includes("ketua") || role.includes("anggota");
+                  const isSignatoryField = select.dataset.fieldKey === "signatoryName" || select.dataset.fieldLabel === "Nama Penuntut Umum penandatangan";
                   
                   option.value = isTeamMember ? (jaksa.kolomG || jaksa.name || "") : (jaksa.name || "");
                   
                   let labelText = jaksa.name || "Tanpa Nama";
                   if (jaksa.kolomF) labelText += ` - ${jaksa.kolomF}`;
-                  if (jaksa.kolomG) labelText += ` (${jaksa.kolomG})`;
+                  if (jaksa.kolomG && !isSignatoryField) labelText += ` (${jaksa.kolomG})`;
                   
                   option.textContent = labelText;
                   option.dataset.name = jaksa.name || "";
