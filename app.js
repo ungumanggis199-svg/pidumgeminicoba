@@ -1705,8 +1705,35 @@ function detectTeamRoleFromLabel(label) {
       source: element.dataset.fieldSource || "manual",
       sortOrder: Number(element.dataset.sortOrder || 0)
     }));
+    const fields = [...form.querySelectorAll("[data-admin-field]")].map((element) => ({
+      key: element.dataset.fieldKey,
+      label: element.dataset.fieldLabel,
+      value: String(element.value || "").trim(),
+      source: element.dataset.fieldSource || "manual",
+      sortOrder: Number(element.dataset.sortOrder || 0)
+    }));
+    
     const formData = Object.fromEntries(fields.map((fieldItem) => [fieldItem.key, fieldItem.value]));
+    
+    // --- TAMBAHAN BARU: Cari nilai dropdown penandatangan secara spesifik ---
+    const penandatanganField = fields.find(f => 
+      f.key === "responsibleOfficer" || 
+      f.key === "prosecutorName" || 
+      (f.label && f.label.toLowerCase().includes("penandatangan"))
+    );
+    const selectedPenandatangan = penandatanganField ? penandatanganField.value : null;
+    // ------------------------------------------------------------------------
+
     const payload = {
+      caseId,
+      type,
+      documentNumber: formData.documentNumber || "",
+      documentDate: formData.documentDate || todayISO(),
+      // --- UBAH BARIS INI: Sisipkan selectedPenandatangan di urutan pertama ---
+      responsibleOfficer: selectedPenandatangan || formData.responsibleOfficer || state.session.user.fullName || state.session.user.username,
+      notes: String(form.elements.systemNotes?.value || "").trim(),
+      formFields: fields
+    };
       caseId,
       type,
       documentNumber: formData.documentNumber || "",
