@@ -1079,6 +1079,15 @@
               ${detail("Barang bukti", item.evidence, true)}
             </div>
 
+<div class="ai-analysis-section" style="margin-top:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <h3 class="modal-section-title" style="margin:0">Analisa AI (Gemini)</h3>
+      <button id="ai-analyze-btn" class="secondary-button" type="button" data-case-id="${escapeAttr(item.caseId)}">
+        Jalankan analisa AI
+      </button>
+    </div>
+    <div id="ai-analysis-result" style="margin-top:12px"></div>
+  </div>
             <h3 class="modal-section-title">Data penyidik dan SPDP</h3>
             <div class="detail-grid">
               ${detail("Penyidik", item.investigatorName)}
@@ -1104,6 +1113,10 @@
       button.addEventListener("click", () => openAdministrationModal(caseId, button.dataset.createAdministration));
     });
     bindCaseStageEditor(caseId);
+    document.getElementById("ai-analyze-btn")?.addEventListener("click", () => {
+    runAiAnalysis(item.caseId);
+  });
+  loadExistingAiAnalyses(item.caseId);
   }
 
   function renderCaseStageEditor(item) {
@@ -3356,3 +3369,84 @@ document.addEventListener('input', function(e) {
         }
     }
 });
+async function runAiAnalysis(caseId) {
+  const resultBox = document.getElementById("ai-analysis-result");
+  const button = document.getElementById("ai-analyze-btn");
+  if (!resultBox) return;
+ 
+  if (button) { button.disabled = true; button.textContent = "Menganalisa..."; }
+  resultBox.innerHTML = `<p class="case-secondary">Sedang menghubungi Gemini AI, mohon tunggu...</p>`;
+ 
+  try {
+    const data = await gasRequest("analyzeCase", { caseId }, { timeout: 60000 });
+    renderAiAnalysisResult(data.parsed, data.analysis);
+  } catch (error) {
+    resultBox.innerHTML = `<p class="status-badge red" style="display:inline-block">Gagal menjalankan analisa: ${escapeHtml(error.message || String(error))}</p>`;
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "Jalankan analisa AI"; }
+  }
+}
+ 
+async function loadExistingAiAnalyses(caseId) {
+  const resultBox = document.getElementById("ai-analysis-result");
+  if (!resultBox) return;
+  try {
+    const data = await gasRequest("listCaseAnalyses", { caseId }, { silent: true, timeout: 30000 });
+    const latest = (data.analyses || [])[0];
+    if (latest) {
+      resultBox.innerHTML = `<p class="case-secondary">Menampilkan hasil analisa terakhir (${formatDate(latest.createdAt)}). Klik tombol di atas untuk menjalankan ulang.</p>`;
+      renderAiAnalysisResult(latest, latest);
+    }
+  } catch (error) {
+    // diam-diam saja: riwayat opsional, jangan ganggu tampilan awal modal
+  }
+}
+ 
+function renderAiAnalysisResult(parsed, meta) {
+  const resultBox = document.getElementById("ai-analysis-result");
+  if (!resultBox || !parsed) return;
+ 
+  const statusTone = (status) => {
+    const s = String(status || "").toLowerCase();
+    if (s.indexOf("belum") !== -1) return "red";
+    if (s.indexOf("pendalaman") !== -1) return "amber";
+    return "green";
+  };
+ 
+  const renderUnsurList = (items) => (items || []).map((u) => `
+    <div class="detail-item full-span" style="border-left:3px solid var(--border-color, #ddd);padding-left:10px;margin-bottom:8px">
+      <span><strong>${escapeHtml(u.unsur || "-")}</strong> — <span class="status-badge ${statusTone(u.status)}">${escapeHtml(u.status || "-")}</span></span>
+      <div>${escapeHtml(u.keterangan || "")}</div>
+    </div>
+  `).join("");
+ 
+  const renderAsasList = (items) => (items || []).map((a) => `
+    <li><strong>${escapeHtml(a.asas || "-")}</strong>: ${escapeHtml(a.penjelasan || "")}</li>
+  `).join("");
+ 
+  const renderPasalList = (items) => (items || []).map((p) => `
+    <li><strong>${escapeHtml(p.pasal || "-")}</strong> (${escapeHtml(p.undangUndang || "-")}) — ${escapeHtml(p.alasan || "")}</li>
+  `).join("");
+ 
+  resultBox.innerHTML = `
+    <div class="ai-result-card" style="border:1px solid var(--border-color,#ddd);border-radius:10px;padding:14px">
+      <p><strong>Kesimpulan singkat:</strong> ${escapeHtml(parsed.kesimpulan || "-")}</p>
+ 
+      <h4>Asas yang relevan/berpotensi dilanggar</h4>
+      <ul>${renderAsasList(parsed.asasDilanggar) || "<li>-</li>"}</ul>
+ 
+      <h4>Unsur formil</h4>
+      ${renderUnsurList(parsed.unsurFormil) || "<p>-</p>"}
+ 
+      <h4>Unsur materil</h4>
+      ${renderUnsurList(parsed.unsurMateril) || "<p>-</p>"}
+ 
+      <h4>Pasal yang disarankan untuk didalami</h4>
+      <ul>${renderPasalList(parsed.pasalDisarankan) || "<li>-</li>"}</ul>
+ 
+      <p class="case-secondary" style="margin-top:10px">⚠ ${escapeHtml(parsed.catatanKehatihatian || "Hasil ini adalah draf pendukung prapenuntutan, bukan pengganti keputusan hukum Jaksa Peneliti.")}</p>
+      ${meta && meta.model ? `<p class="case-secondary" style="font-size:12px">Model: ${escapeHtml(meta.model)} · Rujukan: ${escapeHtml(meta.lawsReferenced || "-")}</p>` : ""}
+    </div>
+  `;
+}
+ 
