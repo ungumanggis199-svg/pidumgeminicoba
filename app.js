@@ -1604,8 +1604,15 @@ function detectTeamRoleFromLabel(label) {
                   option.textContent = jaksa;
                   if (jaksa === currentValue) option.selected = true;
                 } else if (jaksa && typeof jaksa === 'object') {
-                  option.value = jaksa.kolomG || jaksa.name || ""; 
-                  let labelText = jaksa.name || "Tanpa Nama";
+          // Ambil role dari dropdown untuk mengecek apakah ini tim atau penandatangan
+          const role = select.dataset.teamRole || "";
+          const isTeamMember = role.includes("ketua") || role.includes("anggota");
+          
+          // Gunakan ID (kolomG) HANYA untuk anggota tim agar bisa di-intercept oleh backend.
+          // Untuk penuntut umum / penandatangan utama, langsung gunakan nama aslinya.
+          option.value = isTeamMember ? (jaksa.kolomG || jaksa.name || "") : (jaksa.name || "");
+          
+          let labelText = jaksa.name || "Tanpa Nama";
                   if (jaksa.kolomF) labelText += ` - ${jaksa.kolomF}`;
                   if (jaksa.kolomG) labelText += ` (${jaksa.kolomG})`;
                   
