@@ -278,7 +278,13 @@
       subtitle: "Pengembalian berkas perkara untuk dilengkapi",
       referencePages: "Halaman 99",
       sections: [
-        ...commonDocument,
+        {
+          title: "Identitas dokumen",
+          description: "Data utama administrasi yang sedang dibuat.",
+          fields: [
+            { key: "documentDate", label: "Tanggal administrasi", type: "date", required: true, source: "today", editableAuto: true }
+          ]
+        },
         {
           title: "Tujuan surat",
           description: "Pihak penyidik yang menerima petunjuk P-19.",
