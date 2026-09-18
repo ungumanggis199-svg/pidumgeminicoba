@@ -1390,12 +1390,6 @@
       </div>`;
   }
 
-  // Mendeteksi apakah sebuah field "Nama ..." termasuk anggota Tim Penuntut Umum
-  // (ketua / anggota 1 / anggota 2 / dst) berdasarkan teks labelnya, tanpa perlu
-  // bergantung pada nama key di schema. Contoh label yang cocok:
-  //   "Nama ketua/penanggung jawab tim" -> "ketua"
-  //   "Nama anggota 1"                  -> "anggota 1"
-  //   "Nama anggota 2"                  -> "anggota 2"
 function detectTeamRoleFromLabel(label) {
     const text = String(label || "").trim().toLowerCase();
     if (!text.startsWith("nama")) return null;
@@ -1403,18 +1397,12 @@ function detectTeamRoleFromLabel(label) {
     if (memberMatch) return "anggota " + memberMatch[1];
     if (text.includes("ketua")) return "ketua";
     
-    // --- TAMBAHAN BARU UNTUK P-19, P-21, dan P-29 ---
     if (text.includes("penandatangan")) return "penandatangan";
     if (text.includes("penuntut umum")) return "penuntut umum";
-    // ------------------------------------------------
     
     return null;
   }
 
-  // Mengisi otomatis field Pangkat/NIP/Jabatan di sekitar dropdown nama anggota tim,
-  // berdasarkan data Jaksa (pangkat, nip, jabatan) yang tersimpan di setiap <option>.
-  // Pencarian field tujuan dilakukan lewat teks label (bukan lewat key), supaya tetap
-  // berfungsi walau nama field di schema P-16 berbeda-beda.
   function autofillTeamMemberFields(selectEl) {
     const role = selectEl?.dataset?.teamRole;
     if (!role) return;
@@ -1432,26 +1420,21 @@ function detectTeamRoleFromLabel(label) {
       setAdministrationFieldByLabel(section, ["nip", "ketua"], nip);
       setAdministrationFieldByLabel(section, ["jabatan", "ketua"], jabatan);
     } 
-    // --- TAMBAHAN BARU UNTUK P-19, P-21, dan P-29 ---
     else if (role === "penandatangan") {
-      // Mengisi field yang mengandung kata "Pangkat" di bagian (section) yang sama
       setAdministrationFieldByLabel(section, ["pangkat"], pangkat);
-      setAdministrationFieldByLabel(section, ["nip"], nip); // Berjaga-jaga jika ada kolom NIP
+      setAdministrationFieldByLabel(section, ["nip"], nip); 
     } 
     else if (role === "penuntut umum") {
       setAdministrationFieldByLabel(section, ["pangkat", "penuntut umum"], pangkat);
       setAdministrationFieldByLabel(section, ["nip", "penuntut umum"], nip);
     }
-    // ------------------------------------------------
     else {
-      // anggota 1, anggota 2, dst — "Pangkat/NIP anggota N" digabung jadi satu field.
       const combined = pangkat && nip ? `${pangkat} / ${nip}` : (pangkat || nip);
       setAdministrationFieldByLabel(section, ["pangkat", role], combined);
       setAdministrationFieldByLabel(section, ["jabatan", role], jabatan);
     }
   }
-  // Cari <input>/<textarea> di dalam container yang labelnya memuat SEMUA kata kunci
-  // (case-insensitive), lalu isi nilainya. Dipakai oleh autofillTeamMemberFields().
+
   function setAdministrationFieldByLabel(container, keywords, value) {
     const labels = container.querySelectorAll(".form-field label");
     for (const label of labels) {
@@ -1589,7 +1572,6 @@ function detectTeamRoleFromLabel(label) {
       if (selects.length > 0) {
         try {
           const res = await gasRequest("listProsecutors", {}, { silent: true });
-          // Antisipasi bentuk balikan data backend: baik list of strings maupun list of objects.
           const jaksaList = Array.isArray(res) ? res : (res && res.prosecutors ? res.prosecutors : []);
           
           if (jaksaList && jaksaList.length > 0) {
@@ -1604,21 +1586,16 @@ function detectTeamRoleFromLabel(label) {
                   option.textContent = jaksa;
                   if (jaksa === currentValue) option.selected = true;
                 } else if (jaksa && typeof jaksa === 'object') {
-          // Ambil role dari dropdown untuk mengecek apakah ini tim atau penandatangan
-          const role = select.dataset.teamRole || "";
-          const isTeamMember = role.includes("ketua") || role.includes("anggota");
-          
-          // Gunakan ID (kolomG) HANYA untuk anggota tim agar bisa di-intercept oleh backend.
-          // Untuk penuntut umum / penandatangan utama, langsung gunakan nama aslinya.
-          option.value = isTeamMember ? (jaksa.kolomG || jaksa.name || "") : (jaksa.name || "");
-          
-          let labelText = jaksa.name || "Tanpa Nama";
+                  const role = select.dataset.teamRole || "";
+                  const isTeamMember = role.includes("ketua") || role.includes("anggota");
+                  
+                  option.value = isTeamMember ? (jaksa.kolomG || jaksa.name || "") : (jaksa.name || "");
+                  
+                  let labelText = jaksa.name || "Tanpa Nama";
                   if (jaksa.kolomF) labelText += ` - ${jaksa.kolomF}`;
                   if (jaksa.kolomG) labelText += ` (${jaksa.kolomG})`;
                   
                   option.textContent = labelText;
-                  // Simpan data mentah Jaksa di dataset <option> supaya bisa dipakai untuk
-                  // autofill Pangkat/NIP/Jabatan ketika salah satu anggota tim dipilih.
                   option.dataset.name = jaksa.name || "";
                   option.dataset.nip = jaksa.nip || "";
                   option.dataset.pangkat = jaksa.pangkat || jaksa.kolomF || "";
@@ -1630,12 +1607,8 @@ function detectTeamRoleFromLabel(label) {
                 select.appendChild(option);
               });
 
-                  if (isTeamField) {
+              if (isTeamField) {
                 select.addEventListener('change', () => autofillTeamMemberFields(select));
-                
-                // Hilangkan 'if (select.value)' agar fungsi selalu dijalankan di awal.
-                // Ini akan memaksa sistem mengosongkan Pangkat/NIP/Jabatan secara otomatis
-                // jika dropdown nama belum dipilih atau berada di posisi default.
                 autofillTeamMemberFields(select);
               }
             });
@@ -1705,40 +1678,22 @@ function detectTeamRoleFromLabel(label) {
       source: element.dataset.fieldSource || "manual",
       sortOrder: Number(element.dataset.sortOrder || 0)
     }));
-    const fields = [...form.querySelectorAll("[data-admin-field]")].map((element) => ({
-      key: element.dataset.fieldKey,
-      label: element.dataset.fieldLabel,
-      value: String(element.value || "").trim(),
-      source: element.dataset.fieldSource || "manual",
-      sortOrder: Number(element.dataset.sortOrder || 0)
-    }));
     
     const formData = Object.fromEntries(fields.map((fieldItem) => [fieldItem.key, fieldItem.value]));
     
-    // --- TAMBAHAN BARU: Cari nilai dropdown penandatangan secara spesifik ---
     const penandatanganField = fields.find(f => 
       f.key === "responsibleOfficer" || 
       f.key === "prosecutorName" || 
       (f.label && f.label.toLowerCase().includes("penandatangan"))
     );
     const selectedPenandatangan = penandatanganField ? penandatanganField.value : null;
-    // ------------------------------------------------------------------------
 
     const payload = {
       caseId,
       type,
       documentNumber: formData.documentNumber || "",
       documentDate: formData.documentDate || todayISO(),
-      // --- UBAH BARIS INI: Sisipkan selectedPenandatangan di urutan pertama ---
       responsibleOfficer: selectedPenandatangan || formData.responsibleOfficer || state.session.user.fullName || state.session.user.username,
-      notes: String(form.elements.systemNotes?.value || "").trim(),
-      formFields: fields
-    };
-      caseId,
-      type,
-      documentNumber: formData.documentNumber || "",
-      documentDate: formData.documentDate || todayISO(),
-      responsibleOfficer: formData.responsibleOfficer || state.session.user.fullName || state.session.user.username,
       notes: String(form.elements.systemNotes?.value || "").trim(),
       formFields: fields
     };
