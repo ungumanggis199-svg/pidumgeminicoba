@@ -284,7 +284,6 @@
           description: "Pihak penyidik yang menerima petunjuk P-19.",
           fields: [
             { key: "recipientTitle", label: "Yth. Penyidik/Atasan Penyidik", type: "text", required: true, source: "computed:investigatorRecipient", editableAuto: true },
-            { key: "destination", label: "Tempat tujuan", type: "text", required: true },
             { key: "coordinationDate", label: "Tanggal Berita Acara Koordinasi", type: "date", required: true }
           ]
         },
