@@ -1064,6 +1064,8 @@
               ${lateFlag ? `<span class="status-badge red">SPDP > 7 hari (${escapeHtml(String(item.spdpDelayDays || "?"))} hari)</span>` : `<span class="status-badge green">Verifikasi waktu SPDP aman</span>`}
             </div>
 
+            ${renderCaseStageEditor(item)}
+
             <div class="detail-grid">
               ${detail("Nama tersangka", item.suspectName)}
               ${detail("Nomor identitas", item.suspectIdentityNumber)}
@@ -1100,6 +1102,65 @@
     bindModalClose();
     els.modalRoot.querySelectorAll("[data-create-administration]").forEach((button) => {
       button.addEventListener("click", () => openAdministrationModal(caseId, button.dataset.createAdministration));
+    });
+    bindCaseStageEditor(caseId);
+  }
+
+  function renderCaseStageEditor(item) {
+    const groupedStatuses = new Set(DASHBOARD_STAGES.flatMap((stage) => stage.statuses));
+    const otherStatuses = Object.keys(STATUS).filter((key) => !groupedStatuses.has(key));
+
+    const groupOptions = DASHBOARD_STAGES.map((stage) => {
+      const opts = stage.statuses.map((statusKey) => `<option value="${escapeAttr(statusKey)}" ${item.status === statusKey ? "selected" : ""}>${escapeHtml(STATUS[statusKey]?.label || statusKey)}</option>`).join("");
+      return `<optgroup label="${escapeAttr(stage.label)}">${opts}</optgroup>`;
+    }).join("");
+
+    const otherOptions = otherStatuses.length
+      ? `<optgroup label="Status lainnya">${otherStatuses.map((key) => `<option value="${escapeAttr(key)}" ${item.status === key ? "selected" : ""}>${escapeHtml(STATUS[key].label)}</option>`).join("")}</optgroup>`
+      : "";
+
+    return `
+      <section class="stage-editor-panel" style="margin-bottom:20px;padding:16px;border:1px solid #e5e7eb;border-radius:12px;">
+        <h3 class="modal-section-title" style="margin-top:0">Tahapan alur perkara</h3>
+        <div class="pidum-case-stage" style="margin-bottom:14px">
+          ${renderDashboardStagePips(item.status)}
+        </div>
+        <div class="form-field" style="max-width:460px">
+          <label for="modal-status-select">Ubah tahapan secara manual</label>
+          <select id="modal-status-select" name="modal-status-select">
+            ${groupOptions}
+            ${otherOptions}
+          </select>
+          <small class="form-hint">Perubahan di sini langsung memperbarui status perkara, terlepas dari administrasi yang sudah/belum dibuat.</small>
+        </div>
+        <div style="margin-top:12px">
+          <button type="button" id="save-case-status" class="primary-button" data-case-id="${escapeAttr(item.caseId)}">Simpan tahapan</button>
+        </div>
+      </section>`;
+  }
+
+  function bindCaseStageEditor(caseId) {
+    const button = document.getElementById("save-case-status");
+    if (!button) return;
+    button.addEventListener("click", async () => {
+      const select = document.getElementById("modal-status-select");
+      const newStatus = select?.value;
+      if (!newStatus) return;
+
+      setButtonLoading(button, true);
+      try {
+        const result = await gasRequest("updateCase", { caseId, updates: { status: newStatus } });
+        const index = state.cases.findIndex((entry) => entry.caseId === caseId);
+        if (index >= 0) state.cases[index] = result.case || { ...state.cases[index], status: newStatus };
+
+        toast("success", "Tahapan diperbarui", `Status perkara diubah menjadi ${getStatus(newStatus).label}.`);
+        renderSidebar();
+        renderActivePage();
+        openCaseModal(caseId);
+      } catch (error) {
+        toast("error", "Gagal memperbarui tahapan", error.message);
+        setButtonLoading(button, false);
+      }
     });
   }
 
