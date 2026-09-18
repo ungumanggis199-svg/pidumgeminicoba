@@ -157,7 +157,6 @@
           description: "Data utama administrasi yang sedang dibuat.",
           fields: [
             { key: "p17Date", label: "Tanggal administrasi", type: "date", required: true, source: "today", editableAuto: true },
-            { key: "p17Number", label: "Nomor Administrasi (P-17)", type: "text", required: true },
             { key: "responsibleOfficer", label: "Pejabat / Jaksa penanggung jawab", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true }
           ]
         },
