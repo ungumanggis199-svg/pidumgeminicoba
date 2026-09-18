@@ -305,7 +305,7 @@
             { key: "formalInstructions", label: "A. Kelengkapan Formil yang harus dilengkapi", type: "textarea", required: true, full: true },
             { key: "materialInstructions", label: "B. Kelengkapan Materil yang harus dilengkapi", type: "textarea", required: true, full: true },
             { key: "completionDeadlineDays", label: "Batas waktu penyidikan tambahan (hari)", type: "number", required: true, defaultValue: "14" },
-            { key: "signatoryName", label: "Nama Penuntut Umum penandatangan", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true },
+            { key: "signatoryName", label: "Nama Penuntut Umum penandatangan", type: "text", required: true,},
             { key: "signatoryRank", label: "Pangkat Penuntut Umum", type: "text", required: true },
             { key: "copies", label: "Tembusan", type: "textarea", full: true }
           ]
