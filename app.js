@@ -3318,13 +3318,13 @@ function autoFillHistoricalData(currentCase) {
 }
 
 // --- LOGIKA PERHITUNGAN OTOMATIS WAKTU PENAHANAN ---
-document.addEventListener('change', function(e) {
-    const targetKey = e.target.id || e.target.name;
-    
+document.addEventListener('input', function(e) {
+    const targetKey = e.target?.dataset?.fieldKey || e.target?.name || e.target?.id;
+
     if (targetKey === 'penahananDays' || targetKey === 'penahananStartDate') {
-        const daysInput = document.querySelector('[name="penahananDays"], #penahananDays');
-        const startDateInput = document.querySelector('[name="penahananStartDate"], #penahananStartDate');
-        const endDateInput = document.querySelector('[name="penahananEndDate"], #penahananEndDate');
+        const daysInput = document.querySelector('[data-field-key="penahananDays"], [name="penahananDays"], #penahananDays');
+        const startDateInput = document.querySelector('[data-field-key="penahananStartDate"], [name="penahananStartDate"], #penahananStartDate');
+        const endDateInput = document.querySelector('[data-field-key="penahananEndDate"], [name="penahananEndDate"], #penahananEndDate');
 
         if (daysInput && startDateInput && endDateInput) {
             const days = parseInt(daysInput.value, 10);
