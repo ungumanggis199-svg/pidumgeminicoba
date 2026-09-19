@@ -544,6 +544,7 @@
     return [...cases]
       .filter((item) => {
         const haystack = [
+          item.courtCaseNumber,
           item.caseId,
           item.suspectName,
           item.allegedArticle,
@@ -600,7 +601,7 @@
           return `
             <article class="pidum-case-grid pidum-case-grid-row" role="row">
               <div class="pidum-case-register">
-                <strong>${escapeHtml(item.caseId || "-")}</strong>
+                <strong>${escapeHtml(item.courtCaseNumber || item.caseId || "-")}</strong>
                 <span>SPDP ${escapeHtml(item.spdpNumber || "-")}</span>
               </div>
               <div class="pidum-case-suspect">
@@ -618,7 +619,8 @@
                 <span class="pidum-deadline-pill ${escapeAttr(deadline.state)}">${dashboardIcon(deadlineIcon)} ${escapeHtml(deadlineCopy)}</span>
                 ${item.deadlineDate ? `<small>${formatDate(item.deadlineDate)}</small>` : ""}
               </div>
-              <div class="pidum-case-action">
+              <div class="pidum-case-action" style="display:flex; gap:8px;">
+                <button class="secondary-button" onclick="window.openAiSidebar('${escapeAttr(item.caseId)}')" style="color:var(--blue-700); border-color:var(--blue-300); background:var(--blue-50); padding:6px 12px; font-size:13px;" type="button">Analisa AI</button>
                 <button class="pidum-detail-button" data-case-id="${escapeAttr(item.caseId)}" type="button">Detail</button>
               </div>
             </article>`;
@@ -1020,13 +1022,18 @@
               const status = getStatus(item.status);
               const deadline = getDeadlineState(item);
               return `<tr>
-                <td><div class="case-primary">${escapeHtml(item.caseId)}</div><div class="case-secondary">SPDP ${escapeHtml(item.spdpNumber || "-")}</div></td>
+                <td><div class="case-primary">${escapeHtml(item.courtCaseNumber || item.caseId)}</div><div class="case-secondary">SPDP ${escapeHtml(item.spdpNumber || "-")}</div></td>
                 <td><div class="case-primary">${escapeHtml(item.suspectName || "-")}</div><div class="case-secondary">${escapeHtml(item.allegedArticle || "Pasal belum diisi")}</div></td>
                 <td><div>${escapeHtml(item.investigatorName || "-")}</div><div class="case-secondary">${escapeHtml(item.investigatorInstitution || "-")}</div></td>
                 <td><span class="status-badge ${status.tone}">${escapeHtml(status.label)}</span></td>
                 <td>${item.deadlineDate ? `<span class="deadline-badge ${deadline.state}">${escapeHtml(deadline.label)}</span><div class="case-secondary">${formatDate(item.deadlineDate)}</div>` : `<span class="case-secondary">Belum ditentukan</span>`}</td>
                 <td>${formatDateTime(item.updatedAt || item.createdAt)}</td>
-                <td><button class="table-action" data-case-id="${escapeAttr(item.caseId)}" type="button">Detail</button></td>
+                <td>
+                  <div style="display:flex; gap:6px;">
+                    <button class="secondary-button" onclick="window.openAiSidebar('${escapeAttr(item.caseId)}')" type="button" style="padding:4px 8px; font-size:12px;">Analisa AI</button>
+                    <button class="table-action" data-case-id="${escapeAttr(item.caseId)}" type="button" style="padding:4px 8px; font-size:12px;">Detail</button>
+                  </div>
+                </td>
               </tr>`;
             }).join("")}
           </tbody>
@@ -1046,15 +1053,23 @@
     const status = getStatus(item.status);
     const lateFlag = String(item.spdpLate).toLowerCase() === "true" || Number(item.spdpDelayDays) > 7;
 
+    const isRegEdited = Boolean(item.courtCaseNumber);
+    const displayReg = isRegEdited ? item.courtCaseNumber : item.caseId;
+    const regWarning = isRegEdited ? "" : `<div class="status-badge amber" style="margin-top:8px; display:inline-block; padding:6px 10px; background:#fffbeb; color:#b45309; border:1px solid #fde68a; border-radius:6px; font-size:12px;">⚠️ Nomor register bersifat sementara. Harap edit sesuai nomor CMS.</div>`;
+
     state.selectedAdministrationFile = null;
     els.modalRoot.innerHTML = `
       <div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Detail perkara ${escapeAttr(item.caseId)}">
         <div class="modal-card">
           <div class="modal-header">
-            <div>
+            <div style="width: 100%;">
               <div class="case-secondary">Nomor register perkara</div>
-              <h2>${escapeHtml(item.caseId)}</h2>
-              <div class="case-secondary">SPDP ${escapeHtml(item.spdpNumber || "-")}</div>
+              <div style="display:flex; align-items:center; gap:12px; margin-top:4px;">
+                <h2 style="margin:0;">${escapeHtml(displayReg)}</h2>
+                <button id="edit-reg-btn" class="secondary-button" style="padding:4px 12px; font-size:12px; cursor:pointer;" type="button">Edit</button>
+              </div>
+              ${regWarning}
+              <div class="case-secondary" style="margin-top:8px;">SPDP ${escapeHtml(item.spdpNumber || "-")}</div>
             </div>
             <button class="modal-close" data-close-modal type="button">×</button>
           </div>
@@ -1079,15 +1094,15 @@
               ${detail("Barang bukti", item.evidence, true)}
             </div>
 
-<div class="ai-analysis-section" style="margin-top:20px">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-      <h3 class="modal-section-title" style="margin:0">Analisa AI (Gemini)</h3>
-      <button id="ai-analyze-btn" class="secondary-button" type="button" data-case-id="${escapeAttr(item.caseId)}">
-        Jalankan analisa AI
-      </button>
-    </div>
-    <div id="ai-analysis-result" style="margin-top:12px"></div>
-  </div>
+            <div class="ai-analysis-section" style="margin-top:20px">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+                  <h3 class="modal-section-title" style="margin:0">Analisa AI (Gemini)</h3>
+                  <button id="ai-analyze-btn" class="secondary-button" type="button" data-case-id="${escapeAttr(item.caseId)}">
+                    Jalankan analisa AI
+                  </button>
+                </div>
+                <div id="ai-analysis-result" style="margin-top:12px"></div>
+            </div>
             <h3 class="modal-section-title">Data penyidik dan SPDP</h3>
             <div class="detail-grid">
               ${detail("Penyidik", item.investigatorName)}
@@ -1113,10 +1128,31 @@
       button.addEventListener("click", () => openAdministrationModal(caseId, button.dataset.createAdministration));
     });
     bindCaseStageEditor(caseId);
+    
+    document.getElementById("edit-reg-btn")?.addEventListener("click", async () => {
+      const newReg = prompt("Masukkan Nomor Register CMS yang baru:", item.courtCaseNumber || item.caseId);
+      if (newReg !== null && newReg.trim() !== "") {
+        const btn = document.getElementById("edit-reg-btn");
+        btn.textContent = "Menyimpan...";
+        btn.disabled = true;
+        try {
+          await gasRequest("updateCase", { caseId: caseId, updates: { courtCaseNumber: newReg.trim() } });
+          toast("success", "Berhasil", "Nomor register telah diperbarui.");
+          item.courtCaseNumber = newReg.trim(); // Update state locally
+          renderActivePage(); // Refresh list background
+          openCaseModal(caseId); // Refresh modal
+        } catch (err) {
+          toast("error", "Gagal menyimpan", err.message);
+          btn.textContent = "Edit";
+          btn.disabled = false;
+        }
+      }
+    });
+
     document.getElementById("ai-analyze-btn")?.addEventListener("click", () => {
-    runAiAnalysis(item.caseId);
-  });
-  loadExistingAiAnalyses(item.caseId);
+      runAiAnalysis(item.caseId);
+    });
+    loadExistingAiAnalyses(item.caseId);
   }
 
   function renderCaseStageEditor(item) {
@@ -3286,7 +3322,34 @@ function detectTeamRoleFromLabel(label) {
     return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
   }
 
-  // ---- Analisa AI (Gemini) ----
+  // ---- Analisa AI (Gemini) Sidebar Kanan ----
+  window.openAiSidebar = function(caseId) {
+    let sidebar = document.getElementById("ai-right-sidebar");
+    if (!sidebar) {
+      document.body.insertAdjacentHTML('beforeend', `
+        <div id="ai-right-sidebar" class="ai-sidebar" style="position: fixed; top: 0; right: -450px; width: 450px; max-width: 100%; height: 100vh; background: #fff; box-shadow: -4px 0 15px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 9999; display: flex; flex-direction: column;">
+          <div class="ai-sidebar-header" style="padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
+            <h3 style="margin:0;">Analisa AI (Gemini)</h3>
+            <button onclick="document.getElementById('ai-right-sidebar').style.right = '-450px'" style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
+          </div>
+          <div class="ai-sidebar-content" id="ai-sidebar-result" style="padding: 20px; overflow-y: auto; flex: 1;"></div>
+        </div>
+      `);
+      sidebar = document.getElementById("ai-right-sidebar");
+    }
+    
+    sidebar.style.right = "0";
+    const resultBox = document.getElementById("ai-sidebar-result");
+    resultBox.innerHTML = `
+      <div class="skeleton" style="height:150px; margin-bottom:10px; background:#f3f4f6; border-radius:8px;"></div>
+      <p class="case-secondary">Menganalisa perkara ${escapeHtml(caseId)}, mohon tunggu...</p>
+    `;
+    
+    gasRequest("analyzeCase", { caseId })
+      .then(data => renderAiAnalysisResult(data.parsed, data.analysis, "ai-sidebar-result"))
+      .catch(err => resultBox.innerHTML = `<p class="status-badge red">Gagal: ${escapeHtml(err.message)}</p>`);
+  };
+
   async function runAiAnalysis(caseId) {
     const resultBox = document.getElementById("ai-analysis-result");
     const button = document.getElementById("ai-analyze-btn");
@@ -3320,8 +3383,8 @@ function detectTeamRoleFromLabel(label) {
     }
   }
  
-  function renderAiAnalysisResult(parsed, meta) {
-    const resultBox = document.getElementById("ai-analysis-result");
+  function renderAiAnalysisResult(parsed, meta, targetId = "ai-analysis-result") {
+    const resultBox = document.getElementById(targetId);
     if (!resultBox || !parsed) return;
  
     const statusTone = (status) => {
