@@ -3351,12 +3351,19 @@ function detectTeamRoleFromLabel(label) {
   // ---- Analisa AI (Gemini) Sidebar Kanan ----
   window.openAiSidebar = function(caseId) {
     let sidebar = document.getElementById("ai-right-sidebar");
+    let appView = document.getElementById("app-view"); // Mengambil elemen pembungkus konten utama
+    
+    // Tambahkan efek transisi pada kontainer utama agar pergeserannya halus
+    if (appView) {
+      appView.style.transition = "padding-right 0.3s ease";
+    }
+
     if (!sidebar) {
       document.body.insertAdjacentHTML('beforeend', `
         <div id="ai-right-sidebar" class="ai-sidebar" style="position: fixed; top: 0; right: -450px; width: 450px; max-width: 100%; height: 100vh; background: #fff; box-shadow: -4px 0 15px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 9999; display: flex; flex-direction: column;">
           <div class="ai-sidebar-header" style="padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
             <h3 style="margin:0;">Analisa AI (Gemini)</h3>
-            <button onclick="document.getElementById('ai-right-sidebar').style.right = '-450px'" style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
+            <button onclick="document.getElementById('ai-right-sidebar').style.right = '-450px'; if(document.getElementById('app-view')) document.getElementById('app-view').style.paddingRight = '0';" style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
           </div>
           <div class="ai-sidebar-content" id="ai-sidebar-result" style="padding: 20px; overflow-y: auto; flex: 1;"></div>
         </div>
@@ -3364,7 +3371,15 @@ function detectTeamRoleFromLabel(label) {
       sidebar = document.getElementById("ai-right-sidebar");
     }
     
+    // Tampilkan sidebar AI
     sidebar.style.right = "0";
+    
+    // Geser konten utama ke kiri sebesar lebar sidebar (450px) agar teks tidak tertutup
+    // (Hanya berlaku di layar desktop agar tampilan mobile tidak rusak)
+    if (appView && window.innerWidth > 920) {
+      appView.style.paddingRight = "450px"; 
+    }
+
     const resultBox = document.getElementById("ai-sidebar-result");
     resultBox.innerHTML = `
       <div class="skeleton" style="height:150px; margin-bottom:10px; background:#f3f4f6; border-radius:8px;"></div>
