@@ -1786,3 +1786,19 @@ select option:checked {
     color: #0b5d3b !important;
     font-weight: 600 !important;
 }
+.ai-sidebar {
+  position: fixed; top: 0; right: -450px; width: 450px; height: 100vh;
+  background: #fff; box-shadow: -4px 0 15px rgba(0,0,0,0.1);
+  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 9999;
+  display: flex; flex-direction: column;
+}
+.ai-sidebar.open { right: 0; }
+.ai-sidebar-header {
+  padding: 20px; border-bottom: 1px solid var(--border-color, #e5e7eb);
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--blue-50);
+}
+.ai-sidebar-content { padding: 20px; overflow-y: auto; flex: 1; }
+@media (max-width: 600px) {
+  .ai-sidebar { width: 100%; right: -100%; }
+}
