@@ -1058,9 +1058,19 @@
     const status = getStatus(item.status);
     const lateFlag = String(item.spdpLate).toLowerCase() === "true" || Number(item.spdpDelayDays) > 7;
 
-    const isRegEdited = Boolean(item.courtCaseNumber);
+    // Logika pengecekan nomor register sementara
+    const isRegEdited = Boolean(item.courtCaseNumber && item.courtCaseNumber !== item.caseId);
     const displayReg = isRegEdited ? item.courtCaseNumber : item.caseId;
-    const regWarning = isRegEdited ? "" : `<div class="status-badge amber" style="margin-top:8px; display:inline-block; padding:6px 10px; background:#fffbeb; color:#b45309; border:1px solid #fde68a; border-radius:6px; font-size:12px;">⚠️ Nomor register bersifat sementara. Harap edit sesuai nomor CMS.</div>`;
+    
+    // Notifikasi akan hilang otomatis jika isRegEdited bernilai true
+    const regWarning = isRegEdited ? "" : `
+      <div style="margin-top:12px; display:inline-flex; align-items:flex-start; gap:8px; padding:10px 14px; background:#fffbeb; color:#b45309; border:1px solid #fde68a; border-radius:8px; font-size:13px; line-height:1.4;">
+        <span style="font-size:16px">⚠️</span>
+        <div>
+          <strong>Nomor register masih sementara</strong><br/>
+          Harap edit dan sesuaikan dengan nomor register perkara yang terdaftar pada sistem CMS.
+        </div>
+      </div>`;
 
     state.selectedAdministrationFile = null;
     els.modalRoot.innerHTML = `
@@ -1070,11 +1080,11 @@
             <div style="width: 100%;">
               <div class="case-secondary">Nomor register perkara</div>
               <div style="display:flex; align-items:center; gap:12px; margin-top:4px;">
-                <h2 style="margin:0;">${escapeHtml(displayReg)}</h2>
-                <button id="edit-reg-btn" class="secondary-button" style="padding:4px 12px; font-size:12px; cursor:pointer;" type="button">Edit</button>
+                <h2 style="margin:0; font-size: 24px;">${escapeHtml(displayReg)}</h2>
+                <button id="edit-reg-btn" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#334155; border-radius:6px; padding:4px 12px; font-size:12px; font-weight:600; cursor:pointer;" type="button">Edit Nomor</button>
               </div>
               ${regWarning}
-              <div class="case-secondary" style="margin-top:8px;">SPDP ${escapeHtml(item.spdpNumber || "-")}</div>
+              <div class="case-secondary" style="margin-top:12px;">SPDP ${escapeHtml(item.spdpNumber || "-")}</div>
             </div>
             <button class="modal-close" data-close-modal type="button">×</button>
           </div>
@@ -1089,7 +1099,7 @@
             <div class="detail-grid">
               ${detail("Nama tersangka", item.suspectName)}
               ${detail("Nomor identitas", item.suspectIdentityNumber)}
-              ${detail("Tempat/Tanggal lahir", `${item.birthPlace || "-"}, ${formatDate(item.birthDate)}`)}
+              ${detail("Tempat/Tanggal lahir", `${item.birthPlace \vert{}\vert{} "-"}, ${formatDate(item.birthDate)}`)}
               ${detail("Jenis kelamin", item.gender)}
               ${detail("Kewarganegaraan", item.nationality)}
               ${detail("Pekerjaan", item.occupation)}
@@ -1108,13 +1118,14 @@
                 </div>
                 <div id="ai-analysis-result" style="margin-top:12px"></div>
             </div>
+            
             <h3 class="modal-section-title">Data penyidik dan SPDP</h3>
             <div class="detail-grid">
               ${detail("Penyidik", item.investigatorName)}
-              ${detail("Pangkat / NRP", `${item.investigatorRank || "-"} / ${item.investigatorNipNrp || "-"}`)}
+              ${detail("Pangkat / NRP", `${item.investigatorRank \vert{}\vert{} "-"} / ${item.investigatorNipNrp || "-"}`)}
               ${detail("Jabatan", item.investigatorPosition)}
               ${detail("Instansi", item.investigatorInstitution)}
-              ${detail("Sprindik", `${item.sprindikNumber || "-"} · ${formatDate(item.sprindikDate)}`)}
+              ${detail("Sprindik", `${item.sprindikNumber \vert{}\vert{} "-"} · ${formatDate(item.sprindikDate)}`)}
               ${detail("SPDP diterima", `${formatDate(item.receivedDate)} · selisih ${item.spdpDelayDays ?? "-"} hari`)}
               ${item.spdpFileUrl ? `<div class="detail-item full-span"><span>Dokumen SPDP</span><a class="document-link" href="${escapeAttr(item.spdpFileUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.spdpFileName || "Buka dokumen")}</a></div>` : ""}
             </div>
@@ -1134,23 +1145,34 @@
     });
     bindCaseStageEditor(caseId);
     
+    // Event listener untuk tombol Edit Register
     document.getElementById("edit-reg-btn")?.addEventListener("click", async () => {
       const newReg = prompt("Masukkan Nomor Register CMS yang baru:", item.courtCaseNumber || item.caseId);
-      if (newReg !== null && newReg.trim() !== "") {
+      
+      // Validasi agar input tidak kosong dan berbeda dari default caseId
+      if (newReg !== null && newReg.trim() !== "" && newReg.trim() !== item.caseId) {
         const btn = document.getElementById("edit-reg-btn");
+        const originalText = btn.textContent;
         btn.textContent = "Menyimpan...";
         btn.disabled = true;
+        
         try {
+          // Menyimpan pembaruan ke backend
           await gasRequest("updateCase", { caseId: caseId, updates: { courtCaseNumber: newReg.trim() } });
-          toast("success", "Berhasil", "Nomor register telah diperbarui.");
-          item.courtCaseNumber = newReg.trim(); // Update state locally
-          renderActivePage(); // Refresh list background
-          openCaseModal(caseId); // Refresh modal
+          toast("success", "Berhasil", "Nomor register telah diperbarui sesuai CMS.");
+          
+          // Memperbarui UI tanpa perlu reload halaman penuh
+          item.courtCaseNumber = newReg.trim(); 
+          renderActivePage(); 
+          openCaseModal(caseId); // Buka ulang modal agar peringatan (warning) otomatis hilang
+          
         } catch (err) {
           toast("error", "Gagal menyimpan", err.message);
-          btn.textContent = "Edit";
+          btn.textContent = originalText;
           btn.disabled = false;
         }
+      } else if (newReg !== null && newReg.trim() === item.caseId) {
+        toast("warning", "Nomor tidak valid", "Harap masukkan nomor yang berbeda dari nomor sementara.");
       }
     });
 
