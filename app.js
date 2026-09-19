@@ -615,8 +615,12 @@
                 <strong>${escapeHtml(prosecutor)}</strong>
                 <span>${dashboardIcon("users")} ${escapeHtml(item.investigatorInstitution || item.investigatorName || "Penyidik belum diisi")}</span>
               </div>
-              <div class="pidum-case-deadline">
-                <span class="pidum-deadline-pill ${escapeAttr(deadline.state)}">${dashboardIcon(deadlineIcon)} ${escapeHtml(deadlineCopy)}</span>${item.deadlineDate ? `<small>${formatDate(item.deadlineDate)}</small>` : ""}
+              <div class="pidum-case-deadline" style="padding-right: 12px;">
+                <span class="pidum-deadline-pill ${escapeAttr(deadline.state)}" style="font-size: 10px; white-space: normal; line-height: 1.4; padding: 4px 8px; display: inline-flex; align-items: flex-start; text-align: left; gap: 4px; max-width: 160px; word-break: break-word;">
+                  <span style="flex-shrink:0; display:flex; margin-top:2px;">${dashboardIcon(deadlineIcon)}</span>
+                  <span>${escapeHtml(deadlineCopy)}</span>
+                </span>
+                ${item.deadlineDate ? `<small style="display:block; margin-top:4px; font-size:10px;">${formatDate(item.deadlineDate)}</small>` : ""}
               </div>
              <div class="pidum-case-action" style="display:flex; gap:6px; justify-content:flex-end; align-items:center; flex-shrink:0; background-color:#ffffff; padding-left:12px; position:relative; z-index:2;">
                 <button onclick="window.openAiSidebar('${escapeAttr(item.caseId)}')" style="background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%); border: 1px solid #450a0a; color: #ffffff; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 6px rgba(127,29,29,0.3); display: flex; align-items: center; gap: 4px; white-space: nowrap; transition: all 0.2s;" type="button">
