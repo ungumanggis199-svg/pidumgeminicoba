@@ -619,11 +619,11 @@
                 <span class="pidum-deadline-pill ${escapeAttr(deadline.state)}">${dashboardIcon(deadlineIcon)} ${escapeHtml(deadlineCopy)}</span>
                 ${item.deadlineDate ? `<small>${formatDate(item.deadlineDate)}</small>` : ""}
               </div>
-              <div class="pidum-case-action" style="display:flex; gap:8px; justify-content:flex-start; align-items:center;">
-                <button onclick="window.openAiSidebar('${escapeAttr(item.caseId)}')" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #7dd3fc; color: #0369a1; border-radius: 6px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(125,211,252,0.2); display: flex; align-items: center; gap: 6px; white-space: nowrap; transition: all 0.2s;" type="button">
-                  <span style="font-size:14px">✨</span> Analisa AI
+              <div class="pidum-case-action" style="display:flex; gap:4px; justify-content:flex-end; align-items:center; padding-right:16px;">
+                <button onclick="window.openAiSidebar('${escapeAttr(item.caseId)}')" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #7dd3fc; color: #0369a1; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 2px rgba(125,211,252,0.2); display: flex; align-items: center; gap: 4px; white-space: nowrap; transition: all 0.2s;" type="button">
+                  <span style="font-size:12px">✨</span> Analisa AI
                 </button>
-                <button class="pidum-detail-button table-action" data-case-id="${escapeAttr(item.caseId)}" type="button" style="padding:6px 12px; font-size:13px; white-space: nowrap; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer;">Detail</button>
+                <button class="pidum-detail-button table-action" data-case-id="${escapeAttr(item.caseId)}" type="button" style="padding:4px 8px; font-size:11px; white-space: nowrap; border: 1px solid #e2e8f0; border-radius: 4px; background: #fff; cursor: pointer;">Detail</button>
               </div>
             </article>`;
         }).join("")}
@@ -1030,12 +1030,12 @@
                 <td><span class="status-badge ${status.tone}">${escapeHtml(status.label)}</span></td>
                 <td>${item.deadlineDate ? `<span class="deadline-badge ${deadline.state}">${escapeHtml(deadline.label)}</span><div class="case-secondary">${formatDate(item.deadlineDate)}</div>` : `<span class="case-secondary">Belum ditentukan</span>`}</td>
                 <td>${formatDateTime(item.updatedAt || item.createdAt)}</td>
-                <td>
-                  <div style="display:flex; gap:8px; justify-content:flex-start; align-items:center;">
-                    <button onclick="window.openAiSidebar('${escapeAttr(item.caseId)}')" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #7dd3fc; color: #0369a1; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(125,211,252,0.2); display: flex; align-items: center; gap: 4px; white-space: nowrap; transition: all 0.2s;" type="button">
-                      <span style="font-size:14px">✨</span> Analisa AI
+               <td style="padding-right: 16px;">
+                  <div style="display:flex; gap:4px; justify-content:flex-end; align-items:center;">
+                    <button onclick="window.openAiSidebar('${escapeAttr(item.caseId)}')" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #7dd3fc; color: #0369a1; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 2px rgba(125,211,252,0.2); display: flex; align-items: center; gap: 4px; white-space: nowrap; transition: all 0.2s;" type="button">
+                      <span style="font-size:12px">✨</span> Analisa AI
                     </button>
-                    <button class="table-action" data-case-id="${escapeAttr(item.caseId)}" type="button" style="padding:6px 12px; font-size:12px; white-space: nowrap; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer;">Detail</button>
+                    <button class="table-action" data-case-id="${escapeAttr(item.caseId)}" type="button" style="padding:4px 8px; font-size:11px; white-space: nowrap; border: 1px solid #e2e8f0; border-radius: 4px; background: #fff; cursor: pointer;">Detail</button>
                   </div>
                 </td>
               </tr>`;
