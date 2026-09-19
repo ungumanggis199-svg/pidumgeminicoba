@@ -619,12 +619,12 @@
                 <span class="pidum-deadline-pill ${escapeAttr(deadline.state)}">${dashboardIcon(deadlineIcon)} ${escapeHtml(deadlineCopy)}</span>
                 ${item.deadlineDate ? `<small>${formatDate(item.deadlineDate)}</small>` : ""}
               </div>
-             <div class="pidum-case-action" style="display:flex; gap:8px; justify-content:flex-end; align-items:center;">
-  <button onclick="window.openAiSidebar('${escapeAttr(item.caseId)}')" style="background: #f0f9ff; border: 1px solid #7dd3fc; color: #0369a1; border-radius: 6px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 4px; white-space: nowrap;" type="button">
-    ✨ Analisa AI
-  </button>
-  <button class="pidum-detail-button" data-case-id="${escapeAttr(item.caseId)}" type="button" style="white-space: nowrap;">Detail</button>
-</div>
+              <div class="pidum-case-action" style="display:flex; gap:8px; justify-content:flex-start; align-items:center;">
+                <button onclick="window.openAiSidebar('${escapeAttr(item.caseId)}')" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #7dd3fc; color: #0369a1; border-radius: 6px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(125,211,252,0.2); display: flex; align-items: center; gap: 6px; white-space: nowrap; transition: all 0.2s;" type="button">
+                  <span style="font-size:14px">✨</span> Analisa AI
+                </button>
+                <button class="pidum-detail-button table-action" data-case-id="${escapeAttr(item.caseId)}" type="button" style="padding:6px 12px; font-size:13px; white-space: nowrap; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer;">Detail</button>
+              </div>
             </article>`;
         }).join("")}
       </div>`;
@@ -1030,15 +1030,14 @@
                 <td><span class="status-badge ${status.tone}">${escapeHtml(status.label)}</span></td>
                 <td>${item.deadlineDate ? `<span class="deadline-badge ${deadline.state}">${escapeHtml(deadline.label)}</span><div class="case-secondary">${formatDate(item.deadlineDate)}</div>` : `<span class="case-secondary">Belum ditentukan</span>`}</td>
                 <td>${formatDateTime(item.updatedAt || item.createdAt)}</td>
-                // Ganti bagian sel <td> terakhir yang berisi tombol aksi menjadi:
-<td>
-  <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
-    <button onclick="window.openAiSidebar('${escapeAttr(item.caseId)}')" style="background: #f0f9ff; border: 1px solid #7dd3fc; color: #0369a1; border-radius: 6px; padding: 5px 10px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap;" type="button">
-      ✨ Analisa AI
-    </button>
-    <button class="table-action" data-case-id="${escapeAttr(item.caseId)}" type="button" style="padding:5px 10px; font-size:12px; white-space: nowrap;">Detail</button>
-  </div>
-</td>
+                <td>
+                  <div style="display:flex; gap:8px; justify-content:flex-start; align-items:center;">
+                    <button onclick="window.openAiSidebar('${escapeAttr(item.caseId)}')" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #7dd3fc; color: #0369a1; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(125,211,252,0.2); display: flex; align-items: center; gap: 4px; white-space: nowrap; transition: all 0.2s;" type="button">
+                      <span style="font-size:14px">✨</span> Analisa AI
+                    </button>
+                    <button class="table-action" data-case-id="${escapeAttr(item.caseId)}" type="button" style="padding:6px 12px; font-size:12px; white-space: nowrap; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer;">Detail</button>
+                  </div>
+                </td>
               </tr>`;
             }).join("")}
           </tbody>
@@ -1099,7 +1098,7 @@
             <div class="detail-grid">
               ${detail("Nama tersangka", item.suspectName)}
               ${detail("Nomor identitas", item.suspectIdentityNumber)}
-              ${detail("Tempat/Tanggal lahir", `${item.birthPlace \vert{}\vert{} "-"}, ${formatDate(item.birthDate)}`)}
+              ${detail("Tempat/Tanggal lahir", `${item.birthPlace || "-"}, ${formatDate(item.birthDate)}`)}
               ${detail("Jenis kelamin", item.gender)}
               ${detail("Kewarganegaraan", item.nationality)}
               ${detail("Pekerjaan", item.occupation)}
@@ -1122,10 +1121,10 @@
             <h3 class="modal-section-title">Data penyidik dan SPDP</h3>
             <div class="detail-grid">
               ${detail("Penyidik", item.investigatorName)}
-              ${detail("Pangkat / NRP", `${item.investigatorRank \vert{}\vert{} "-"} / ${item.investigatorNipNrp || "-"}`)}
+              ${detail("Pangkat / NRP", `${item.investigatorRank || "-"} / ${item.investigatorNipNrp || "-"}`)}
               ${detail("Jabatan", item.investigatorPosition)}
               ${detail("Instansi", item.investigatorInstitution)}
-              ${detail("Sprindik", `${item.sprindikNumber \vert{}\vert{} "-"} · ${formatDate(item.sprindikDate)}`)}
+              ${detail("Sprindik", `${item.sprindikNumber || "-"} · ${formatDate(item.sprindikDate)}`)}
               ${detail("SPDP diterima", `${formatDate(item.receivedDate)} · selisih ${item.spdpDelayDays ?? "-"} hari`)}
               ${item.spdpFileUrl ? `<div class="detail-item full-span"><span>Dokumen SPDP</span><a class="document-link" href="${escapeAttr(item.spdpFileUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.spdpFileName || "Buka dokumen")}</a></div>` : ""}
             </div>
