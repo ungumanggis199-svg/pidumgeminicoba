@@ -619,10 +619,12 @@
                 <span class="pidum-deadline-pill ${escapeAttr(deadline.state)}">${dashboardIcon(deadlineIcon)} ${escapeHtml(deadlineCopy)}</span>
                 ${item.deadlineDate ? `<small>${formatDate(item.deadlineDate)}</small>` : ""}
               </div>
-              <div class="pidum-case-action" style="display:flex; gap:8px;">
-                <button class="secondary-button" onclick="window.openAiSidebar('${escapeAttr(item.caseId)}')" style="color:var(--blue-700); border-color:var(--blue-300); background:var(--blue-50); padding:6px 12px; font-size:13px;" type="button">Analisa AI</button>
-                <button class="pidum-detail-button" data-case-id="${escapeAttr(item.caseId)}" type="button">Detail</button>
-              </div>
+             <div class="pidum-case-action" style="display:flex; gap:8px; justify-content:flex-end; align-items:center;">
+  <button onclick="window.openAiSidebar('${escapeAttr(item.caseId)}')" style="background: #f0f9ff; border: 1px solid #7dd3fc; color: #0369a1; border-radius: 6px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 4px; white-space: nowrap;" type="button">
+    ✨ Analisa AI
+  </button>
+  <button class="pidum-detail-button" data-case-id="${escapeAttr(item.caseId)}" type="button" style="white-space: nowrap;">Detail</button>
+</div>
             </article>`;
         }).join("")}
       </div>`;
@@ -1028,12 +1030,15 @@
                 <td><span class="status-badge ${status.tone}">${escapeHtml(status.label)}</span></td>
                 <td>${item.deadlineDate ? `<span class="deadline-badge ${deadline.state}">${escapeHtml(deadline.label)}</span><div class="case-secondary">${formatDate(item.deadlineDate)}</div>` : `<span class="case-secondary">Belum ditentukan</span>`}</td>
                 <td>${formatDateTime(item.updatedAt || item.createdAt)}</td>
-                <td>
-                  <div style="display:flex; gap:6px;">
-                    <button class="secondary-button" onclick="window.openAiSidebar('${escapeAttr(item.caseId)}')" type="button" style="padding:4px 8px; font-size:12px;">Analisa AI</button>
-                    <button class="table-action" data-case-id="${escapeAttr(item.caseId)}" type="button" style="padding:4px 8px; font-size:12px;">Detail</button>
-                  </div>
-                </td>
+                // Ganti bagian sel <td> terakhir yang berisi tombol aksi menjadi:
+<td>
+  <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
+    <button onclick="window.openAiSidebar('${escapeAttr(item.caseId)}')" style="background: #f0f9ff; border: 1px solid #7dd3fc; color: #0369a1; border-radius: 6px; padding: 5px 10px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap;" type="button">
+      ✨ Analisa AI
+    </button>
+    <button class="table-action" data-case-id="${escapeAttr(item.caseId)}" type="button" style="padding:5px 10px; font-size:12px; white-space: nowrap;">Detail</button>
+  </div>
+</td>
               </tr>`;
             }).join("")}
           </tbody>
