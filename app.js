@@ -3354,33 +3354,39 @@ function detectTeamRoleFromLabel(label) {
   // ---- Analisa AI (Gemini) Sidebar Kanan ----
   window.openAiSidebar = function(caseId) {
     let sidebar = document.getElementById("ai-right-sidebar");
-    let appView = document.getElementById("app-view"); // Mengambil elemen pembungkus konten utama
+    let appView = document.getElementById("app-view"); 
     
-    // Tambahkan efek transisi pada kontainer utama agar pergeserannya halus
     if (appView) {
       appView.style.transition = "padding-right 0.3s ease";
     }
 
     if (!sidebar) {
+      // Modifikasi HTML sidebar dengan menambahkan div chatbox di paling bawah
       document.body.insertAdjacentHTML('beforeend', `
-        <div id="ai-right-sidebar" class="ai-sidebar" style="position: fixed; top: 0; right: -450px; width: 450px; max-width: 100%; height: 100vh; background: #fff; box-shadow: -4px 0 15px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 9999; display: flex; flex-direction: column;">
+        <div id="ai-right-sidebar" class="ai-sidebar" style="position: fixed; top: 0; right: -500px; width: 500px; max-width: 100%; height: 100vh; background: #fff; box-shadow: -4px 0 15px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 9999; display: flex; flex-direction: column;">
           <div class="ai-sidebar-header" style="padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
             <h3 style="margin:0;">Analisa AI (Gemini)</h3>
-            <button onclick="document.getElementById('ai-right-sidebar').style.right = '-450px'; if(document.getElementById('app-view')) document.getElementById('app-view').style.paddingRight = '0';" style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
+            <button onclick="document.getElementById('ai-right-sidebar').style.right = '-500px'; if(document.getElementById('app-view')) document.getElementById('app-view').style.paddingRight = '0';" style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
           </div>
-          <div class="ai-sidebar-content" id="ai-sidebar-result" style="padding: 20px; overflow-y: auto; flex: 1;"></div>
+          <div class="ai-sidebar-content" id="ai-sidebar-result" style="padding: 20px; overflow-y: auto; flex: 1; display:flex; flex-direction:column; scroll-behavior: smooth;"></div>
+          
+          <!-- AREA CHATBOX -->
+          <div style="padding: 15px 20px; border-top: 1px solid #e5e7eb; background: #f8fafc; display: flex; gap: 8px; flex-shrink: 0;">
+            <input type="text" id="ai-chat-input" placeholder="Tanyakan lebih lanjut soal berkas ini..." style="flex:1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" onkeypress="if(event.key === 'Enter') window.sendAiChat('${caseId}')" />
+            <button onclick="window.sendAiChat('${caseId}')" id="ai-chat-btn" class="primary-button" style="padding: 10px 15px;">Kirim</button>
+          </div>
         </div>
       `);
       sidebar = document.getElementById("ai-right-sidebar");
     }
     
-    // Tampilkan sidebar AI
-    sidebar.style.right = "0";
+    // Perbarui event listener fungsi klik enter ke caseId terbaru jika sidebar sudah ada
+    document.getElementById("ai-chat-btn").setAttribute("onclick", `window.sendAiChat('${caseId}')`);
+    document.getElementById("ai-chat-input").setAttribute("onkeypress", `if(event.key === 'Enter') window.sendAiChat('${caseId}')`);
     
-    // Geser konten utama ke kiri sebesar lebar sidebar (450px) agar teks tidak tertutup
-    // (Hanya berlaku di layar desktop agar tampilan mobile tidak rusak)
+    sidebar.style.right = "0";
     if (appView && window.innerWidth > 920) {
-      appView.style.paddingRight = "450px"; 
+      appView.style.paddingRight = "500px"; 
     }
 
     const resultBox = document.getElementById("ai-sidebar-result");
@@ -3559,3 +3565,68 @@ document.addEventListener('input', function(e) {
         }
     }
 });
+/**
+Chat bOx AI*
+ */
+window.sendAiChat = async function(caseId) {
+    const inputField = document.getElementById("ai-chat-input");
+    const sendBtn = document.getElementById("ai-chat-btn");
+    const resultBox = document.getElementById("ai-sidebar-result");
+    const message = inputField.value.trim();
+
+    if (!message) return;
+
+    // Bersihkan input dan nonaktifkan tombol
+    inputField.value = "";
+    sendBtn.disabled = true;
+    sendBtn.textContent = "...";
+
+    // 1. Tambahkan bubble chat dari pengguna
+    const userChat = `
+      <div style="margin-top:16px; padding: 12px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px 8px 0px 8px; margin-left: 30px; align-self: flex-end;">
+        <strong style="color: #1e3a8a; font-size: 13px;">Anda</strong><br/>
+        <span style="font-size: 13px;">${escapeHtml(message)}</span>
+      </div>`;
+    resultBox.insertAdjacentHTML('beforeend', userChat);
+    resultBox.scrollTop = resultBox.scrollHeight;
+
+    // 2. Tambahkan indikator loading
+    const loadingId = "ai-loading-" + Date.now();
+    const loadingHtml = `
+      <div id="${loadingId}" style="margin-top:16px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px 8px 8px 0px; margin-right: 30px; align-self: flex-start;">
+        <span style="color: #64748b; font-size: 13px;">Gemini sedang mengetik...</span>
+      </div>`;
+    resultBox.insertAdjacentHTML('beforeend', loadingHtml);
+    resultBox.scrollTop = resultBox.scrollHeight;
+
+    try {
+      // 3. Kirim ke backend
+      const response = await gasRequest("chatAi", { caseId: caseId, message: message });
+      
+      // Hapus loading
+      document.getElementById(loadingId)?.remove();
+
+      // Format baris baru menjadi HTML
+      const formattedReply = escapeHtml(response.reply).replace(/\n/g, '<br/>');
+      
+      // 4. Tambahkan bubble chat dari AI
+      const aiChat = `
+        <div style="margin-top:16px; padding: 12px 14px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px 8px 8px 0px; margin-right: 10px; align-self: flex-start; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+          <strong style="color: #0f172a; font-size: 13px;">Gemini AI</strong><br/>
+          <span style="font-size: 13px; color: #334155; line-height: 1.5;">${formattedReply}</span>
+        </div>`;
+      resultBox.insertAdjacentHTML('beforeend', aiChat);
+
+    } catch (error) {
+      document.getElementById(loadingId)?.remove();
+      resultBox.insertAdjacentHTML('beforeend', `
+        <div style="margin-top:16px; padding: 10px; background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; border-radius: 8px; font-size:13px;">
+          <strong>Error:</strong> ${escapeHtml(error.message)}
+        </div>`);
+    } finally {
+      sendBtn.disabled = false;
+      sendBtn.textContent = "Kirim";
+      inputField.focus();
+      resultBox.scrollTop = resultBox.scrollHeight;
+    }
+  };
