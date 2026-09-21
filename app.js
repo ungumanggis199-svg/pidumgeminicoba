@@ -3508,6 +3508,7 @@ function detectTeamRoleFromLabel(label) {
   }
 
   // --- CHAT BOX AI ---
+  // --- CHAT BOX AI ---
   window.sendAiChat = async function(caseId) {
     const inputField = document.getElementById("ai-chat-input");
     const sendBtn = document.getElementById("ai-chat-btn");
@@ -3524,33 +3525,24 @@ function detectTeamRoleFromLabel(label) {
 
     // Helper untuk merubah teks biasa menjadi aman dan merender Markdown (Bold/Italic/Heading)
     const sanitizeAndParseMarkdown = (str) => {
-      // 1. Amankan dari tag HTML berbahaya
       const temp = document.createElement('div');
       temp.textContent = str;
       let html = temp.innerHTML;
       
-      // 2. Terjemahkan Markdown ke HTML
-      html = html.replace(/### (.*?)(?=\n|$)/g, '<strong style="font-size: 14px; color: #1e3a8a;">$1</strong>'); // Heading 3
-      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Bold
-      html = html.replace(/\*(.*?)\*/g, '<em>$1</em>'); // Italic
+      html = html.replace(/### (.*?)(?=\n|$)/g, '<strong style="font-size: 14px; color: #1e3a8a;">$1</strong>');
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
       
       return html;
     };
 
-    // Saat menyisipkan chat Anda:
-    const userChat = `
+    // 1. Tambahkan bubble chat dari Anda ke dalam ai-chat-history (Hanya 1 deklarasi)
+    const userChatHtml = `
       <div style="padding: 12px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px 8px 0px 8px; margin-left: 30px; align-self: flex-end; margin-bottom: 5px;">
         <strong style="color: #1e3a8a; font-size: 13px;">Anda</strong><br/>
         <span style="font-size: 13px;">${sanitizeAndParseMarkdown(message).replace(/\n/g, '<br/>')}</span>
       </div>`;
-
-    // 1. Tambahkan bubble chat dari Anda ke dalam ai-chat-history
-    const userChat = `
-      <div style="padding: 12px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px 8px 0px 8px; margin-left: 30px; align-self: flex-end; margin-bottom: 5px;">
-        <strong style="color: #1e3a8a; font-size: 13px;">Anda</strong><br/>
-        <span style="font-size: 13px;">${sanitize(message)}</span>
-      </div>`;
-    chatHistory.insertAdjacentHTML('beforeend', userChat);
+    chatHistory.insertAdjacentHTML('beforeend', userChatHtml);
     scrollContainer.scrollTop = scrollContainer.scrollHeight;
 
     // 2. Tambahkan indikator loading
@@ -3582,9 +3574,11 @@ function detectTeamRoleFromLabel(label) {
 
     } catch (error) {
       document.getElementById(loadingId)?.remove();
+      const tempDiv = document.createElement('div');
+      tempDiv.textContent = error.message;
       chatHistory.insertAdjacentHTML('beforeend', `
         <div style="padding: 10px; background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; border-radius: 8px; font-size:13px; margin-bottom: 5px;">
-          <strong>Sistem Gagal:</strong> ${sanitize(error.message)}
+          <strong>Sistem Gagal:</strong> ${tempDiv.innerHTML}
         </div>`);
     } finally {
       sendBtn.disabled = false;
