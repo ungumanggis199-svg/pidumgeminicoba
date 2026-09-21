@@ -8,7 +8,25 @@
   const CONFIG = window.APP_CONFIG;
   const ADMIN_FORM_SCHEMAS = window.SIAP_ADMIN_FORM_SCHEMAS || {};
   const STORAGE_KEY = "siap_pidum_session_v1";
+  
+  window.gasRequest = async function(action, payload) {
+  // Ganti dengan URL Web App Apps Script Anda
+  const scriptUrl = 'https://script.google.com/macros/s/AKfycbwGoon2xWI_hvrdbxqo8cJps4_oXtHagRMNkOFp1YvgqgX2mvLMP1Rc4DlV_0TGqnh86w/exec'; 
+  const token = localStorage.getItem('token') || ''; 
 
+  try {
+    const res = await fetch(scriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: action, token: token, payload: payload })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data;
+  } catch (err) {
+    throw new Error("Koneksi ke server gagal: " + err.message);
+  }
+};
   const STATUS = Object.freeze({
     SPDP_DITERIMA: { label: "SPDP Diterima", tone: "blue" },
     VERIFIKASI_SPDP: { label: "Verifikasi SPDP", tone: "amber" },
@@ -3636,7 +3654,15 @@ window.sendAiChat = async function(caseId) {
 
   try {
     // 3. Panggil endpoint chat backend
-    const response = await gasRequest("chatAi", { caseId: caseId, message: message });
+    const response = await new Promise((resolve, reject) => {
+  // Pastikan Anda menyesuaikan cara mengambil token aplikasi Anda (misal dari localStorage atau variabel global)
+  const token = localStorage.getItem('token') || ''; 
+  
+  google.script.run
+    .withSuccessHandler(resolve)
+    .withFailureHandler(reject)
+    .chatAi_(token, { caseId: caseId, message: message }); 
+});
     
     // Hapus animasi loading
     document.getElementById(loadingId)?.remove();
