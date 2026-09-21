@@ -3507,7 +3507,7 @@ function detectTeamRoleFromLabel(label) {
     `;
   }
 
-  // LETAKKAN sendAiChat DI SINI (Di dalam blok aplikasi)
+  // --- CHAT BOX AI ---
   window.sendAiChat = async function(caseId) {
     const inputField = document.getElementById("ai-chat-input");
     const sendBtn = document.getElementById("ai-chat-btn");
@@ -3517,16 +3517,19 @@ function detectTeamRoleFromLabel(label) {
     const message = inputField.value.trim();
     if (!message) return;
 
+    // Bersihkan input dan kunci tombol
     inputField.value = "";
     sendBtn.disabled = true;
     sendBtn.textContent = "...";
 
+    // Helper agar tidak terjadi error jika escapeHtml belum ter-load secara global
     const sanitize = (str) => {
       const temp = document.createElement('div');
       temp.textContent = str;
       return temp.innerHTML;
     };
 
+    // 1. Tambahkan bubble chat dari Anda ke dalam ai-chat-history
     const userChat = `
       <div style="padding: 12px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px 8px 0px 8px; margin-left: 30px; align-self: flex-end; margin-bottom: 5px;">
         <strong style="color: #1e3a8a; font-size: 13px;">Anda</strong><br/>
@@ -3535,6 +3538,7 @@ function detectTeamRoleFromLabel(label) {
     chatHistory.insertAdjacentHTML('beforeend', userChat);
     scrollContainer.scrollTop = scrollContainer.scrollHeight;
 
+    // 2. Tambahkan indikator loading
     const loadingId = "ai-loading-" + Date.now();
     const loadingHtml = `
       <div id="${loadingId}" style="padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px 8px 8px 0px; margin-right: 30px; align-self: flex-start; margin-bottom: 5px;">
@@ -3544,12 +3548,15 @@ function detectTeamRoleFromLabel(label) {
     scrollContainer.scrollTop = scrollContainer.scrollHeight;
 
     try {
-      // Menggunakan gasRequest bawaan sistem (CORS aman dengan text/plain)
+      // 3. Panggil endpoint chat backend menggunakan fungsi lokal gasRequest
       const response = await gasRequest("chatAi", { caseId: caseId, message: message });
       
+      // Hapus animasi loading
       document.getElementById(loadingId)?.remove();
+
       const formattedReply = sanitize(response.reply).replace(/\n/g, '<br/>');
       
+      // 4. Tambahkan bubble chat dari AI
       const aiChat = `
         <div style="padding: 12px 14px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px 8px 8px 0px; margin-right: 10px; align-self: flex-start; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 5px;">
           <strong style="color: #0f172a; font-size: 13px;">Gemini AI</strong><br/>
@@ -3571,9 +3578,9 @@ function detectTeamRoleFromLabel(label) {
     }
   };
 
-})(); // PENUTUP BLOK UTAMA APLIKASI HARUS BERADA DI SINI
+})(); // === PENUTUP BLOK UTAMA APLIKASI (IIFE) HARUS BERADA DI SINI ===
 
-// Fungsi di luar blok (biarkan apa adanya)
+// --- Fungsi di luar blok (biarkan apa adanya) ---
 function autoFillHistoricalData(currentCase) {
   if (!currentCase || !currentCase.administrations) return;
 
@@ -3651,75 +3658,3 @@ document.addEventListener('input', function(e) {
         }
     }
 });
-/**
- * Chat box AI
- */
-window.sendAiChat = async function(caseId) {
-  const inputField = document.getElementById("ai-chat-input");
-  const sendBtn = document.getElementById("ai-chat-btn");
-  const chatHistory = document.getElementById("ai-chat-history");
-  const scrollContainer = document.getElementById("ai-scroll-container");
-  
-  const message = inputField.value.trim();
-  if (!message) return;
-
-  // Bersihkan input dan kunci tombol
-  inputField.value = "";
-  sendBtn.disabled = true;
-  sendBtn.textContent = "...";
-
-  // Helper agar tidak terjadi error jika escapeHtml belum ter-load secara global
-  const sanitize = (str) => {
-    const temp = document.createElement('div');
-    temp.textContent = str;
-    return temp.innerHTML;
-  };
-
-  // 1. Tambahkan bubble chat dari Anda ke dalam ai-chat-history
-  const userChat = `
-    <div style="padding: 12px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px 8px 0px 8px; margin-left: 30px; align-self: flex-end; margin-bottom: 5px;">
-      <strong style="color: #1e3a8a; font-size: 13px;">Anda</strong><br/>
-      <span style="font-size: 13px;">${sanitize(message)}</span>
-    </div>`;
-  chatHistory.insertAdjacentHTML('beforeend', userChat);
-  scrollContainer.scrollTop = scrollContainer.scrollHeight; // Auto-scroll ke bawah
-
-  // 2. Tambahkan indikator loading
-  const loadingId = "ai-loading-" + Date.now();
-  const loadingHtml = `
-    <div id="${loadingId}" style="padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px 8px 8px 0px; margin-right: 30px; align-self: flex-start; margin-bottom: 5px;">
-      <span style="color: #64748b; font-size: 13px; font-style: italic;">Gemini sedang menganalisa...</span>
-    </div>`;
-  chatHistory.insertAdjacentHTML('beforeend', loadingHtml);
-  scrollContainer.scrollTop = scrollContainer.scrollHeight;
-
-  try {
-    // 3. Panggil endpoint chat backend menggunakan gasRequest global Anda
-    const response = await window.gasRequest("chatAi", { caseId: caseId, message: message });
-    
-    // Hapus animasi loading
-    document.getElementById(loadingId)?.remove();
-
-    const formattedReply = sanitize(response.reply).replace(/\n/g, '<br/>');
-    
-    // 4. Tambahkan bubble chat dari AI
-    const aiChat = `
-      <div style="padding: 12px 14px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px 8px 8px 0px; margin-right: 10px; align-self: flex-start; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 5px;">
-        <strong style="color: #0f172a; font-size: 13px;">Gemini AI</strong><br/>
-        <span style="font-size: 13px; color: #334155; line-height: 1.5;">${formattedReply}</span>
-      </div>`;
-    chatHistory.insertAdjacentHTML('beforeend', aiChat);
-
-  } catch (error) {
-    document.getElementById(loadingId)?.remove();
-    chatHistory.insertAdjacentHTML('beforeend', `
-      <div style="padding: 10px; background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; border-radius: 8px; font-size:13px; margin-bottom: 5px;">
-        <strong>Sistem Gagal:</strong> ${sanitize(error.message)}
-      </div>`);
-  } finally {
-    sendBtn.disabled = false;
-    sendBtn.textContent = "Kirim";
-    inputField.focus();
-    scrollContainer.scrollTop = scrollContainer.scrollHeight;
-  }
-};
