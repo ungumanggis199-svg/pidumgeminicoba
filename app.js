@@ -1112,7 +1112,7 @@
 
             <div class="ai-analysis-section" style="margin-top:20px">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-                  <h3 class="modal-section-title" style="margin:0">Analisa AI (Gemini)</h3>
+                  <h3 class="modal-section-title" style="margin:0">Analisa AI </h3>
                   <button id="ai-analyze-btn" class="secondary-button" type="button" data-case-id="${escapeAttr(item.caseId)}">
                     Jalankan analisa AI
                   </button>
@@ -3366,7 +3366,7 @@ function detectTeamRoleFromLabel(label) {
         
         <!-- HEADER -->
         <div class="ai-sidebar-header" style="padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; flex-shrink: 0;">
-          <h3 style="margin:0;">Analisa AI (Gemini)</h3>
+          <h3 style="margin:0;">Analisa AI </h3>
           <button onclick="document.getElementById('ai-right-sidebar').style.right = '-500px'; if(document.getElementById('app-view')) document.getElementById('app-view').style.paddingRight = '0';" style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
         </div>
         
@@ -3432,7 +3432,7 @@ function detectTeamRoleFromLabel(label) {
     if (!resultBox) return;
  
     if (button) { button.disabled = true; button.textContent = "Menganalisa..."; }
-    resultBox.innerHTML = `<p class="case-secondary">Sedang menghubungi Gemini AI, mohon tunggu...</p>`;
+    resultBox.innerHTML = `<p class="case-secondary">Sedang menghubungi AI, mohon tunggu...</p>`;
  
     try {
       const data = await gasRequest("analyzeCase", { caseId }, { timeout: 60000 });
@@ -3549,7 +3549,7 @@ function detectTeamRoleFromLabel(label) {
     const loadingId = "ai-loading-" + Date.now();
     const loadingHtml = `
       <div id="${loadingId}" style="padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px 8px 8px 0px; margin-right: 30px; align-self: flex-start; margin-bottom: 5px;">
-        <span style="color: #64748b; font-size: 13px; font-style: italic;">Gemini sedang menganalisa...</span>
+        <span style="color: #64748b; font-size: 13px; font-style: italic;">AI sedang menganalisa...</span>
       </div>`;
     chatHistory.insertAdjacentHTML('beforeend', loadingHtml);
     scrollContainer.scrollTop = scrollContainer.scrollHeight;
@@ -3567,7 +3567,7 @@ function detectTeamRoleFromLabel(label) {
       // 4. Tambahkan bubble chat dari AI
       const aiChat = `
         <div style="padding: 12px 14px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px 8px 8px 0px; margin-right: 10px; align-self: flex-start; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 5px;">
-          <strong style="color: #0f172a; font-size: 13px;">Gemini AI</strong><br/>
+          <strong style="color: #0f172a; font-size: 13px;"> AI</strong><br/>
           <span style="font-size: 13px; color: #334155; line-height: 1.5;">${formattedReply}</span>
         </div>`;
       chatHistory.insertAdjacentHTML('beforeend', aiChat);
