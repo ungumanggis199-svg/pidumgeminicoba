@@ -3611,7 +3611,7 @@ document.addEventListener('input', function(e) {
     }
 });
 /**
-Chat bOx AI*
+ * Chat box AI
  */
 window.sendAiChat = async function(caseId) {
   const inputField = document.getElementById("ai-chat-input");
@@ -3653,16 +3653,8 @@ window.sendAiChat = async function(caseId) {
   scrollContainer.scrollTop = scrollContainer.scrollHeight;
 
   try {
-    // 3. Panggil endpoint chat backend
-    const response = await new Promise((resolve, reject) => {
-  // Pastikan Anda menyesuaikan cara mengambil token aplikasi Anda (misal dari localStorage atau variabel global)
-  const token = localStorage.getItem('token') || ''; 
-  
-  google.script.run
-    .withSuccessHandler(resolve)
-    .withFailureHandler(reject)
-    .chatAi_(token, { caseId: caseId, message: message }); 
-});
+    // 3. Panggil endpoint chat backend menggunakan gasRequest global Anda
+    const response = await window.gasRequest("chatAi", { caseId: caseId, message: message });
     
     // Hapus animasi loading
     document.getElementById(loadingId)?.remove();
