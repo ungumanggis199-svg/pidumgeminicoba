@@ -2363,3 +2363,32 @@ body.modal-open { overflow: hidden; }
   .adm-pending-copy { grid-column: 1 / -1; grid-row: 2; }
   .adm-overview { padding: 12px; }
 }
+
+/* ---------- V4.2: Panel AI persisten (tidak memblokir halaman) ---------- */
+:root { --ai-w: 440px; }
+.ai-drawer { width: min(var(--ai-w), 100vw); visibility: hidden; transition: transform .3s var(--v4-ease), visibility 0s linear .3s; }
+.ai-drawer.open { visibility: visible; transition: transform .3s var(--v4-ease), visibility 0s; }
+.app-main { transition: margin-right .3s var(--v4-ease); }
+@media (min-width: 1180px) {
+  body.ai-docked .app-main { margin-right: var(--ai-w); }
+  body.ai-docked .modal-backdrop { right: var(--ai-w); }
+  body.ai-docked .toast-root { right: calc(var(--ai-w) + 18px); }
+  .ai-drawer { box-shadow: -1px 0 0 var(--v4-line), -12px 0 30px rgba(46, 10, 22, .08); }
+}
+@media (max-width: 1179px) {
+  .ai-drawer { box-shadow: -18px 0 46px rgba(46, 10, 22, .22); }
+}
+.ai-pill {
+  position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 9998;
+  display: inline-flex; align-items: center; gap: 10px; max-width: min(320px, calc(100vw - 36px));
+  padding: 10px 16px 10px 12px; border: 1px solid #5a172b; border-radius: 999px;
+  background: linear-gradient(135deg, #8e3650, #5a172b); color: #fff; box-shadow: 0 14px 34px rgba(91, 22, 42, .32);
+  animation: v4-page-in .25s var(--v4-ease) both; transition: transform .16s var(--v4-ease);
+}
+.ai-pill:hover { transform: translateY(-2px); }
+.ai-pill-spark { width: 30px; height: 30px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; background: rgba(255,255,255,.14); color: var(--pidum-gold-soft, #ead6a5); }
+.ai-pill-copy { display: flex; flex-direction: column; min-width: 0; text-align: left; }
+.ai-pill-copy b { font-size: 12px; }
+.ai-pill-copy small { overflow: hidden; color: rgba(255,255,255,.75); font-size: 11px; white-space: nowrap; text-overflow: ellipsis; }
+.ai-pill-dot { position: absolute; top: 6px; right: 8px; width: 9px; height: 9px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 2px #5a172b; }
+.ai-drawer-head-actions .case-modal-close { width: 32px; height: 32px; font-size: 18px; }
