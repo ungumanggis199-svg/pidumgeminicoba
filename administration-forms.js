@@ -12,6 +12,7 @@
       description: "Data utama administrasi yang sedang dibuat.",
       fields: [
         { key: "documentDate", label: "Tanggal administrasi", type: "date", required: true, source: "today", editableAuto: true },
+        { key: "documentNumber", label: "Nomor surat/administrasi", type: "text", placeholder: "Contoh: PRINT-123/P.3.18/Eoh.1/10/2026" },
         { key: "responsibleOfficer", label: "Pejabat / Jaksa penanggung jawab", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true }
       ]
     }
@@ -19,6 +20,8 @@
 
   const schemas = {
     "SOP FORM 1": {
+      documentNumberKey: "sop1Number",
+      documentDateKey: "sop1Date",
       title: "Pemantauan Perkembangan Penyidikan",
       subtitle: "Surat pemantauan tindak lanjut SPDP",
       sections: [
@@ -27,7 +30,7 @@
           description: "Data utama administrasi yang sedang dibuat.",
           fields: [
             { key: "sop1Date", label: "Tanggal administrasi", type: "date", required: true, source: "today", editableAuto: true },
-            { key: "sop1Number", label: "Nomor Administrasi (SOP 1)", type: "text", required: true },
+            { key: "sop1Number", label: "Nomor Administrasi (SOP 1)", type: "text", required: true, source: "case:sop1Number", editableAuto: true },
             { key: "responsibleOfficer", label: "Pejabat / Jaksa penanggung jawab", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true }
           ]
         },
@@ -46,6 +49,8 @@
     },
 
     "SOP FORM 2": {
+      documentNumberKey: "sop2Number",
+      documentDateKey: "sop2Date",
       title: "Permintaan Perkembangan Hasil Penyidikan",
       subtitle: "Penagihan hasil penyidikan setelah 30 hari",
       sections: [
@@ -54,6 +59,7 @@
           description: "Data utama administrasi yang sedang dibuat.",
           fields: [
             { key: "sop2Date", label: "Tanggal administrasi", type: "date", required: true, source: "today", editableAuto: true },
+            { key: "sop2Number", label: "Nomor surat (SOP Form 2)", type: "text", source: "case:sop2Number", editableAuto: true },
             { key: "responsibleOfficer", label: "Pejabat / Jaksa penanggung jawab", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true }
           ]
         },
@@ -62,8 +68,8 @@
           description: "Data surat SOP 1 dan SPDP.",
           fields: [
             { key: "recipientTitle", label: "Yth. Pimpinan Instansi Penyidik", type: "text", required: true, defaultValue: "Kepala Kepolisian Resor Muna" },
-            { key: "p17Number", label: "Nomor P-17", type: "text", required: true, source: "case:p17Number" },
-            { key: "p17Date", label: "Tanggal P-17", type: "date", required: true, source: "case:p17Date" },
+            { key: "p17Number", label: "Nomor P-17", type: "text", required: true, source: "admin:P-17:documentNumber|case:p17Number", editableAuto: true },
+            { key: "p17Date", label: "Tanggal P-17", type: "date", required: true, source: "admin:P-17:documentDate|case:p17Date", editableAuto: true },
             { key: "spdpNumber", label: "Nomor SPDP", type: "text", required: true, source: "case:spdpNumber" },
             { key: "spdpDate", label: "Tanggal SPDP", type: "date", required: true, source: "case:spdpDate" },
             { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName" }
@@ -73,6 +79,8 @@
     },
 
     "SOP FORM 3": {
+      documentNumberKey: "sop3Number",
+      documentDateKey: "sop3Date",
       title: "Pengembalian SPDP",
       subtitle: "Pengembalian SPDP karena penyidikan belum diterima",
       sections: [
@@ -81,6 +89,7 @@
           description: "Data utama administrasi yang sedang dibuat.",
           fields: [
             { key: "sop3Date", label: "Tanggal administrasi", type: "date", required: true, source: "today", editableAuto: true },
+            { key: "sop3Number", label: "Nomor surat (SOP Form 3)", type: "text", source: "case:sop3Number", editableAuto: true },
             { key: "responsibleOfficer", label: "Pejabat / Jaksa penanggung jawab", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true }
           ]
         },
@@ -89,8 +98,8 @@
           description: "Data tagihan penyidikan (SOP Form 2) sebelumnya.",
           fields: [
             { key: "recipientTitle", label: "Yth. Pimpinan Instansi Penyidik", type: "text", required: true, defaultValue: "Kepala Kepolisian Resor Muna" },
-            { key: "sop2Number", label: "Nomor Surat Permintaan (SOP Form 2)", type: "text", required: true, source: "case:sop2Number", editableAuto: true },
-            { key: "sop2Date", label: "Tanggal Surat Permintaan (SOP Form 2)", type: "date", required: true, source: "case:sop2Date", editableAuto: true },
+            { key: "sop2Number", label: "Nomor Surat Permintaan (SOP Form 2)", type: "text", required: true, source: "admin:SOP FORM 2:documentNumber|case:sop2Number", editableAuto: true },
+            { key: "sop2Date", label: "Tanggal Surat Permintaan (SOP Form 2)", type: "date", required: true, source: "admin:SOP FORM 2:documentDate|case:sop2Date", editableAuto: true },
             { key: "spdpNumber", label: "Nomor SPDP yang dikembalikan", type: "text", required: true, source: "case:spdpNumber", editableAuto: true },
             { key: "spdpDate", label: "Tanggal SPDP", type: "date", required: true, source: "case:spdpDate", editableAuto: true },
             { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName", editableAuto: true },
@@ -148,6 +157,8 @@
       ]
     },
     "P-17": {
+      documentNumberKey: "p17Number",
+      documentDateKey: "p17Date",
       title: "Permintaan Perkembangan Hasil Penyidikan",
       subtitle: "Penagihan hasil penyidikan setelah 30 hari (P-17)",
       referencePages: "Berdasarkan Template P-17",
@@ -157,6 +168,7 @@
           description: "Data utama administrasi yang sedang dibuat.",
           fields: [
             { key: "p17Date", label: "Tanggal administrasi", type: "date", required: true, source: "today", editableAuto: true },
+            { key: "p17Number", label: "Nomor P-17", type: "text", source: "case:p17Number", editableAuto: true },
             { key: "responsibleOfficer", label: "Pejabat / Jaksa penanggung jawab", type: "text", required: true, source: "case:prosecutorName|user:fullName", editableAuto: true }
           ]
         },
@@ -189,10 +201,11 @@
             { key: "prosecutor1Nip", label: "NIP Jaksa Peneliti 1", type: "text", required: true },
             { key: "prosecutor2Name", label: "Nama Jaksa Peneliti 2", type: "text" },
             { key: "prosecutor2RankNip", label: "Pangkat/NIP Jaksa Peneliti 2", type: "text" },
-            { key: "p16Number", label: "Nomor P-16", type: "text", required: true, source: "admin:P-16:documentNumber" },
-            { key: "p16Date", label: "Tanggal P-16", type: "date", required: true, source: "admin:P-16:documentDate" },
-            { key: "dossierNumber", label: "Nomor Berkas Perkara", type: "text", required: true, source: "case:spdpNumber" },
-            { key: "dossierDate", label: "Tanggal Berkas Perkara", type: "date", required: true, source: "case:spdpDate" }
+            { key: "p16Number", label: "Nomor P-16", type: "text", required: true, source: "admin:P-16:documentNumber|case:p16Number", editableAuto: true },
+            { key: "p16Date", label: "Tanggal P-16", type: "date", required: true, source: "admin:P-16:documentDate|case:p16Date", editableAuto: true },
+            { key: "dossierNumber", label: "Nomor Berkas Perkara", type: "text", required: true, source: "case:nomorBerkas|admin:P-24:field:dossierNumber", editableAuto: true, placeholder: "Nomor berkas dari penyidik (bukan nomor SPDP)" },
+            { key: "dossierDate", label: "Tanggal Berkas Perkara", type: "date", required: true, source: "case:tanggalBerkas|admin:P-24:field:dossierDate", editableAuto: true },
+            { key: "dossierReceivedDate", label: "Tanggal berkas diterima (P-1B)", type: "date", source: "admin:P-24:field:dossierReceivedDate|case:p1bDate", editableAuto: true }
           ]
         },
         {
@@ -236,7 +249,8 @@
           title: "Data Surat dan Tersangka",
           description: "Detail surat permintaan perpanjangan penahanan dan identitas",
           fields: [
-            { key: "documentDate", label: "Tanggal Dikeluarkan Surat T-4", type: "date", required: true, source: "today" },
+            { key: "documentDate", label: "Tanggal Dikeluarkan Surat T-4", type: "date", required: true, source: "today", editableAuto: true },
+            { key: "documentNumber", label: "Nomor Surat T-4", type: "text" },
             // Menarik data "Pasal" dari sheet cases
             { key: "allegedArticle", label: "Pasal yang disangkakan", type: "text", required: true, source: "case:allegedArticle" },
             
@@ -282,7 +296,8 @@
           title: "Identitas dokumen",
           description: "Data utama administrasi yang sedang dibuat.",
           fields: [
-            { key: "documentDate", label: "Tanggal administrasi", type: "date", required: true, source: "today", editableAuto: true }
+            { key: "documentDate", label: "Tanggal administrasi", type: "date", required: true, source: "today", editableAuto: true },
+            { key: "documentNumber", label: "Nomor surat P-19", type: "text", source: "case:p19Number", editableAuto: true }
           ]
         },
         {
@@ -299,9 +314,9 @@
           fields: [
             { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName" },
             { key: "allegedArticle", label: "Pasal yang disangkakan", type: "textarea", required: true, source: "case:allegedArticle", full: true },
-            { key: "dossierNumber", label: "Nomor Berkas Perkara", type: "text", required: true, source: "case:spdpNumber" },
-            { key: "dossierDate", label: "Tanggal Berkas Perkara", type: "date", required: true, source: "case:spdpDate" },
-            { key: "dossierReceivedDate", label: "Tanggal berkas diterima", type: "date", required: true, source: "case:receivedDate" }
+            { key: "dossierNumber", label: "Nomor Berkas Perkara", type: "text", required: true, source: "case:nomorBerkas|admin:P-24:field:dossierNumber", editableAuto: true },
+            { key: "dossierDate", label: "Tanggal Berkas Perkara", type: "date", required: true, source: "case:tanggalBerkas|admin:P-24:field:dossierDate", editableAuto: true },
+            { key: "dossierReceivedDate", label: "Tanggal berkas diterima", type: "date", required: true, source: "admin:P-24:field:dossierReceivedDate|case:p1bDate", editableAuto: true }
           ]
         },
         {
@@ -311,7 +326,7 @@
             { key: "formalInstructions", label: "A. Kelengkapan Formil yang harus dilengkapi", type: "textarea", required: true, full: true },
             { key: "materialInstructions", label: "B. Kelengkapan Materil yang harus dilengkapi", type: "textarea", required: true, full: true },
             { key: "completionDeadlineDays", label: "Batas waktu penyidikan tambahan (hari)", type: "number", required: true, defaultValue: "14" },
-            { key: "signatoryName", label: "Nama Penuntut Umum penandatangan", type: "text", required: true,},
+            { key: "signatoryName", label: "Nama Penuntut Umum penandatangan", type: "text", required: true },
             { key: "signatoryRank", label: "Pangkat Penuntut Umum", type: "text", required: true },
             { key: "copies", label: "Tembusan", type: "textarea", full: true }
           ]
@@ -333,12 +348,12 @@
             { key: "destination", label: "Tempat tujuan", type: "text", required: true },
             { key: "attachment", label: "Lampiran", type: "text", required: true, defaultValue: "1 (satu) berkas" },
             { key: "letterNature", label: "Sifat surat", type: "select", required: true, defaultValue: "Rahasia", options: ["Rahasia", "Segera", "Biasa"] },
-            { key: "dossierNumber", label: "Nomor Berkas Perkara", type: "text", required: true, source: "case:spdpNumber" },
-            { key: "dossierDate", label: "Tanggal Berkas Perkara", type: "date", required: true, source: "case:spdpDate" },
-            { key: "dossierReceivedDate", label: "Tanggal berkas diterima", type: "date", required: true, source: "case:receivedDate" },
+            { key: "dossierNumber", label: "Nomor Berkas Perkara", type: "text", required: true, source: "case:nomorBerkas|admin:P-24:field:dossierNumber", editableAuto: true },
+            { key: "dossierDate", label: "Tanggal Berkas Perkara", type: "date", required: true, source: "case:tanggalBerkas|admin:P-24:field:dossierDate", editableAuto: true },
+            { key: "dossierReceivedDate", label: "Tanggal berkas diterima", type: "date", required: true, source: "admin:P-24:field:dossierReceivedDate|case:p1bDate", editableAuto: true },
             { key: "suspectName", label: "Nama Tersangka", type: "text", required: true, source: "case:suspectName" },
             { key: "allegedArticle", label: "Pasal yang disangkakan", type: "textarea", required: true, source: "case:allegedArticle", full: true },
-            { key: "researchConclusion", label: "Kesimpulan penelitian berkas", type: "textarea", required: true, source: "admin:P-24:field:conclusion", full: true }
+            { key: "researchConclusion", label: "Kesimpulan penelitian berkas", type: "textarea", required: true, source: "admin:P-24:field:conclusion|case:p24Conclusion", editableAuto: true, full: true }
           ]
         },
         {
