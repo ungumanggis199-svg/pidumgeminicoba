@@ -1718,7 +1718,10 @@
             <h3 class="case-section-title" style="margin:0">Administrasi perkara</h3>
             <p>${doneKnown} dari ${total} jenis dibuat · ${administrations.length} file tersimpan</p>
           </div>
-          <div class="adm-overview-meta">${folder}<span class="adm-pct">${pct}%</span></div>
+          <div class="adm-overview-meta">
+            <button type="button" class="case-ghost-button small" id="adm-verify-files" title="Cek ulang keberadaan file di Google Drive">↻ Periksa file</button>
+            ${folder}<span class="adm-pct">${pct}%</span>
+          </div>
         </header>
         <div class="administration-progress"><span style="width:${pct}%"></span></div>
 
@@ -1806,6 +1809,30 @@
       } catch (error) {
         toast("error", "Gagal menyimpan", error.message);
         setButtonLoading(button, false);
+      }
+    });
+
+    document.getElementById("adm-verify-files")?.addEventListener("click", async (event) => {
+      const button = event.currentTarget;
+      const before = (state.cases.find((entry) => entry.caseId === caseId)?.administrations || []).length;
+      button.disabled = true;
+      button.textContent = "Memeriksa…";
+      try {
+        const result = await gasRequest("getCase", { caseId, verifyFiles: true }, { timeout: 90000 });
+        if (result.case) {
+          // ganti seluruh daftar administrasi (bukan digabung) agar file yang terhapus benar-benar hilang
+          const index = state.cases.findIndex((entry) => entry.caseId === caseId);
+          if (index >= 0) state.cases[index] = result.case;
+        }
+        const after = (result.case?.administrations || []).length;
+        toast(after < before ? "warning" : "success", "Pemeriksaan file selesai",
+          after < before ? `${before - after} administrasi tidak lagi memiliki file di Drive dan dikembalikan ke status belum dibuat.` : "Semua file administrasi masih tersedia di Google Drive.");
+        refreshCurrentPage();
+        openCaseModal(caseId);
+      } catch (error) {
+        toast("error", "Gagal memeriksa file", error.message);
+        button.disabled = false;
+        button.textContent = "↻ Periksa file";
       }
     });
 
@@ -3954,6 +3981,10 @@ function detectTeamRoleFromLabel(label) {
       { id: "JAKSA-002", name: "Daniel Marbun, S.H.", nip: "199002022015031002", pangkat: "Ajun Jaksa", jabatan: "Jaksa Fungsional" }
     ] });
     if (action === "listCaseAnalyses") return Promise.resolve({ analyses: [] });
+    if (action === "getCase") {
+      const found = demoCases.find((item) => item.caseId === payload.caseId);
+      return found ? Promise.resolve({ case: { ...found, administrations: (found.administrations || []).filter((record) => !record.fileMissing) } }) : Promise.reject(new Error("Perkara tidak ditemukan."));
+    }
     if (action === "analyzeCase") return new Promise((resolve) => setTimeout(() => resolve({
       analysis: { model: "demo", createdAt: new Date().toISOString() },
       parsed: {
