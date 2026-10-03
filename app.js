@@ -2581,6 +2581,10 @@ function detectTeamRoleFromLabel(label) {
       toast("success", `${type} berhasil dibuat`, statusNote);
       progress.done();
       renderBuilderSuccess({ type, result, statusNote });
+      const unfilled = Array.isArray(result.unfilledPlaceholders) ? result.unfilledPlaceholders : [];
+      if (unfilled.length) {
+        toast("warning", `${unfilled.length} bagian dokumen berisi "......"`, `Placeholder tanpa data: ${unfilled.slice(0, 6).map((name) => `{{${name}}}`).join(", ")}${unfilled.length > 6 ? ", …" : ""}`);
+      }
     } catch (error) {
       progress.fail();
       toast("error", "Administrasi gagal dibuat", error.message || "Data administrasi belum berhasil disimpan.");
@@ -2611,6 +2615,7 @@ function detectTeamRoleFromLabel(label) {
         <div class="builder-success-copy">
           <strong>${escapeHtml(type)} tersimpan</strong>
           <p>${escapeHtml(statusNote)}${result.administration?.documentNumber ? ` Nomor: ${escapeHtml(result.administration.documentNumber)}.` : ""}</p>
+          ${(result.unfilledPlaceholders || []).length ? `<p class="builder-unfilled">Bagian berikut di template belum memiliki data sehingga tertulis "......": ${(result.unfilledPlaceholders || []).map((name) => `<code>{{${escapeHtml(name)}}}</code>`).join(" ")}. Lengkapi isian form atau sesuaikan nama placeholder di template Google Docs.</p>` : ""}
         </div>
         <div class="builder-success-actions">
           ${result.fileUrl ? `<a class="case-primary-button" href="${escapeAttr(result.fileUrl)}" target="_blank" rel="noopener noreferrer">Buka dokumen</a>` : ""}
