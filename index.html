@@ -1,196 +1,3186 @@
-<!doctype html>
-<html lang="id">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#6f1d32" />
+/**
+ * SIAP PIDUM KEJAKSAAN NEGERI MUNA
+ * Backend Google Apps Script (Versi Real-Time Docs Generator)
+ */
 
-  <meta name="description" content="Sistem Informasi Alur Administrasi Pidana Umum Kejaksaan Negeri Muna" />
-  <meta name="color-scheme" content="light" />
+const APP_CONFIG = Object.freeze({
+  APP_NAME: 'SIAP PIDUM Kejari Muna',
+  SPREADSHEET_ID: '1OCCl_rOodETdsdQRuBwxBMWZWO7LvqYv6Kbyw__UiCg',
+  DRIVE_FOLDER_ID: '1k4NiHI47evCnGZJSa4Z29zzU3dSDuKJm',
+  TOKEN_TTL_SECONDS: 8 * 60 * 60,
+  TIMEZONE: 'Asia/Makassar'
+});
 
-  <!-- Logo pada tab browser & layar utama HP -->
-  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/refs/heads/main/LOGO/Pidum.png?v=1" />
-  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/refs/heads/main/LOGO/Pidum.png?v=1" />
+const SHEETS = Object.freeze({
+  USERS: 'akses',
+  CASES: 'Cases',
+  DOCUMENTS: 'Documents',
+  ADMINISTRATIONS: 'Administrations',
+  ADMINISTRATION_FIELDS: 'AdministrationFields',
+  LIST_JAKSA: 'List Jaksa',
+  REMINDERS: 'Reminders',
+  REMINDER_PROGRESS: 'ReminderProgress',
+  REMINDER_LOGS: 'ReminderLogs',
+  LIST_INTELIJEN: 'List Intelijen',
+  TIK_REMINDERS: 'ReminderKartuTIK',
+  TIK_FILES: 'ReminderKartuTIKFiles',
+  TIK_LOGS: 'ReminderKartuTIKLogs',
+  LOGS: 'ActivityLog',
+  CASE_ANALYSIS: 'CaseAnalysis',
+  LEGAL_CORPUS: 'LegalCorpus'
+});
 
-  <title>SIAP PIDUM Kejari Muna</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=4.2" />
-</head>
-<body>
-  <noscript>Aplikasi ini membutuhkan JavaScript.</noscript>
+const ACCESS_HEADERS = ['Username', 'password', 'Name', 'Role', 'Unit'];
+const CASE_HEADERS = [
+  'caseId', 'createdAt', 'updatedAt', 'submittedBy', 'submittedByName', 'investigatorName', 'investigatorRank', 'investigatorNipNrp', 'investigatorPosition', 'investigatorInstitution', 'investigatorPhone', 'spdpNumber', 'spdpDate', 'receivedDate', 'sprindikNumber', 'sprindikDate', 'spdpDelayDays', 'spdpLate', 'allegedArticle', 'caseSummary', 'suspectName', 'suspectIdentityNumber', 'birthPlace', 'birthDate', 'age', 'gender', 'nationality', 'address', 'religion', 'occupation', 'education', 'evidence', 'status', 'statusUpdatedAt', 'prosecutorName', 'deadlineType', 'deadlineDate', 'notes', 'courtCaseNumber', 'nextHearingDate', 'hearingAgenda', 'spdpFileId', 'spdpFileName', 'spdpFileUrl', 'caseFolderId', 'caseFolderUrl', 'nomorBerkas', 'tanggalBerkas', 'p16Number', 'p16Date', 'p16Notes', 'p17Number', 'p17Date', 'p1bNumber', 'p1bDate', 'p1bNotes', 'p24Number', 'p24Date', 
+  'p24Conclusion', 'p24Notes', 'p19Number', 'p19Date', 'p19Notes', 'p21Number', 'p21Date', 'p21Notes', 'p29Number', 'p29Date', 'p29Notes', 'sop1Number', 'sop1Date', 'sop2Number', 'sop2Date', 'sop3Number', 'sop3Date'
+];
+const DOCUMENT_HEADERS = ['documentId', 'caseId', 'type', 'fileName', 'mimeType', 'fileSize', 'fileId', 'fileUrl', 'uploadedBy', 'uploadedAt'];
+const ADMINISTRATION_HEADERS = ['administrationId', 'caseId', 'type', 'title', 'documentNumber', 'documentDate', 'responsibleOfficer', 'notes', 'fileName', 'mimeType', 'fileSize', 'fileId', 'fileUrl', 'createdBy', 'createdByName', 'createdAt', 'updatedAt', 'suspectName', 'schemaVersion', 'fieldCount'];
+const ADMINISTRATION_FIELD_HEADERS = ['fieldId', 'administrationId', 'caseId', 'suspectName', 'type', 'fieldKey', 'fieldLabel', 'fieldValue', 'fieldSource', 'sortOrder', 'createdAt'];
 
-  <div id="toast-root" class="toast-root" aria-live="polite"></div>
-  <div id="modal-root"></div>
+// Tambahkan SOP FORM ke dalam urutan array
+const ADMINISTRATION_ORDER = ['P-16','P-17', 'P-24', 'P-19', 'P-21', 'P-29', 'SOP FORM 1', 'SOP FORM 2', 'SOP FORM 3', 'T-4'];
 
-  <section id="login-view" class="login-page">
-    <div class="login-decoration login-decoration-a"></div>
-    <div class="login-decoration login-decoration-b"></div>
+const ADMINISTRATION_RULES = Object.freeze({
+  'P-16': { title: 'Penunjukan Penuntut Umum', status: 'P16_DITERBITKAN',prerequisites: [] },
+  'P-17': { title: 'Permintaan Perkembangan Hasil Penyidikan', status: 'MENUNGGU_BERKAS_TAHAP_I', prerequisites: ['P-16'] },
+  'P-24': { title: 'Nota pendapat hasil penelitian', status: 'PENELITIAN_BERKAS',prerequisites: []},
+  'P-19': { title: 'Berkas belum lengkap', status: 'P19_PENGEMBALIAN_BERKAS', prerequisites: ['P-24'] },
+  'P-21': { title: 'Berkas lengkap', status: 'P21_LENGKAP', prerequisites: ['P-24'] },
+  'P-29': { title: 'Surat dakwaan', status: 'PENUNTUTAN', prerequisites: ['P-21'] },  
+  'SOP FORM 1': { title: 'Pemantauan Perkembangan Penyidikan', status: 'MENUNGGU_BERKAS_TAHAP_I', prerequisites: ['P-16'] },
+  'SOP FORM 2': { title: 'Permintaan Perkembangan Hasil Penyidikan', status: 'MENUNGGU_BERKAS_TAHAP_I', prerequisites: ['P-16'] },
+  'SOP FORM 3': { title: 'Pengembalian SPDP', status: 'SPDP_DIKEMBALIKAN', prerequisites: ['SOP FORM 2'] },
+  // T-4 tidak mengubah tahapan perkara (perpanjangan penahanan berjalan paralel dengan penyidikan)
+  'T-4': { title: 'Surat Perpanjangan Penahanan', status: '', prerequisites: [] }
+});
 
-    <div class="login-brand-panel">
-      <div class="brand-lockup">
-        <div class="brand-emblem" aria-hidden="true">
-          <img src="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/77b6ab999166a79deca09af8a19961f9df49a6aa/LOGO/Logo%20Kejaksaan.png" alt="" />
-        </div>
-        <div>
-          <p class="eyebrow">KEJAKSAAN REPUBLIK INDONESIA</p>
-          <h1>SIAP PIDUM</h1>
-          <p>Sistem Informasi Alur Administrasi Pidana Umum<br />Kejaksaan Negeri Muna</p>
-        </div>
-      </div>
+const LIST_JAKSA_HEADERS = ['ID Jaksa', 'Nama Jaksa', 'NIP', 'Nomor WhatsApp', 'Aktif'];
+const LIST_INTELIJEN_HEADERS = ['ID Intelijen', 'Nama Intelijen', 'Nomor WhatsApp', 'Aktif'];
+const TIK_REMINDER_HEADERS = ['reminderId', 'suspectName', 'folderId', 'folderUrl', 'fileCount', 'recipientCount', 'successCount', 'failedCount', 'status', 'createdBy', 'createdByName', 'createdAt', 'sentAt', 'lastSendResponse'];
+const TIK_FILE_HEADERS = ['fileId', 'reminderId', 'suspectName', 'fileName', 'mimeType', 'fileSize', 'driveFileId', 'fileUrl', 'downloadUrl', 'uploadedBy', 'uploadedAt'];
+const TIK_LOG_HEADERS = ['logId', 'reminderId', 'suspectName', 'intelijenId', 'intelijenName', 'phone', 'status', 'response', 'sentAt'];
+const REMINDER_HEADERS = ['reminderId', 'caseId', 'spdpNumber', 'spdpDate', 'sprindikNumber', 'sprindikDate', 'detentionEndDate', 'receivedDate', 'suspectName', 'administrationType', 'detentionCategory', 'deadlineDays', 'deadlineDate', 'prosecutorId', 'prosecutorName', 'prosecutorPhone', 'status', 'notes', 'createdBy', 'createdAt', 'updatedBy', 'updatedAt', 'completedAt', 'sentH3At', 'sentH1At', 'sentH0At', 'lastSendStatus', 'lastSendResponse'];
+const REMINDER_PROGRESS_HEADERS = ['progressId', 'caseId', 'spdpNumber', 'suspectName', 'administrationType', 'completed', 'completedAt', 'completedBy', 'updatedAt'];
+const REMINDER_LOG_HEADERS = ['logId', 'reminderId', 'caseId', 'administrationType', 'prosecutorName', 'prosecutorPhone', 'triggerType', 'status', 'response', 'sentAt'];
 
-      <div class="login-feature-card">
-        <span class="feature-number">01</span>
-        <div>
-          <h2>Administrasi perkara lebih tertib</h2>
-          <p>Penerimaan SPDP, pemantauan tenggat, penelitian berkas, Tahap II, pelimpahan, dan persidangan dalam satu alur kerja.</p>
-        </div>
-      </div>
+const REMINDER_ADMIN_TYPES = Object.freeze(['P-16', 'P-17', 'P-18', 'P-19', 'P-21', 'SOP FORM 1', 'SOP FORM 2', 'SOP FORM 3', 'TAHAP 2', 'P-29']);
+const REMINDER_STATUS = Object.freeze({ ACTIVE: 'ACTIVE', COMPLETED: 'COMPLETED', CANCELLED: 'CANCELLED' });
+const FONNTE_ENDPOINT = 'https://api.fonnte.com/send';
+const FONNTE_TOKEN_PROPERTY = 'FONNTE_TOKEN';
+const REMINDER_TRIGGER_HANDLER = 'scanAndSendDueReminders';
 
-      <div class="security-note">
-        <span class="security-icon">◆</span>
-        <p>Gunakan akun resmi. Seluruh aktivitas penting dicatat dalam log aplikasi.</p>
-      </div>
-    </div>
+const LOG_HEADERS = ['logId', 'userId', 'username', 'role', 'action', 'caseId', 'description', 'timestamp'];
+const ALLOWED_STATUSES = ['SPDP_DITERIMA', 'VERIFIKASI_SPDP', 'P16_DITERBITKAN', 'KOORDINASI', 'MENUNGGU_BERKAS_TAHAP_I', 'BERKAS_TAHAP_I_DITERIMA', 'PENELITIAN_BERKAS', 'P19_PENGEMBALIAN_BERKAS', 'PENYIDIKAN_TAMBAHAN', 'P21_LENGKAP', 'MENUNGGU_TAHAP_II', 'TAHAP_II', 'PENUNTUTAN', 'DILIMPAHKAN_KE_PN', 'SIDANG', 'SELESAI', 'SPDP_DIKEMBALIKAN', 'DIHENTIKAN'];
 
-    <div class="login-form-panel">
-      <form id="login-form" class="login-card" autocomplete="on">
-        <div class="login-card-header">
-          <p class="eyebrow green">PORTAL TERPADU</p>
-          <h2>Masuk ke aplikasi</h2>
-          <p>Pilih peran, lalu masukkan nama pengguna dan kata sandi.</p>
-        </div>
+function setupProject() {
+  const spreadsheet = SpreadsheetApp.openById(APP_CONFIG.SPREADSHEET_ID);
+  ensureSheet_(spreadsheet, SHEETS.USERS, ACCESS_HEADERS);
+  ensureSheet_(spreadsheet, SHEETS.CASES, CASE_HEADERS);
+  ensureSheet_(spreadsheet, SHEETS.DOCUMENTS, DOCUMENT_HEADERS);
+  ensureSheet_(spreadsheet, SHEETS.ADMINISTRATIONS, ADMINISTRATION_HEADERS);
+  ensureSheet_(spreadsheet, SHEETS.ADMINISTRATION_FIELDS, ADMINISTRATION_FIELD_HEADERS);
+  ensureListJaksaSheet_(spreadsheet);
+  ensureListIntelijenSheet_(spreadsheet);
+  ensureSheet_(spreadsheet, SHEETS.REMINDERS, REMINDER_HEADERS);
+  ensureSheet_(spreadsheet, SHEETS.REMINDER_PROGRESS, REMINDER_PROGRESS_HEADERS);
+  ensureSheet_(spreadsheet, SHEETS.REMINDER_LOGS, REMINDER_LOG_HEADERS);
+  ensureSheet_(spreadsheet, SHEETS.TIK_REMINDERS, TIK_REMINDER_HEADERS);
+  ensureSheet_(spreadsheet, SHEETS.TIK_FILES, TIK_FILE_HEADERS);
+  ensureSheet_(spreadsheet, SHEETS.TIK_LOGS, TIK_LOG_HEADERS);
+  ensureSheet_(spreadsheet, SHEETS.LOGS, LOG_HEADERS);
+  ensureAiSheets_(spreadsheet);
 
-<div class="role-selector" role="radiogroup" aria-label="Pilih peran pengguna">
+  getTokenSecret_();
+  const folder = DriveApp.getFolderById(APP_CONFIG.DRIVE_FOLDER_ID);
+  folder.getName();
 
-  <!-- KEJAKSAAN -->
-  <label class="role-option active" data-role-card="jaksa">
-    <input type="radio" name="role" value="jaksa" checked />
+  formatSheets_(spreadsheet);
+  installReminderTrigger();
+  return "Setup selesai. Konfigurasi berhasil.";
+}
 
-    <span class="role-icon role-icon-image" aria-hidden="true">
-      <img
-        src="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/refs/heads/main/LOGO/LOGO-JAMPIDUM-FIX.png"
-        alt=""
-      />
-    </span>
+function doPost(e) {
+  if (!e || !e.postData || !e.postData.contents) {
+    return jsonResponse_(false, null, 'doPost adalah endpoint Web App');
+  }
 
-    <span class="role-copy">
-      <strong>KEJAKSAAN</strong>
-      <small>Dashboard dan<br />pengelolaan perkara</small>
-    </span>
-  </label>
+  try {
+    const request = JSON.parse(e.postData.contents);
+    const action = String(request.action || '').trim();
+    const payload = request.payload || {};
+    const token = String(request.token || '');
 
-  <!-- KEPOLISIAN -->
-  <label class="role-option" data-role-card="penyidik">
-    <input type="radio" name="role" value="penyidik" />
+    let result;
+    switch (action) {
+      case 'health': result = { app: APP_CONFIG.APP_NAME, status: 'ok', timestamp: new Date().toISOString() }; break;
+      case 'login': result = login_(payload); break;
+      case 'me': result = me_(token); break;
+      case 'submitCase': result = submitCase_(token, payload); break;
+      case 'listCases': result = listCases_(token); break;
+      case 'getCase': result = getCase_(token, payload); break;
+      case 'listAdministrations': result = listAdministrations_(token, payload); break;
+      case 'createAdministration': result = createAdministration_(token, payload); break;
+      case 'updateCase': result = updateCase_(token, payload); break;
+      case 'listProsecutors': result = listProsecutors_(token); break;
+      case 'listReminders': result = listReminders_(token, payload); break;
+      case 'createReminder': result = saveReminder_(token, Object.assign({}, payload, { __mode: 'CREATE' })); break;
+      case 'updateReminder': result = saveReminder_(token, Object.assign({}, payload, { __mode: 'UPDATE' })); break;
+      case 'saveReminder': result = saveReminder_(token, payload); break;
+      case 'updateReminderStatus': result = updateReminderStatus_(token, payload); break;
+      case 'updateReminderProgress': result = updateReminderProgress_(token, payload); break;
+      case 'sendReminderNow': result = sendReminderNow_(token, payload); break;
+      case 'deleteReminder': result = deleteReminder_(token, payload); break;
+      case 'listTikReminders': result = listTikReminders_(token); break;
+      case 'createTikReminderDraft': result = createTikReminderDraft_(token, payload); break;
+      case 'uploadTikIdentityFile': result = uploadTikIdentityFile_(token, payload); break;
+      case 'sendTikReminder': result = sendTikReminder_(token, payload); break;
+      case 'deleteTikReminderDraft': result = deleteTikReminderDraft_(token, payload); break;
+      case 'analyzeCase': result = analyzeCase_(token, payload); break;
+      case 'listCaseAnalyses': result = listCaseAnalyses_(token, payload); break;
+      case 'chatAi': result = chatAi_(token, payload); break;
+      default: throw new Error('Aksi tidak dikenal: ' + action);
+    }
+    return jsonResponse_(true, result, 'OK');
+  } catch (error) {
+    console.error(error && error.stack ? error.stack : error);
+    const fallbackResponse = { status: '', caseId: '', case: {}, administration: {}, fileUrl: '' };
+    return jsonResponse_(false, fallbackResponse, cleanErrorMessage_(error));
+  }
+}
 
-    <span class="role-icon role-icon-image" aria-hidden="true">
-      <img
-        src="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/refs/heads/main/LOGO/reserse.png"
-        alt=""
-      />
-    </span>
+function doGet() {
+  return jsonResponse_(true, { app: APP_CONFIG.APP_NAME, status: 'ok' }, 'Backend aktif');
+}
 
-    <span class="role-copy">
-      <strong>KEPOLISIAN</strong>
-      <small>Form pengiriman<br />SPDP</small>
-    </span>
-  </label>
+/** =====================================================================
+ *  PEMBUATAN ADMINISTRASI & GOOGLE DOCS (V4 — perbaikan pengambilan data)
+ *  ---------------------------------------------------------------------
+ *  Perbaikan utama:
+ *  1. Data perkara dibaca/ditulis berdasarkan NAMA KOLOM aktual pada sheet
+ *     Cases (bukan urutan CASE_HEADERS) sehingga tidak bergeser.
+ *  2. Field form TIDAK lagi menimpa sembarang kolom perkara. Hanya kolom
+ *     pada CASE_WRITEBACK_KEYS yang diperbarui (nomor/tanggal P-xx, berkas).
+ *  3. Data Jaksa dicari berdasarkan ID ATAU nama melalui sheet List Jaksa
+ *     yang dibaca per nama kolom (getJaksaData lama memakai indeks kolom
+ *     tetap & getActiveSpreadsheet sehingga sering null / salah orang).
+ *  4. Nama Jaksa yang dipilih tidak lagi terhapus menjadi kosong.
+ *  5. Tanggal & nomor dokumen diambil dari field yang tepat (sop1Date, p17Date…).
+ *  6. Mode "Administrasi manual (tanpa perkara)" kini didukung.
+ *  7. Status perkara tidak mundur saat membuat ulang administrasi lama.
+ *  8. Hanya placeholder {{…}} yang ada di template yang diganti (lebih cepat).
+ *  ===================================================================== */
 
-</div>
+const MANUAL_CASE_ID = '__NEW_ADMIN__';
 
-        <label class="field-label" for="login-username">Nama pengguna</label>
-        <div class="input-with-icon">
-          <span>◎</span>
-          <input id="login-username" name="username" type="text" autocomplete="username" placeholder="Masukkan nama pengguna" required />
-        </div>
+const CASE_WRITEBACK_KEYS = [
+  'prosecutorName', 'nomorBerkas', 'tanggalBerkas',
+  'p16Number', 'p16Date', 'p16Notes', 'p17Number', 'p17Date',
+  'p1bNumber', 'p1bDate', 'p1bNotes', 'p24Number', 'p24Date', 'p24Conclusion', 'p24Notes',
+  'p19Number', 'p19Date', 'p19Notes', 'p21Number', 'p21Date', 'p21Notes',
+  'p29Number', 'p29Date', 'p29Notes',
+  'sop1Number', 'sop1Date', 'sop2Number', 'sop2Date', 'sop3Number', 'sop3Date'
+];
 
-        <label class="field-label" for="login-password">Kata sandi</label>
-        <div class="input-with-icon">
-          <span>●</span>
-          <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Masukkan kata sandi" required />
-          <button type="button" id="toggle-password" class="icon-button" aria-label="Tampilkan kata sandi">◉</button>
-        </div>
+const CASE_FIELD_ALIASES = Object.freeze({
+  dossierNumber: 'nomorBerkas',
+  dossierDate: 'tanggalBerkas'
+});
 
-        <button id="login-submit" class="primary-button full" type="submit">
-          <span class="button-label">Masuk</span>
-          <span class="button-spinner" hidden></span>
-        </button>
+const ADMIN_CASE_COLUMNS = Object.freeze({
+  'P-16': { number: 'p16Number', date: 'p16Date' },
+  'P-17': { number: 'p17Number', date: 'p17Date' },
+  'P-24': { number: 'p24Number', date: 'p24Date' },
+  'P-19': { number: 'p19Number', date: 'p19Date' },
+  'P-21': { number: 'p21Number', date: 'p21Date' },
+  'P-29': { number: 'p29Number', date: 'p29Date' },
+  'SOP FORM 1': { number: 'sop1Number', date: 'sop1Date' },
+  'SOP FORM 2': { number: 'sop2Number', date: 'sop2Date' },
+  'SOP FORM 3': { number: 'sop3Number', date: 'sop3Date' }
+});
 
-      </form>
-    </div>
-  </section>
+/** Urutan status untuk mencegah status perkara mundur. */
+const STATUS_ORDER = ['SPDP_DITERIMA', 'VERIFIKASI_SPDP', 'P16_DITERBITKAN', 'KOORDINASI', 'MENUNGGU_BERKAS_TAHAP_I',
+  'BERKAS_TAHAP_I_DITERIMA', 'PENELITIAN_BERKAS', 'P19_PENGEMBALIAN_BERKAS', 'PENYIDIKAN_TAMBAHAN', 'P21_LENGKAP',
+  'MENUNGGU_TAHAP_II', 'TAHAP_II', 'PENUNTUTAN', 'DILIMPAHKAN_KE_PN', 'SIDANG', 'SELESAI'];
 
-  <section id="app-view" class="app-shell" hidden>
-    <aside id="sidebar" class="sidebar">
-      <div class="sidebar-brand">
-        <div class="sidebar-emblem" aria-hidden="true">
-          <img src="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/77b6ab999166a79deca09af8a19961f9df49a6aa/LOGO/Logo%20Kejaksaan.png" alt="" />
-        </div>
-        <div>
-          <strong>SIAP PIDUM</strong>
-          <small>Kejari Muna</small>
-        </div>
-      </div>
+function createAdministration_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
 
-      <nav id="sidebar-menu" class="sidebar-menu" aria-label="Navigasi utama"></nav>
+  payload = payload || {};
+  const caseId = text_(payload.caseId);
+  const type = text_(payload.type).toUpperCase();
+  if (!caseId) throw new Error('ID Perkara wajib diisi.');
+  if (!type) throw new Error('Jenis administrasi wajib ditentukan.');
 
-      <div class="sidebar-footer">
-        <div class="sidebar-user">
-          <div id="sidebar-avatar" class="avatar">U</div>
-          <div>
-            <strong id="sidebar-user-name">Pengguna</strong>
-            <small id="sidebar-user-role">Peran</small>
-          </div>
-        </div>
-        <button id="logout-button" class="logout-button" type="button">Keluar</button>
-      </div>
-    </aside>
+  const rule = ADMINISTRATION_RULES[type];
+  if (!rule) throw new Error('Jenis administrasi "' + type + '" tidak dikenal sistem.');
 
-    <div class="app-main">
-      <header class="topbar">
-        <button id="mobile-menu-button" class="mobile-menu-button" type="button" aria-label="Buka menu">☰</button>
+  const isManual = caseId === MANUAL_CASE_ID;
+  const timestamp = new Date();
+  const administrationId = 'ADM-' + Utilities.getUuid().substring(0, 8).toUpperCase();
 
-        <div class="topbar-brand-lockup" aria-label="e-Pidum Kejaksaan Negeri Muna">
-          <div class="topbar-brand-emblem" aria-hidden="true">
-            <img src="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/refs/heads/main/LOGO/Pidum.png" alt="" />
-          </div>
-          <div>
-            <div class="topbar-brand-title">e-Pidum · Kejaksaan Negeri Muna</div>
-            <div class="topbar-brand-subtitle">Administrasi perkara tindak pidana umum</div>
-          </div>
-        </div>
+  // ---------- 1. Normalisasi field dari frontend ----------
+  const rawFields = normalizeAdministrationFields_(payload);
+  const fieldValues = {};
+  rawFields.forEach(function (f) { if (!(f.key in fieldValues)) fieldValues[f.key] = f.value; });
 
-        <div class="topbar-page-context">
-          <p id="page-eyebrow" class="eyebrow">RINGKASAN</p>
-          <h1 id="page-title">Dashboard</h1>
-        </div>
+  // ---------- 2. Ambil data perkara (berdasarkan nama kolom) ----------
+  const caseSheet = getSheet_(SHEETS.CASES);
+  let located = null;
+  let current;
+  if (isManual) {
+    current = {
+      caseId: 'MANUAL',
+      suspectName: text_(fieldValues.suspectName) || 'Tanpa Nama',
+      spdpNumber: text_(fieldValues.spdpNumber),
+      spdpDate: fieldValues.spdpDate || '',
+      allegedArticle: text_(fieldValues.allegedArticle),
+      investigatorInstitution: text_(fieldValues.investigatorInstitution)
+    };
+  } else {
+    located = readCaseRow_(caseSheet, caseId);
+    if (!located) throw new Error('Data perkara ' + caseId + ' tidak ditemukan pada sheet Cases.');
+    current = located.record;
+  }
+  const existing = isManual ? [] : getAdministrationsForCase_(caseId);
 
-        <div class="topbar-actions">
-          <div id="connection-indicator" class="connection-indicator">
-            <span></span>
-            <small>Memeriksa koneksi</small>
-          </div>
-          <div class="date-chip" id="current-date"></div>
-          <button class="topbar-icon-button" type="button" aria-label="Notifikasi" title="Notifikasi tenggat">♢</button>
-          <div class="topbar-profile">
-            <div id="topbar-avatar" class="topbar-profile-avatar">U</div>
-            <div class="topbar-profile-copy">
-              <strong id="topbar-user-name">Pengguna</strong>
-              <small id="topbar-user-role">Peran</small>
-            </div>
-          </div>
-        </div>
-      </header>
+  // ---------- 3. Selesaikan nama Jaksa (ID → nama, isi pangkat/jabatan bila kosong) ----------
+  const jaksaResolved = resolveTeamMembers_(fieldValues);
+  rawFields.forEach(function (f) {
+    if (jaksaResolved.names[f.key] !== undefined) f.value = jaksaResolved.names[f.key];
+    if (jaksaResolved.extra[f.key] !== undefined && !text_(f.value)) f.value = jaksaResolved.extra[f.key];
+  });
+  Object.keys(jaksaResolved.names).forEach(function (k) { fieldValues[k] = jaksaResolved.names[k]; });
+  Object.keys(jaksaResolved.extra).forEach(function (k) { if (!text_(fieldValues[k])) fieldValues[k] = jaksaResolved.extra[k]; });
 
-      <main id="page-content" class="page-content"></main>
-    </div>
-  </section>
+  // ---------- 4. Nomor & tanggal dokumen ----------
+  const columns = ADMIN_CASE_COLUMNS[type] || {};
+  const documentNumber = text_(payload.documentNumber) || text_(fieldValues.documentNumber) || text_(fieldValues[columns.number]);
+  const documentDateRaw = text_(fieldValues[columns.date]) || text_(payload.documentDate) || text_(fieldValues.documentDate) || dateKey_(timestamp);
+  const documentDate = dateCell_(documentDateRaw) || timestamp;
+  const responsibleOfficer = text_(payload.responsibleOfficer) || text_(fieldValues.responsibleOfficer) || text_(fieldValues.signatoryName) || text_(user.fullName);
 
-  <!-- Skrip dimuat SEKALI saja (versi lama memuat app.js dua kali → event ganda & crash) -->
-  <script src="config.js?v=4.2" defer></script>
-  <script src="administration-forms.js?v=4.2" defer></script>
-  <script src="app.js?v=4.2" defer></script>
-</body>
-</html>
+  // ---------- 5. Simpan ke sheet khusus per jenis (riwayat) ----------
+  let sheetDataMap = {};
+  try {
+    sheetDataMap = saveToSpecificSheet_(isManual ? 'MANUAL' : caseId, current.suspectName, type, documentNumber, documentDate, rawFields);
+  } catch (error) {
+    console.error('Gagal merekam ke sheet ' + type + ': ' + error.message);
+  }
+
+  // ---------- 6. Data pengganti placeholder Google Docs ----------
+  const replaceData = {};
+  Object.keys(current).forEach(function (key) {
+    if (key) replaceData[key] = formatReplaceValue_(current[key]);
+  });
+  existing.forEach(function (admin) {
+    (admin.formFields || []).forEach(function (field) {
+      const k = text_(field.key);
+      if (k && !text_(replaceData[k])) replaceData[k] = formatReplaceValue_(field.value);
+    });
+  });
+  Object.keys(sheetDataMap).forEach(function (k) { if (!text_(replaceData[k])) replaceData[k] = sheetDataMap[k]; });
+  rawFields.forEach(function (f) { replaceData[f.key] = formatReplaceValue_(f.value); });
+  Object.keys(jaksaResolved.template).forEach(function (k) { replaceData[k] = jaksaResolved.template[k]; });
+  replaceData.documentNumber = documentNumber;
+  replaceData.documentDate = formatDateId_(documentDate);
+  replaceData.prosecutorName = responsibleOfficer;
+  replaceData.responsibleOfficer = responsibleOfficer;
+  if (columns.date) replaceData[columns.date] = formatDateId_(documentDate);
+  if (columns.number && documentNumber) replaceData[columns.number] = documentNumber;
+
+  // ---------- 7. Struktur folder arsip ----------
+  const targetFolder = isManual
+    ? getManualAdministrationFolder_(current.suspectName, timestamp)
+    : getCaseAdministrationFolder_(current, timestamp);
+
+  // ---------- 8. Buat dokumen dari template / unggah lampiran ----------
+  let uploadedFile = null;
+  const templateId = ADMINISTRATION_TEMPLATES[type];
+  if (templateId && templateId.indexOf('ISI_DENGAN') !== 0) {
+    uploadedFile = generateDocumentFromTemplate_(templateId, type + ' - ' + (current.suspectName || 'Tanpa Nama'), targetFolder, replaceData);
+  } else if (payload.administrationFile && payload.administrationFile.name && payload.administrationFile.dataBase64) {
+    validateAdministrationFile_(payload.administrationFile);
+    const file = createDriveFile_(targetFolder, isManual ? 'MANUAL' : caseId, type, payload.administrationFile);
+    uploadedFile = { name: file.getName(), mimeType: file.getMimeType(), fileSize: file.getSize(), fileId: file.getId(), fileUrl: file.getUrl() };
+  }
+
+  // ---------- 9. Tulis ke sheet (dengan kunci agar tidak bentrok) ----------
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const adminRecord = {
+      administrationId: administrationId,
+      caseId: isManual ? 'MANUAL' : caseId,
+      type: type,
+      title: rule.title,
+      documentNumber: documentNumber,
+      documentDate: documentDate,
+      responsibleOfficer: responsibleOfficer,
+      notes: text_(payload.notes),
+      fileName: uploadedFile ? uploadedFile.name : '',
+      mimeType: uploadedFile ? uploadedFile.mimeType : '',
+      fileSize: uploadedFile ? uploadedFile.fileSize : '',
+      fileId: uploadedFile ? uploadedFile.fileId : '',
+      fileUrl: uploadedFile ? uploadedFile.fileUrl : '',
+      createdBy: user.username,
+      createdByName: user.fullName,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      suspectName: text_(current.suspectName),
+      schemaVersion: '4.0',
+      fieldCount: rawFields.length
+    };
+    appendObject_(getSheet_(SHEETS.ADMINISTRATIONS), ADMINISTRATION_HEADERS, adminRecord);
+    markDriveFileAvailable_(adminRecord.fileId);
+
+    if (rawFields.length) {
+      const fieldRows = rawFields.map(function (f, index) {
+        return ['FLD-' + Utilities.getUuid().substring(0, 8), administrationId, adminRecord.caseId,
+          text_(current.suspectName), type, f.key, f.label, f.value, f.source, index + 1, timestamp];
+      });
+      const fieldSheet = getSheet_(SHEETS.ADMINISTRATION_FIELDS);
+      fieldSheet.getRange(fieldSheet.getLastRow() + 1, 1, fieldRows.length, ADMINISTRATION_FIELD_HEADERS.length).setValues(fieldRows);
+    }
+
+    let updatedCase = null;
+    let statusApplied = false;
+    if (!isManual) {
+      // Baca ulang baris perkara di dalam kunci (data paling baru)
+      const fresh = readCaseRow_(caseSheet, caseId) || located;
+      const record = fresh.record;
+
+      // a) Write-back terbatas
+      rawFields.forEach(function (f) {
+        const column = CASE_FIELD_ALIASES[f.key] || f.key;
+        if (CASE_WRITEBACK_KEYS.indexOf(column) === -1 || !text_(f.value)) return;
+        record[column] = /Date$|^tanggal/i.test(column) ? (dateCell_(f.value) || f.value) : f.value;
+      });
+      if (columns.number && documentNumber) record[columns.number] = documentNumber;
+      if (columns.date) record[columns.date] = documentDate;
+      if (type === 'P-24' && text_(fieldValues.conclusion)) record.p24Conclusion = text_(fieldValues.conclusion);
+      if (type === 'P-16' && jaksaResolved.names.teamLeaderName) record.prosecutorName = jaksaResolved.names.teamLeaderName;
+      if (!text_(record.prosecutorName) && responsibleOfficer) record.prosecutorName = responsibleOfficer;
+
+      // b) Status & tenggat (tidak boleh mundur)
+      if (shouldApplyStatus_(record.status, rule.status, type)) {
+        if (record.status !== rule.status) record.statusUpdatedAt = timestamp;
+        record.status = rule.status;
+        statusApplied = true;
+        const deadline = resolveAdministrationDeadline_(type, documentDate, record);
+        record.deadlineDate = deadline.date;
+        record.deadlineType = deadline.type;
+      }
+      record.updatedAt = timestamp;
+      writeCaseRow_(caseSheet, fresh, record);
+      updatedCase = attachAdministrationsToCase_(record, getAdministrationsForCase_(caseId));
+    }
+
+    writeLog_(user, 'CREATE_ADMINISTRATION', isManual ? 'MANUAL' : caseId, 'Membuat ' + type + (documentNumber ? ' nomor ' + documentNumber : ''));
+
+    return {
+      success: true,
+      caseId: isManual ? '' : caseId,
+      manual: isManual,
+      administrationId: administrationId,
+      status: updatedCase ? updatedCase.status : '',
+      statusApplied: statusApplied,
+      fileUrl: adminRecord.fileUrl,
+      folderUrl: targetFolder.getUrl(),
+      administration: normalizeObjectForJson_(adminRecord),
+      case: updatedCase
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Template Google Docs per jenis administrasi. */
+const ADMINISTRATION_TEMPLATES = Object.freeze({
+  'P-16': '1EQqZ9xVV6lVeZ8lP2bFZCbnwvfddD0l6_iUX5L_f8ng',
+  'P-17': '1CxZLK0CrH1Ub9eUpDfY2577xJ4OVJqpCzCD5gcAxxG0',
+  'P-19': '1ZewRIPUf4fp52nb_Dly2YAcLArfwRfcTD_KmTb1Egog',
+  'P-21': '135sUkS_y5RNVkobMu_EiNh9Sp0ItIAy53LRUk4iyDbE',
+  'T-4': '1YqyBvrwDQxbzIK3MV2X5xQ_ofqaBu20gduWTCZ1esEo',
+  'SOP FORM 1': '1Ju_9YNajG-w6vNzt2xfX283EcvQhGyX4DOAtWvrDfBc',
+  'SOP FORM 2': '1WUPo-hQurWLr7spDpfhmieUFzLK4D-MmqL6q1r6prho',
+  'SOP FORM 3': '1niwmfsIVMWMkhdbYeEaFmqaTlezEmVgRvQ0vb71-pPc',
+  'SOP FORM 4': 'ISI_DENGAN_ID_DOCS_SOP_FORM_4',
+  'SOP FORM 5': 'ISI_DENGAN_ID_DOCS_SOP_FORM_5'
+});
+
+function normalizeAdministrationFields_(payload) {
+  let source = [];
+  if (Array.isArray(payload.formFields) && payload.formFields.length) source = payload.formFields;
+  else if (Array.isArray(payload.fields) && payload.fields.length) source = payload.fields;
+  else if (payload.formData && typeof payload.formData === 'object') {
+    source = Object.keys(payload.formData).map(function (k) { return { key: k, label: k, value: payload.formData[k] }; });
+  }
+  const seen = {};
+  const result = [];
+  source.forEach(function (f) {
+    if (!f) return;
+    const key = text_(f.key || f.label);
+    if (!key || seen[key]) return;
+    seen[key] = true;
+    result.push({ key: key, label: text_(f.label) || key, value: text_(f.value), source: text_(f.source) || 'manual' });
+  });
+  return result;
+}
+
+/** Ubah ID/nama Jaksa pada field tim menjadi nama lengkap + pangkat/jabatan. */
+function resolveTeamMembers_(fieldValues) {
+  const names = {};
+  const extra = {};
+  const template = {};
+  ['teamLeader', 'member1', 'member2', 'member3', 'prosecutor1', 'prosecutor2'].forEach(function (prefix) {
+    const key = prefix + 'Name';
+    if (!(key in fieldValues)) return;
+    const raw = text_(fieldValues[key]);
+    if (!raw) {
+      template[key] = ' ';
+      ['Rank', 'Position', 'Nip', 'RankNip'].forEach(function (s) { if (!text_(fieldValues[prefix + s])) template[prefix + s] = ' '; });
+      return;
+    }
+    const detail = getJaksaData(raw);
+    if (!detail) { names[key] = raw; return; }
+    names[key] = detail.nama;
+    if (detail.pangkat) extra[prefix + 'Rank'] = detail.pangkat;
+    if (detail.nip) extra[prefix + 'Nip'] = detail.nip;
+    if (detail.jabatan) extra[prefix + 'Position'] = detail.jabatan;
+    const rankNip = [detail.pangkat, detail.nip].filter(Boolean).join(' / ');
+    if (rankNip) extra[prefix + 'RankNip'] = rankNip;
+  });
+  return { names: names, extra: extra, template: template };
+}
+
+function shouldApplyStatus_(currentStatus, nextStatus, type) {
+  if (!nextStatus) return false;
+  if (nextStatus === 'SPDP_DIKEMBALIKAN') return true;
+  const currentIndex = STATUS_ORDER.indexOf(text_(currentStatus));
+  const nextIndex = STATUS_ORDER.indexOf(nextStatus);
+  if (currentIndex === -1 || nextIndex === -1) return true;
+  if (nextIndex >= currentIndex) return true;
+  // Berkas hasil penyidikan tambahan diteliti ulang (P-24 setelah P-19)
+  if (type === 'P-24' && currentIndex <= STATUS_ORDER.indexOf('PENYIDIKAN_TAMBAHAN')) return true;
+  return false;
+}
+
+function formatReplaceValue_(value) {
+  if (value === undefined || value === null) return '';
+  if (value instanceof Date) return isNaN(value.getTime()) ? '' : formatDateId_(value);
+  const str = String(value).trim();
+  const dt = str.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::\d{2})?$/);
+  if (dt) {
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const d = parseDate_(dt[1]);
+    return days[d.getDay()] + ', ' + formatDateId_(d) + ' pukul ' + dt[2] + '.' + dt[3] + ' WITA';
+  }
+  if (/^\d{4}-\d{2}-\d{2}(T00:00:00(\.000)?([+-]\d{2}:\d{2}|Z)?)?$/.test(str)) return formatDateId_(str.substring(0, 10));
+  return str;
+}
+
+function escapeRegex_(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Salin template, ganti hanya placeholder {{…}} yang benar-benar ada. */
+function generateDocumentFromTemplate_(templateId, fileName, folder, replaceData) {
+  const templateFile = DriveApp.getFileById(templateId);
+  if (templateFile.getMimeType() !== MimeType.GOOGLE_DOCS) {
+    throw new Error('Template ' + fileName + ' bukan Google Docs asli.');
+  }
+  const docCopy = templateFile.makeCopy(sanitizeFileName_(fileName), folder);
+  try {
+    docCopy.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT);
+  } catch (e) {
+    try { docCopy.setSharing(DriveApp.Access.DOMAIN_WITH_LINK, DriveApp.Permission.EDIT); } catch (e2) { /* abaikan */ }
+  }
+
+  const doc = DocumentApp.openById(docCopy.getId());
+  const sections = [doc.getBody(), doc.getHeader(), doc.getFooter()].filter(Boolean);
+  const lookup = {};
+  Object.keys(replaceData).forEach(function (k) { lookup[k.trim().toLowerCase()] = replaceData[k]; });
+
+  const placeholders = {};
+  sections.forEach(function (section) {
+    const text = section.getText();
+    const regex = /\{\{\s*([^{}]+?)\s*\}\}/g;
+    let match;
+    while ((match = regex.exec(text)) !== null) placeholders[match[1]] = true;
+  });
+
+  Object.keys(placeholders).forEach(function (name) {
+    let value = lookup[name.trim().toLowerCase()];
+    value = value === undefined || value === null || String(value) === '' ? '......' : String(value);
+    const pattern = '(?i)\\{\\{\\s*' + escapeRegex_(name) + '\\s*\\}\\}';
+    sections.forEach(function (section) { section.replaceText(pattern, value); });
+  });
+
+  doc.saveAndClose();
+  return {
+    name: docCopy.getName(),
+    mimeType: docCopy.getMimeType(),
+    fileSize: docCopy.getSize(),
+    fileId: docCopy.getId(),
+    fileUrl: docCopy.getUrl()
+  };
+}
+
+function getCaseAdministrationFolder_(current, timestamp) {
+  if (current.caseFolderId) {
+    try {
+      return getOrCreateSubfolder_(DriveApp.getFolderById(current.caseFolderId), 'Administrasi');
+    } catch (error) { /* folder lama terhapus → buat ulang di bawah */ }
+  }
+  const parentFolder = DriveApp.getFolderById(APP_CONFIG.DRIVE_FOLDER_ID);
+  const archiveDate = parseDate_(current.receivedDate) || timestamp;
+  const yearFolder = getOrCreateSubfolder_(parentFolder, Utilities.formatDate(archiveDate, APP_CONFIG.TIMEZONE, 'yyyy'));
+  const monthFolder = getOrCreateSubfolder_(yearFolder, getIndonesianMonthFolderName_(archiveDate));
+  const suspectFolder = getOrCreateSubfolder_(monthFolder, sanitizeFileName_(current.suspectName) || 'Tersangka_Tanpa_Nama');
+  return getOrCreateSubfolder_(suspectFolder, 'Administrasi');
+}
+
+function getManualAdministrationFolder_(suspectName, timestamp) {
+  const parentFolder = DriveApp.getFolderById(APP_CONFIG.DRIVE_FOLDER_ID);
+  const manualRoot = getOrCreateSubfolder_(parentFolder, 'Administrasi Manual');
+  const yearFolder = getOrCreateSubfolder_(manualRoot, Utilities.formatDate(timestamp, APP_CONFIG.TIMEZONE, 'yyyy'));
+  return getOrCreateSubfolder_(yearFolder, sanitizeFileName_(suspectName) || 'Tanpa_Nama');
+}
+
+/** Baca satu baris Cases berdasarkan NAMA kolom aktual. */
+function readCaseRow_(sheet, caseId) {
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) return null;
+  const headers = values[0].map(function (h) { return text_(h); });
+  const keyIndex = headers.indexOf('caseId');
+  if (keyIndex === -1) throw new Error('Kolom caseId tidak ditemukan pada sheet Cases.');
+  const target = text_(caseId);
+  for (let i = 1; i < values.length; i++) {
+    if (text_(values[i][keyIndex]) === target) {
+      const record = {};
+      headers.forEach(function (header, index) { if (header) record[header] = values[i][index]; });
+      return { row: i + 1, headers: headers, values: values[i], record: record };
+    }
+  }
+  return null;
+}
+
+/** Tulis kembali baris Cases sesuai NAMA kolom; kolom yang belum ada ditambahkan di kanan. */
+function writeCaseRow_(sheet, located, record) {
+  let headers = located.headers.slice();
+  const missing = Object.keys(record).filter(function (key) {
+    return key && headers.indexOf(key) === -1 && CASE_HEADERS.indexOf(key) !== -1;
+  });
+  if (missing.length) {
+    sheet.getRange(1, headers.length + 1, 1, missing.length).setValues([missing]);
+    headers = headers.concat(missing);
+  }
+  const row = headers.map(function (header, index) {
+    if (header && Object.prototype.hasOwnProperty.call(record, header)) {
+      const value = record[header];
+      return value === undefined || value === null ? '' : value;
+    }
+    return located.values[index] !== undefined ? located.values[index] : '';
+  });
+  sheet.getRange(located.row, 1, 1, row.length).setValues([row]);
+}
+
+function saveToSpecificSheet_(caseId, suspectName, type, documentNumber, documentDate, rawFields) {
+  const spreadsheet = SpreadsheetApp.openById(APP_CONFIG.SPREADSHEET_ID);
+  const sheetName = text_(type).toUpperCase();
+  let sheet = spreadsheet.getSheetByName(sheetName);
+  
+  const defaultHeaders = ['Tanggal Input', 'ID Perkara', 'Nama Tersangka', 'Nomor Dokumen', 'Tanggal Dokumen'];
+  
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(sheetName);
+    sheet.appendRow(defaultHeaders);
+    sheet.getRange(1, 1, 1, defaultHeaders.length).setFontWeight('bold').setBackground('#0b5d3b').setFontColor('#ffffff');
+    sheet.setFrozenRows(1);
+  }
+  
+  const lastCol = sheet.getLastColumn();
+  const currentHeaders = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); }) : defaultHeaders;
+  
+  const rowDataObj = {
+    'Tanggal Input': Utilities.formatDate(new Date(), APP_CONFIG.TIMEZONE, 'dd/MM/yyyy HH:mm:ss'),
+    'ID Perkara': caseId,
+    'Nama Tersangka': suspectName,
+    'Nomor Dokumen': text_(documentNumber),
+    'Tanggal Dokumen': formatDateId_(documentDate)
+  };
+  
+  const newHeaders = [];
+  
+  (rawFields || []).forEach(function(f) {
+    const label = text_(f.label) || text_(f.key); 
+    let value = text_(f.value);
+    
+    if (!label) return;
+    
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      value = formatDateId_(value);
+    }
+    
+    rowDataObj[label] = value;
+    
+    if (currentHeaders.indexOf(label) === -1 && newHeaders.indexOf(label) === -1) {
+      newHeaders.push(label);
+    }
+  });
+  
+  if (newHeaders.length > 0) {
+    sheet.getRange(1, lastCol + 1, 1, newHeaders.length)
+         .setValues([newHeaders])
+         .setFontWeight('bold')
+         .setBackground('#0b5d3b')
+         .setFontColor('#ffffff');
+         
+    newHeaders.forEach(function(nh) {
+      currentHeaders.push(nh);
+    });
+  }
+  
+  const rowDataArray = currentHeaders.map(function(header) {
+    return rowDataObj[header] !== undefined ? rowDataObj[header] : '';
+  });
+  
+  sheet.appendRow(rowDataArray);
+  
+  return rowDataObj;
+}
+
+// ===================================================================================
+// FUNGSI PENDUKUNG 
+// ===================================================================================
+
+function login_(payload) {
+  const username = normalizeUsername_(payload.username);
+  const password = String(payload.password || '');
+  const requestedRole = normalizeRole_(payload.role);
+
+  if (!username || !password || ['jaksa', 'penyidik'].indexOf(requestedRole) === -1) {
+    throw new Error('Nama pengguna, kata sandi, dan peran wajib diisi.');
+  }
+
+  const sheet = getSheet_(SHEETS.USERS);
+  validateAccessHeaders_(sheet);
+
+  const users = sheetToObjects_(sheet);
+  const user = users.find(function (item) {
+    return normalizeUsername_(item.Username) === username;
+  });
+
+  if (!user) {
+    throw new Error('Nama pengguna atau kata sandi salah.');
+  }
+
+  const accountRole = normalizeRole_(user.Role);
+  if (['jaksa', 'penyidik'].indexOf(accountRole) === -1) {
+    throw new Error('Role akun pada sheet akses harus berisi Jaksa atau Penyidik.');
+  }
+  if (accountRole !== requestedRole) {
+    throw new Error('Peran yang dipilih tidak sesuai dengan akun.');
+  }
+
+  if (!safeEqual_(String(user.password || ''), password)) {
+    throw new Error('Nama pengguna atau kata sandi salah.');
+  }
+
+  const publicUser = sanitizeUser_(user);
+  const token = createToken_(publicUser);
+  writeLog_(publicUser, 'LOGIN', '', 'Pengguna masuk ke aplikasi.');
+  return { token: token, user: publicUser };
+}
+
+function me_(token) {
+  const user = requireAuth_(token);
+  return { user: user };
+}
+
+function submitCase_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'penyidik');
+
+  validateRequired_(payload, [
+    'investigatorName', 'investigatorRank', 'investigatorNipNrp',
+    'investigatorPosition', 'investigatorInstitution', 'spdpNumber',
+    'spdpDate', 'receivedDate', 'sprindikNumber', 'sprindikDate',
+    'allegedArticle', 'caseSummary', 'suspectName',
+    'suspectIdentityNumber', 'birthPlace', 'birthDate', 'gender',
+    'nationality', 'address', 'religion', 'occupation', 'education',
+    'evidence'
+  ]);
+
+  if (!payload.spdpFile || !payload.spdpFile.name || !payload.spdpFile.dataBase64) {
+    throw new Error('Dokumen SPDP wajib diunggah.');
+  }
+
+  validateFile_(payload.spdpFile);
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const caseId = generateCaseId_();
+    const now = new Date();
+
+    const delayDays = calculateDayDifference_(
+      payload.sprindikDate,
+      payload.receivedDate
+    );
+
+    const parentFolder = DriveApp.getFolderById(
+      APP_CONFIG.DRIVE_FOLDER_ID
+    );
+
+    const archiveDate =
+      parseDate_(payload.receivedDate) || now;
+
+    const yearFolderName = Utilities.formatDate(
+      archiveDate,
+      APP_CONFIG.TIMEZONE,
+      'yyyy'
+    );
+
+    const yearFolder = getOrCreateSubfolder_(
+      parentFolder,
+      yearFolderName
+    );
+
+    const monthFolderName =
+      getIndonesianMonthFolderName_(archiveDate);
+
+    const monthFolder = getOrCreateSubfolder_(
+      yearFolder,
+      monthFolderName
+    );
+
+    const suspectFolderName = sanitizeFileName_(
+      payload.suspectName
+    );
+
+    const caseFolder = getOrCreateSubfolder_(
+      monthFolder,
+      suspectFolderName
+    );
+
+    const uploadedFile = createDriveFile_(
+      caseFolder,
+      caseId,
+      'SPDP',
+      payload.spdpFile
+    );
+
+    const record = {
+      caseId: caseId,
+      createdAt: now,
+      updatedAt: now,
+      submittedBy: user.userId,
+      submittedByName: user.fullName,
+      investigatorName: text_(payload.investigatorName),
+      investigatorRank: text_(payload.investigatorRank),
+      investigatorNipNrp: text_(payload.investigatorNipNrp),
+      investigatorPosition: text_(payload.investigatorPosition),
+      investigatorInstitution: text_(payload.investigatorInstitution),
+      investigatorPhone: text_(payload.investigatorPhone),
+      spdpNumber: text_(payload.spdpNumber),
+      spdpDate: dateCell_(payload.spdpDate),
+      receivedDate: dateCell_(payload.receivedDate),
+      sprindikNumber: text_(payload.sprindikNumber),
+      sprindikDate: dateCell_(payload.sprindikDate),
+      spdpDelayDays: delayDays,
+      spdpLate: delayDays > 7,
+      allegedArticle: text_(payload.allegedArticle),
+      caseSummary: text_(payload.caseSummary),
+      suspectName: text_(payload.suspectName),
+      suspectIdentityNumber: text_(payload.suspectIdentityNumber),
+      birthPlace: text_(payload.birthPlace),
+      birthDate: dateCell_(payload.birthDate),
+      age: Number(payload.age || calculateAge_(payload.birthDate) || 0),
+      gender: text_(payload.gender),
+      nationality: text_(payload.nationality),
+      address: text_(payload.address),
+      religion: text_(payload.religion),
+      occupation: text_(payload.occupation),
+      education: text_(payload.education),
+      evidence: text_(payload.evidence),
+      status: 'SPDP_DITERIMA',
+      statusUpdatedAt: now,
+      prosecutorName: '',
+      deadlineType: 'Koordinasi awal paling lama 3 hari',
+      deadlineDate: addDays_(payload.receivedDate, 3),
+      notes: delayDays > 7 ? 'Peringatan otomatis: selisih Sprindik dengan penerimaan SPDP lebih dari 7 hari.' : '',
+      courtCaseNumber: '',
+      nextHearingDate: '',
+      hearingAgenda: '',
+      spdpFileId: uploadedFile.getId(),
+      spdpFileName: uploadedFile.getName(),
+      spdpFileUrl: uploadedFile.getUrl(),
+      caseFolderId: caseFolder.getId(),
+      caseFolderUrl: caseFolder.getUrl()
+    };
+
+    appendObjectByHeaders_(getSheet_(SHEETS.CASES), record);
+    appendObject_(getSheet_(SHEETS.DOCUMENTS), DOCUMENT_HEADERS, {
+      documentId: Utilities.getUuid(),
+      caseId: caseId,
+      type: 'SPDP',
+      fileName: uploadedFile.getName(),
+      mimeType: uploadedFile.getMimeType(),
+      fileSize: uploadedFile.getSize(),
+      fileId: uploadedFile.getId(),
+      fileUrl: uploadedFile.getUrl(),
+      uploadedBy: user.username,
+      uploadedAt: now
+    });
+
+    writeLog_(user, 'SUBMIT_SPDP', caseId, 'Penyidik mengirimkan SPDP dan data perkara.');
+    return {
+      caseId: caseId,
+      fileUrl: uploadedFile.getUrl(),
+      folderUrl: caseFolder.getUrl(),
+      spdpDelayDays: delayDays,
+      spdpLate: delayDays > 7
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function listCases_(token) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+
+  const cases = sheetToObjects_(getSheet_(SHEETS.CASES));
+  const fieldMap = getAdministrationFieldMap_();
+  const administrations = sheetToObjects_(getSheet_(SHEETS.ADMINISTRATIONS)).map(function (item) {
+    return attachFieldsToAdministration_(item, fieldMap);
+  });
+  const administrationGroups = {};
+
+  administrations.forEach(function (item) {
+    const caseId = text_(item.caseId);
+    if (!administrationGroups[caseId]) administrationGroups[caseId] = [];
+    administrationGroups[caseId].push(item);
+  });
+
+  cases.sort(function (a, b) {
+    return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
+  });
+
+  return {
+    cases: cases.map(function (item) {
+      return attachAdministrationsToCase_(item, administrationGroups[item.caseId] || []);
+    })
+  };
+}
+
+function getCase_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+  FILE_CHECK_FORCE_ = Boolean(payload && payload.verifyFiles); // tombol "Periksa file" memaksa cek ulang Drive
+  const caseId = text_(payload.caseId);
+  const record = findObjectByKey_(getSheet_(SHEETS.CASES), 'caseId', caseId);
+  if (!record) throw new Error('Perkara tidak ditemukan.');
+  return { case: attachAdministrationsToCase_(record, getAdministrationsForCase_(caseId)) };
+}
+
+function listAdministrations_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+  const caseId = text_(payload.caseId);
+  if (!caseId) throw new Error('Nomor register perkara wajib diisi.');
+  return { administrations: filterAvailableAdministrations_(getAdministrationsForCase_(caseId), Boolean(payload.verifyFiles)) };
+}
+
+function updateCase_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+
+  const caseId = text_(payload.caseId);
+  const updates = payload.updates || {};
+  if (!caseId) throw new Error('ID perkara wajib diisi.');
+
+  const sheet = getSheet_(SHEETS.CASES);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const located = readCaseRow_(sheet, caseId);
+    if (!located) throw new Error('Perkara tidak ditemukan.');
+
+    const current = located.record;
+    const oldStatus = text_(current.status);
+    const newStatus = text_(updates.status || oldStatus);
+    if (ALLOWED_STATUSES.indexOf(newStatus) === -1) {
+      throw new Error('Status perkara tidak valid.');
+    }
+
+    const now = new Date();
+    const textKeys = ['prosecutorName', 'notes', 'courtCaseNumber', 'hearingAgenda', 'nomorBerkas'];
+    textKeys.forEach(function (key) {
+      if (updates[key] !== undefined) current[key] = text_(updates[key]);
+    });
+    if (updates.nextHearingDate !== undefined) current.nextHearingDate = dateTimeCell_(updates.nextHearingDate);
+    if (updates.tanggalBerkas !== undefined) current.tanggalBerkas = dateCell_(updates.tanggalBerkas);
+
+    current.status = newStatus;
+    current.updatedAt = now;
+
+    // Tenggat hanya dihitung ulang bila status berubah atau tenggat diisi manual.
+    // (Versi lama menghitung ulang setiap kali, sehingga mengedit nomor register
+    //  ikut mengubah tanggal tenggat.)
+    const statusChanged = newStatus !== oldStatus;
+    if (statusChanged) current.statusUpdatedAt = now;
+    if (statusChanged || updates.deadlineDate || (newStatus === 'SIDANG' && updates.nextHearingDate)) {
+      const deadline = resolveDeadline_(newStatus, updates.deadlineDate, updates.nextHearingDate, now);
+      current.deadlineDate = deadline.date;
+      current.deadlineType = deadline.type;
+    }
+
+    writeCaseRow_(sheet, located, current);
+    writeLog_(user, 'UPDATE_CASE', caseId, statusChanged ? 'Status: ' + oldStatus + ' → ' + newStatus + '.' : 'Memperbarui data perkara.');
+
+    return { case: attachAdministrationsToCase_(current, getAdministrationsForCase_(caseId)) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function listProsecutors_(token) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+  
+  const prosecutors = getProsecutors_();
+  return {
+    prosecutors: prosecutors
+  };
+}
+
+function getProsecutors_() {
+  const sheet = getSheet_(SHEETS.LIST_JAKSA);
+  const values = sheet.getDataRange().getDisplayValues();
+  if (values.length < 2) return [];
+  
+  const headers = values[0].map(function (value) { return text_(value); });
+  const indexes = prosecutorHeaderIndexes_(headers);
+  
+  const idxName = indexes.name >= 0 ? indexes.name : findHeaderIndex_(headers, ['name', 'nama jaksa', 'nama']);
+  const idxPhone = indexes.phone >= 0 ? indexes.phone : findHeaderIndex_(headers, ['nomor whatsapp', 'whatsapp', 'no wa']);
+  const idxId = indexes.id >= 0 ? indexes.id : findHeaderIndex_(headers, ['id jaksa', 'id']);
+  const idxNip = indexes.nip >= 0 ? indexes.nip : findHeaderIndex_(headers, ['nip']);
+  const idxActive = indexes.active >= 0 ? indexes.active : findHeaderIndex_(headers, ['aktif', 'status']);
+  const idxPangkat = findHeaderIndex_(headers, ['pangkat', 'golongan']);
+  const idxJabatan = findHeaderIndex_(headers, ['jabatan', 'jabatan struktural', 'posisi']);
+
+  if (idxName < 0) throw new Error("Sheet 'List Jaksa' belum memiliki kolom Nama.");
+
+  return values.slice(1).map(function (row, index) {
+    const name = text_(row[idxName]);
+    if (!name) return null;
+    
+    const activeRaw = idxActive >= 0 ? text_(row[idxActive]).toLowerCase() : 'ya';
+    const active = ['tidak', 'nonaktif', 'inactive', '0', 'false'].indexOf(activeRaw) === -1;
+    if (!active) return null;
+    
+    const phoneVal = idxPhone >= 0 ? text_(row[idxPhone]) : '';
+    const idVal = idxId >= 0 && text_(row[idxId]) ? text_(row[idxId]) : ('JAKSA-' + String(index + 1).padStart(3, '0'));
+    const nipVal = idxNip >= 0 ? text_(row[idxNip]) : '';
+    const pangkatVal = idxPangkat >= 0 ? text_(row[idxPangkat]) : '';
+    const jabatanVal = idxJabatan >= 0 ? text_(row[idxJabatan]) : '';
+
+    return {
+      id: idVal,
+      name: name,
+      nip: nipVal,
+      pangkat: pangkatVal,
+      jabatan: jabatanVal,
+      kolomF: pangkatVal, 
+      kolomG: idVal,      
+      phone: normalizeWhatsappNumber_(phoneVal),
+      phoneDisplay: phoneVal,
+      phoneValid: Boolean(normalizeWhatsappNumber_(phoneVal))
+    };
+  }).filter(Boolean).sort(function (a, b) {
+    return a.name.localeCompare(b.name, 'id');
+  });
+}
+
+function listReminders_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+  payload = payload || {};
+
+  const caseId = text_(payload.caseId);
+  let reminders = sheetToObjects_(getSheet_(SHEETS.REMINDERS)).filter(function (item) {
+    return REMINDER_ADMIN_TYPES.indexOf(text_(item.administrationType).toUpperCase()) !== -1;
+  });
+  if (caseId) {
+    reminders = reminders.filter(function (item) {
+      return text_(item.caseId) === caseId;
+    });
+  }
+
+  reminders.sort(function (a, b) {
+    const aTime = parseDate_(a.deadlineDate);
+    const bTime = parseDate_(b.deadlineDate);
+    const aValue = aTime ? aTime.getTime() : Number.MAX_SAFE_INTEGER;
+    const bValue = bTime ? bTime.getTime() : Number.MAX_SAFE_INTEGER;
+    if (aValue !== bValue) return aValue - bValue;
+    return text_(a.suspectName).localeCompare(text_(b.suspectName));
+  });
+
+  return {
+    reminders: reminders.map(attachReminderComputed_),
+    progress: listReminderProgressRecords_(caseId),
+    fonnteConfigured: Boolean(getFonnteToken_()),
+    triggerInstalled: hasReminderTrigger_(),
+    triggerHour: 8,
+    timezone: APP_CONFIG.TIMEZONE
+  };
+}
+
+function saveReminder_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+  payload = payload || {};
+
+  validateRequired_(payload, [
+    'spdpNumber', 'spdpDate', 'sprindikNumber', 'sprindikDate',
+    'receivedDate', 'suspectName', 'administrationType', 'deadlineDays',
+    'prosecutorId'
+  ]);
+
+  const type = text_(payload.administrationType).toUpperCase();
+  if (REMINDER_ADMIN_TYPES.indexOf(type) === -1) {
+    throw new Error('Jenis administrasi reminder tidak valid.');
+  }
+
+  const requestedId = text_(payload.reminderId);
+  const requestedMode = text_(payload.__mode).toUpperCase();
+  const mode = requestedMode === 'CREATE' || requestedMode === 'UPDATE'
+    ? requestedMode
+    : (requestedId ? 'UPDATE' : 'CREATE');
+
+  if (mode === 'UPDATE' && !requestedId) {
+    throw new Error('ID reminder tidak tersedia. Klik tombol Edit pada baris reminder, lalu simpan kembali.');
+  }
+  if (mode === 'CREATE' && requestedId) {
+    throw new Error('Permintaan membuat reminder baru tidak boleh membawa reminderId.');
+  }
+
+  const deadlineDays = Number(payload.deadlineDays);
+  if (!Number.isInteger(deadlineDays) || deadlineDays < 0 || deadlineDays > 3650) {
+    throw new Error('Deadline harus berupa angka bulat antara 0 sampai 3650 hari.');
+  }
+
+  const prosecutor = getProsecutorById_(payload.prosecutorId);
+  if (!prosecutor) throw new Error('Jaksa penanggung jawab tidak ditemukan pada sheet List Jaksa.');
+  if (!prosecutor.phone) {
+    throw new Error('Nomor WhatsApp Jaksa belum diisi pada sheet List Jaksa.');
+  }
+
+  const calculatedDeadline = calculateReminderDeadline_(
+    type,
+    payload.receivedDate,
+    payload.detentionEndDate,
+    deadlineDays
+  );
+  if (!calculatedDeadline) throw new Error('Tanggal deadline tidak dapat dihitung.');
+
+  const reminderSheet = getSheet_(SHEETS.REMINDERS);
+  const now = new Date();
+  let located = null;
+  let existing = null;
+  let caseId = '';
+
+  if (mode === 'UPDATE') {
+    located = findRowByKey_(reminderSheet, 'reminderId', requestedId);
+    if (!located) {
+      throw new Error('Reminder yang diedit tidak ditemukan. Segarkan halaman dan klik Edit kembali.');
+    }
+
+    existing = rowToObject_(REMINDER_HEADERS, located.values);
+    caseId = text_(existing.caseId);
+
+    const duplicate = findReminderByCaseAndType_(caseId, type);
+    if (duplicate && duplicate.row !== located.row) {
+      throw new Error('Reminder ' + type + ' untuk perkara ini sudah tersedia. Edit baris tersebut secara langsung.');
+    }
+  } else {
+    caseId = text_(payload.caseId);
+    if (!caseId) caseId = generateReminderSpdpId_();
+
+    const duplicate = findReminderByCaseAndType_(caseId, type);
+    if (duplicate) {
+      throw new Error(
+        'Reminder ' + type + ' untuk perkara ini sudah tersedia. Gunakan tombol Edit agar baris lama diperbarui.'
+      );
+    }
+  }
+
+  const scheduleChanged = !existing ||
+    dateKey_(existing.deadlineDate) !== dateKey_(calculatedDeadline) ||
+    text_(existing.prosecutorId) !== text_(prosecutor.id) ||
+    normalizeWhatsappNumber_(existing.prosecutorPhone) !== prosecutor.phone;
+
+  const record = Object.assign({}, existing || {}, {
+    reminderId: existing ? text_(existing.reminderId) : Utilities.getUuid(),
+    caseId: caseId,
+    spdpNumber: text_(payload.spdpNumber),
+    spdpDate: dateCell_(payload.spdpDate),
+    sprindikNumber: text_(payload.sprindikNumber),
+    sprindikDate: dateCell_(payload.sprindikDate),
+    detentionEndDate: '',
+    receivedDate: dateCell_(payload.receivedDate),
+    suspectName: text_(payload.suspectName),
+    administrationType: type,
+    detentionCategory: '',
+    deadlineDays: deadlineDays,
+    deadlineDate: calculatedDeadline,
+    prosecutorId: prosecutor.id,
+    prosecutorName: prosecutor.name,
+    prosecutorPhone: prosecutor.phone,
+    status: existing && text_(existing.status) ? existing.status : REMINDER_STATUS.ACTIVE,
+    notes: text_(payload.notes),
+    createdBy: existing ? existing.createdBy : user.username,
+    createdAt: existing ? existing.createdAt : now,
+    updatedBy: user.username,
+    updatedAt: now,
+    completedAt: existing ? existing.completedAt : '',
+    sentH3At: scheduleChanged ? '' : (existing ? existing.sentH3At : ''),
+    sentH1At: scheduleChanged ? '' : (existing ? existing.sentH1At : ''),
+    sentH0At: scheduleChanged ? '' : (existing ? existing.sentH0At : ''),
+    lastSendStatus: scheduleChanged ? '' : (existing ? existing.lastSendStatus : ''),
+    lastSendResponse: scheduleChanged ? '' : (existing ? existing.lastSendResponse : '')
+  });
+
+  if (mode === 'UPDATE') {
+    writeObjectToRow_(reminderSheet, located.row, REMINDER_HEADERS, record);
+  } else {
+    appendObject_(reminderSheet, REMINDER_HEADERS, record);
+  }
+
+  writeLog_(
+    user,
+    mode === 'UPDATE' ? 'UPDATE_REMINDER' : 'CREATE_REMINDER',
+    record.caseId,
+    type + ' untuk ' + record.suspectName + ', deadline ' + formatDateId_(record.deadlineDate) + '.'
+  );
+
+  return {
+    operation: mode === 'UPDATE' ? 'updated' : 'created',
+    reminder: attachReminderComputed_(normalizeObjectForJson_(record))
+  };
+}
+
+function updateReminderStatus_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+  const reminderId = text_(payload && payload.reminderId);
+  const status = text_(payload && payload.status).toUpperCase();
+  if (!reminderId) throw new Error('ID reminder wajib diisi.');
+  if ([REMINDER_STATUS.ACTIVE, REMINDER_STATUS.COMPLETED, REMINDER_STATUS.CANCELLED].indexOf(status) === -1) {
+    throw new Error('Status reminder tidak valid.');
+  }
+
+  const sheet = getSheet_(SHEETS.REMINDERS);
+  const located = findRowByKey_(sheet, 'reminderId', reminderId);
+  if (!located) throw new Error('Reminder tidak ditemukan.');
+  const record = rowToObject_(REMINDER_HEADERS, located.values);
+  if (status === REMINDER_STATUS.ACTIVE && hasCreatedAdministration_(text_(record.caseId), text_(record.administrationType).toUpperCase())) {
+    throw new Error('Administrasi ' + record.administrationType + ' sudah dibuat dan tidak dapat diaktifkan kembali.');
+  }
+  record.status = status;
+  record.updatedBy = user.username;
+  record.updatedAt = new Date();
+  record.completedAt = status === REMINDER_STATUS.COMPLETED ? new Date() : '';
+  writeObjectToRow_(sheet, located.row, REMINDER_HEADERS, record);
+
+  upsertReminderProgress_(
+    record.caseId,
+    record.administrationType,
+    status === REMINDER_STATUS.COMPLETED,
+    user.username,
+    record.spdpNumber,
+    record.suspectName,
+    record.completedAt || new Date()
+  );
+
+  writeLog_(user, 'UPDATE_REMINDER_STATUS', record.caseId,
+    record.administrationType + ' → ' + status + '.');
+  return { reminder: attachReminderComputed_(normalizeObjectForJson_(record)) };
+}
+
+function sendReminderNow_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+  const reminderId = text_(payload && payload.reminderId);
+  if (!reminderId) throw new Error('ID reminder wajib diisi.');
+
+  const sheet = getSheet_(SHEETS.REMINDERS);
+  const located = findRowByKey_(sheet, 'reminderId', reminderId);
+  if (!located) throw new Error('Reminder tidak ditemukan.');
+  const record = rowToObject_(REMINDER_HEADERS, located.values);
+  const result = deliverReminder_(record, 'MANUAL');
+  record.lastSendStatus = 'MANUAL_SUCCESS';
+  record.lastSendResponse = truncateText_(JSON.stringify(result), 3000);
+  record.updatedBy = user.username;
+  record.updatedAt = new Date();
+  writeObjectToRow_(sheet, located.row, REMINDER_HEADERS, record);
+  writeLog_(user, 'SEND_REMINDER_NOW', record.caseId,
+    record.administrationType + ' dikirim ke ' + record.prosecutorName + '.');
+  return { reminder: attachReminderComputed_(normalizeObjectForJson_(record)), fonnte: result };
+}
+
+function deleteReminder_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+
+  const reminderId = text_(payload && payload.reminderId);
+  if (!reminderId) throw new Error('ID reminder wajib diisi.');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const sheet = getSheet_(SHEETS.REMINDERS);
+    const located = findRowByKey_(sheet, 'reminderId', reminderId);
+    if (!located) throw new Error('Reminder tidak ditemukan atau sudah dihapus.');
+
+    const record = rowToObject_(REMINDER_HEADERS, located.values);
+    sheet.deleteRow(located.row);
+
+    writeLog_(
+      user,
+      'DELETE_REMINDER',
+      text_(record.caseId),
+      text_(record.administrationType) + ' atas nama ' + text_(record.suspectName) +
+        ' dihapus. Deadline sebelumnya ' + formatDateId_(record.deadlineDate) + '.'
+    );
+
+    return {
+      deleted: true,
+      reminderId: reminderId,
+      caseId: text_(record.caseId),
+      administrationType: text_(record.administrationType),
+      suspectName: text_(record.suspectName)
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function scanAndSendDueReminders() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const sheet = getSheet_(SHEETS.REMINDERS);
+    const values = sheet.getDataRange().getValues();
+    if (values.length < 2) return { checked: 0, sent: 0, failed: 0 };
+
+    const now = new Date();
+    let checked = 0;
+    let sent = 0;
+    let failed = 0;
+
+    for (let i = 1; i < values.length; i++) {
+      const record = rowToObject_(REMINDER_HEADERS, values[i]);
+      const administrationType = text_(record.administrationType).toUpperCase();
+      if (REMINDER_ADMIN_TYPES.indexOf(administrationType) === -1) continue;
+      if (text_(record.status).toUpperCase() !== REMINDER_STATUS.ACTIVE) continue;
+      checked++;
+      const days = signedDayDifference_(now, record.deadlineDate);
+      const stage = days === 3 ? 'H3' : days === 1 ? 'H1' : days === 0 ? 'H0' : '';
+      if (!stage) continue;
+
+      const field = stage === 'H3' ? 'sentH3At' : stage === 'H1' ? 'sentH1At' : 'sentH0At';
+      if (record[field]) continue;
+
+      try {
+        const response = deliverReminder_(record, stage);
+        record[field] = new Date();
+        record.lastSendStatus = stage + '_SUCCESS';
+        record.lastSendResponse = truncateText_(JSON.stringify(response), 3000);
+        record.updatedBy = 'SYSTEM';
+        record.updatedAt = new Date();
+        writeObjectToRow_(sheet, i + 1, REMINDER_HEADERS, record);
+        sent++;
+      } catch (error) {
+        record.lastSendStatus = stage + '_FAILED';
+        record.lastSendResponse = truncateText_(cleanErrorMessage_(error), 3000);
+        record.updatedBy = 'SYSTEM';
+        record.updatedAt = new Date();
+        writeObjectToRow_(sheet, i + 1, REMINDER_HEADERS, record);
+        writeReminderLog_(record, stage, 'FAILED', cleanErrorMessage_(error));
+        failed++;
+      }
+    }
+    return { checked: checked, sent: sent, failed: failed };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function deliverReminder_(record, stage) {
+  const target = normalizeWhatsappNumber_(record.prosecutorPhone);
+  if (!target) throw new Error('Nomor WhatsApp Jaksa tidak valid.');
+  const message = buildReminderMessage_(record, stage);
+  const response = sendFonnteMessage_(target, message);
+  writeReminderLog_(record, stage, 'SUCCESS', JSON.stringify(response));
+  return response;
+}
+
+function sendFonnteMessage_(target, message) {
+  const token = getFonnteToken_();
+  if (!token) {
+    throw new Error('Token Fonnte belum disimpan. Tambahkan Script Property FONNTE_TOKEN pada Project Settings Apps Script.');
+  }
+
+  const response = UrlFetchApp.fetch(FONNTE_ENDPOINT, {
+    method: 'post',
+    headers: { Authorization: token },
+    payload: {
+      target: String(target),
+      message: String(message),
+      countryCode: '0',
+      typing: 'false',
+      preview: 'false'
+    },
+    muteHttpExceptions: true,
+    followRedirects: true
+  });
+
+  const code = response.getResponseCode();
+  const body = response.getContentText();
+  let parsed;
+  try {
+    parsed = JSON.parse(body);
+  } catch (error) {
+    parsed = { status: false, detail: body };
+  }
+
+  if (code < 200 || code >= 300 || parsed.status !== true) {
+    throw new Error('Fonnte menolak pengiriman: ' + (parsed.detail || parsed.message || body || ('HTTP ' + code)));
+  }
+  return parsed;
+}
+
+function buildReminderMessage_(record, stage) {
+  const stageLabel = stage === 'H3' ? 'H-3' : stage === 'H1' ? 'H-1' : stage === 'H0' ? 'HARI H' : 'PENGINGAT MANUAL';
+  const type = text_(record.administrationType);
+  const lines = [
+    '*REMINDER SIAP PIDUM*',
+    '',
+    'Yth. ' + (text_(record.prosecutorName) || 'Jaksa Penanggung Jawab') + ',',
+    'Mohon segera melengkapi Administrasi *' + type + '*',
+    '',
+    'Nama Tersangka: ' + (text_(record.suspectName) || '-'),
+    'Nomor SPDP: ' + (text_(record.spdpNumber) || '-'),
+    'Tanggal SPDP: ' + formatDateId_(record.spdpDate),
+    'Nomor Sprindik: ' + (text_(record.sprindikNumber) || '-'),
+    'SPDP diterima Kejaksaan: ' + formatDateId_(record.receivedDate),
+    '',
+    '❗*Deadline: ' + formatDateId_(record.deadlineDate) +'*',
+    '',
+  ];
+  if (record.notes) {
+    lines.push('Catatan: ' + text_(record.notes));
+  }
+  lines.push('', 'Mohon segera melakukan tindak lanjut dan memperbarui status administrasi pada aplikasi SIAP PIDUM.', '', '_Pesan otomatis. Mohon tidak membalas nomor ini._');
+  return lines.join('\n');
+}
+
+function attachReminderComputed_(record) {
+  const normalized = normalizeObjectForJson_(record);
+  const days = signedDayDifference_(new Date(), record.deadlineDate);
+  normalized.daysRemaining = days;
+  normalized.deadlineState = days < 0 ? 'OVERDUE' : days <= 3 ? 'DUE_SOON' : 'SAFE';
+  normalized.deadlineLabel = days < 0
+    ? 'Lewat ' + Math.abs(days) + ' hari'
+    : days === 0 ? 'Hari ini' : days + ' hari lagi';
+  return normalized;
+}
+
+function listReminderProgressRecords_(caseId) {
+  const sheet = getSheet_(SHEETS.REMINDER_PROGRESS);
+  let records = sheetToObjects_(sheet).filter(function (item) {
+    return REMINDER_ADMIN_TYPES.indexOf(text_(item.administrationType).toUpperCase()) !== -1;
+  });
+  if (caseId) {
+    records = records.filter(function (item) {
+      return text_(item.caseId) === text_(caseId);
+    });
+  }
+  return records.map(function (item) {
+    return normalizeObjectForJson_({
+      progressId: item.progressId,
+      caseId: item.caseId,
+      spdpNumber: item.spdpNumber,
+      suspectName: item.suspectName,
+      administrationType: text_(item.administrationType).toUpperCase(),
+      completed: String(item.completed).toLowerCase() === 'true' || item.completed === true,
+      completedAt: item.completedAt,
+      completedBy: item.completedBy,
+      updatedAt: item.updatedAt
+    });
+  });
+}
+
+function updateReminderProgress_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+  payload = payload || {};
+
+  const caseId = text_(payload.caseId);
+  const type = text_(payload.administrationType).toUpperCase();
+  const completed = payload.completed === true || String(payload.completed).toLowerCase() === 'true';
+  if (!caseId) throw new Error('Perkara/SPDP wajib dipilih.');
+  if (REMINDER_ADMIN_TYPES.indexOf(type) === -1) throw new Error('Tahap administrasi tidak valid.');
+
+  if (!completed && hasCreatedAdministration_(caseId, type)) {
+    throw new Error(type + ' sudah dibuat pada menu administrasi dan tidak dapat dibatalkan dari checklist reminder.');
+  }
+
+  const source = getReminderCaseSourceBackend_(caseId);
+  const record = upsertReminderProgress_(
+    caseId,
+    type,
+    completed,
+    user.username,
+    text_(payload.spdpNumber) || source.spdpNumber,
+    text_(payload.suspectName) || source.suspectName,
+    new Date()
+  );
+
+  const reminderSheet = getSheet_(SHEETS.REMINDERS);
+  const values = reminderSheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    const reminder = rowToObject_(REMINDER_HEADERS, values[i]);
+    if (text_(reminder.caseId) !== caseId || text_(reminder.administrationType).toUpperCase() !== type) continue;
+    reminder.status = completed ? REMINDER_STATUS.COMPLETED : REMINDER_STATUS.ACTIVE;
+    reminder.completedAt = completed ? new Date() : '';
+    reminder.updatedAt = new Date();
+    reminder.updatedBy = user.username;
+    writeObjectToRow_(reminderSheet, i + 1, REMINDER_HEADERS, reminder);
+  }
+
+  writeLog_(user, 'UPDATE_REMINDER_PROGRESS', caseId, type + ' checklist → ' + (completed ? 'SELESAI' : 'BELUM SELESAI') + '.');
+  return { progress: normalizeObjectForJson_(record) };
+}
+
+function upsertReminderProgress_(caseId, type, completed, username, spdpNumber, suspectName, timestamp) {
+  const sheet = getSheet_(SHEETS.REMINDER_PROGRESS);
+  const located = findReminderProgressByCaseAndType_(caseId, type);
+  const now = timestamp instanceof Date ? timestamp : new Date();
+  const existing = located ? rowToObject_(REMINDER_PROGRESS_HEADERS, located.values) : {};
+  const record = Object.assign({}, existing, {
+    progressId: existing.progressId || Utilities.getUuid(),
+    caseId: text_(caseId),
+    spdpNumber: text_(spdpNumber) || text_(existing.spdpNumber),
+    suspectName: text_(suspectName) || text_(existing.suspectName),
+    administrationType: text_(type).toUpperCase(),
+    completed: Boolean(completed),
+    completedAt: completed ? now : '',
+    completedBy: completed ? text_(username || 'SYSTEM') : '',
+    updatedAt: now
+  });
+  if (located) writeObjectToRow_(sheet, located.row, REMINDER_PROGRESS_HEADERS, record);
+  else appendObject_(sheet, REMINDER_PROGRESS_HEADERS, record);
+  return record;
+}
+
+function findReminderProgressByCaseAndType_(caseId, type) {
+  const sheet = getSheet_(SHEETS.REMINDER_PROGRESS);
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    const record = rowToObject_(REMINDER_PROGRESS_HEADERS, values[i]);
+    if (text_(record.caseId) === text_(caseId) && text_(record.administrationType).toUpperCase() === text_(type).toUpperCase()) {
+      return { row: i + 1, values: values[i] };
+    }
+  }
+  return null;
+}
+
+function hasCreatedAdministration_(caseId, type) {
+  if (ADMINISTRATION_ORDER.indexOf(type) === -1) return false;
+  const items = sheetToObjects_(getSheet_(SHEETS.ADMINISTRATIONS));
+  return items.some(function (item) {
+    return text_(item.caseId) === text_(caseId) && text_(item.type).toUpperCase() === type;
+  });
+}
+
+function getReminderCaseSourceBackend_(caseId) {
+  const caseRecord = findObjectByKey_(getSheet_(SHEETS.CASES), 'caseId', caseId);
+  if (caseRecord) return { spdpNumber: text_(caseRecord.spdpNumber), suspectName: text_(caseRecord.suspectName) };
+  const reminders = sheetToObjects_(getSheet_(SHEETS.REMINDERS));
+  const reminder = reminders.find(function (item) { return text_(item.caseId) === text_(caseId); });
+  return reminder ? { spdpNumber: text_(reminder.spdpNumber), suspectName: text_(reminder.suspectName) } : { spdpNumber: '', suspectName: '' };
+}
+
+function listTikReminders_(token) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+
+  const contacts = getIntelijenContacts_();
+  const reminders = sheetToObjects_(getSheet_(SHEETS.TIK_REMINDERS));
+  reminders.sort(function (a, b) {
+    return (parseDate_(b.sentAt || b.createdAt) || new Date(0)).getTime() -
+      (parseDate_(a.sentAt || a.createdAt) || new Date(0)).getTime();
+  });
+
+  return {
+    reminders: reminders.slice(0, 100).map(normalizeObjectForJson_),
+    intelijenCount: contacts.length,
+    validPhoneCount: contacts.filter(function (item) { return Boolean(item.phone); }).length,
+    fonnteConfigured: Boolean(getFonnteToken_())
+  };
+}
+
+function createTikReminderDraft_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+  payload = payload || {};
+
+  const suspectName = text_(payload.suspectName);
+  if (!suspectName) throw new Error('Nama tersangka wajib diisi.');
+  if (suspectName.length > 250) throw new Error('Nama tersangka terlalu panjang.');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const now = new Date();
+    const reminderId = 'TIK-' + Utilities.formatDate(now, APP_CONFIG.TIMEZONE, 'yyyyMMdd-HHmmss') + '-' + Utilities.getUuid().substring(0, 8).toUpperCase();
+    const parentFolder = DriveApp.getFolderById(APP_CONFIG.DRIVE_FOLDER_ID);
+    const tikRoot = getOrCreateSubfolder_(parentFolder, 'KARTU TIK');
+    const yearFolder = getOrCreateSubfolder_(tikRoot, Utilities.formatDate(now, APP_CONFIG.TIMEZONE, 'yyyy'));
+    const folderName = Utilities.formatDate(now, APP_CONFIG.TIMEZONE, 'yyyyMMdd-HHmmss') + ' - ' + suspectName + ' - ' + reminderId.substring(reminderId.length - 8);
+    const folder = yearFolder.createFolder(sanitizeFileName_(folderName));
+
+    const record = {
+      reminderId: reminderId,
+      suspectName: suspectName,
+      folderId: folder.getId(),
+      folderUrl: folder.getUrl(),
+      fileCount: 0,
+      recipientCount: 0,
+      successCount: 0,
+      failedCount: 0,
+      status: 'DRAFT',
+      createdBy: user.username,
+      createdByName: user.fullName,
+      createdAt: now,
+      sentAt: '',
+      lastSendResponse: ''
+    };
+    appendObject_(getSheet_(SHEETS.TIK_REMINDERS), TIK_REMINDER_HEADERS, record);
+    writeLog_(user, 'CREATE_TIK_REMINDER_DRAFT', reminderId, 'Draft Kartu TIK untuk tersangka ' + suspectName + ' dibuat.');
+    return normalizeObjectForJson_(record);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function uploadTikIdentityFile_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+  payload = payload || {};
+
+  const reminderId = text_(payload.reminderId);
+  const filePayload = payload.file || {};
+  if (!reminderId) throw new Error('ID Reminder Kartu TIK tidak tersedia.');
+  validateTikIdentityFile_(filePayload);
+
+  const sheet = getSheet_(SHEETS.TIK_REMINDERS);
+  const located = findRowByKey_(sheet, 'reminderId', reminderId);
+  if (!located) throw new Error('Draft Reminder Kartu TIK tidak ditemukan.');
+  const record = rowToObject_(TIK_REMINDER_HEADERS, located.values);
+  if (text_(record.status).toUpperCase() !== 'DRAFT') {
+    throw new Error('File hanya dapat ditambahkan ketika Reminder Kartu TIK masih berstatus DRAFT.');
+  }
+
+  const folderId = text_(record.folderId);
+  if (!folderId) throw new Error('Folder Kartu TIK tidak tersedia.');
+  const folder = DriveApp.getFolderById(folderId);
+  const bytes = Utilities.base64Decode(String(filePayload.dataBase64));
+  const originalName = sanitizeFileName_(filePayload.name);
+  const mimeType = text_(filePayload.mimeType) || 'application/octet-stream';
+  const safeName = String(Number(record.fileCount || 0) + 1).padStart(2, '0') + ' - ' + originalName;
+  const blob = Utilities.newBlob(bytes, mimeType, safeName);
+  const file = folder.createFile(blob);
+  file.setDescription(APP_CONFIG.APP_NAME + ' - Kartu TIK - ' + reminderId + ' - ' + text_(record.suspectName));
+
+  const directDownloadUrl = 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(file.getId());
+  appendObject_(getSheet_(SHEETS.TIK_FILES), TIK_FILE_HEADERS, {
+    fileId: Utilities.getUuid(),
+    reminderId: reminderId,
+    suspectName: text_(record.suspectName),
+    fileName: file.getName(),
+    mimeType: file.getMimeType(),
+    fileSize: file.getSize(),
+    driveFileId: file.getId(),
+    fileUrl: file.getUrl(),
+    downloadUrl: directDownloadUrl,
+    uploadedBy: user.username,
+    uploadedAt: new Date()
+  });
+
+  record.fileCount = Number(record.fileCount || 0) + 1;
+  writeObjectToRow_(sheet, located.row, TIK_REMINDER_HEADERS, record);
+  return {
+    reminderId: reminderId,
+    fileCount: record.fileCount,
+    file: {
+      fileName: file.getName(),
+      fileUrl: file.getUrl(),
+      downloadUrl: directDownloadUrl,
+      fileSize: file.getSize()
+    }
+  };
+}
+
+function sendTikReminder_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+  const reminderId = text_(payload && payload.reminderId);
+  if (!reminderId) throw new Error('ID Reminder Kartu TIK wajib diisi.');
+
+  const sheet = getSheet_(SHEETS.TIK_REMINDERS);
+  const located = findRowByKey_(sheet, 'reminderId', reminderId);
+  if (!located) throw new Error('Reminder Kartu TIK tidak ditemukan.');
+  const record = rowToObject_(TIK_REMINDER_HEADERS, located.values);
+  const currentStatus = text_(record.status).toUpperCase();
+  if (currentStatus !== 'DRAFT') {
+    throw new Error('Reminder Kartu TIK ini sudah diproses dengan status ' + (currentStatus || '-') + '.');
+  }
+
+  const files = getTikFiles_(reminderId);
+  if (!files.length) throw new Error('Minimal satu file identitas tersangka wajib diunggah.');
+
+  const contacts = getIntelijenContacts_();
+  if (!contacts.length) throw new Error("Sheet 'List Intelijen' belum memiliki anggota aktif.");
+  const validContacts = contacts.filter(function (item) { return Boolean(item.phone); });
+  if (!validContacts.length) throw new Error("Belum ada nomor WhatsApp Intelijen yang valid pada sheet 'List Intelijen'.");
+
+  const messages = buildTikReminderMessages_(record, files);
+  let successCount = 0;
+  let failedCount = 0;
+  const summaries = [];
+
+  validContacts.forEach(function (contact) {
+    try {
+      const responses = [];
+      messages.forEach(function (message, messageIndex) {
+        const response = sendFonnteMessage_(contact.phone, message);
+        responses.push({ part: messageIndex + 1, response: response });
+      });
+      successCount++;
+      summaries.push({ id: contact.id, name: contact.name, status: 'SUCCESS', parts: messages.length });
+      writeTikLog_(record, contact, 'SUCCESS', JSON.stringify(responses));
+    } catch (error) {
+      failedCount++;
+      const errorMessage = cleanErrorMessage_(error);
+      summaries.push({ id: contact.id, name: contact.name, status: 'FAILED', error: errorMessage });
+      writeTikLog_(record, contact, 'FAILED', errorMessage);
+    }
+  });
+
+  const now = new Date();
+  record.fileCount = files.length;
+  record.recipientCount = validContacts.length;
+  record.successCount = successCount;
+  record.failedCount = failedCount;
+  record.status = successCount === validContacts.length ? 'SENT' : successCount > 0 ? 'PARTIAL' : 'FAILED';
+  record.sentAt = now;
+  record.lastSendResponse = truncateText_(JSON.stringify(summaries), 30000);
+  writeObjectToRow_(sheet, located.row, TIK_REMINDER_HEADERS, record);
+
+  writeLog_(user, 'SEND_TIK_REMINDER', reminderId,
+    'Kartu TIK tersangka ' + text_(record.suspectName) + ': ' + successCount + ' berhasil, ' + failedCount + ' gagal.');
+
+  return {
+    reminderId: reminderId,
+    suspectName: text_(record.suspectName),
+    fileCount: files.length,
+    recipientCount: validContacts.length,
+    successCount: successCount,
+    failedCount: failedCount,
+    status: record.status,
+    folderUrl: text_(record.folderUrl)
+  };
+}
+
+function deleteTikReminderDraft_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+  const reminderId = text_(payload && payload.reminderId);
+  if (!reminderId) throw new Error('ID Reminder Kartu TIK wajib diisi.');
+
+  const sheet = getSheet_(SHEETS.TIK_REMINDERS);
+  const located = findRowByKey_(sheet, 'reminderId', reminderId);
+  if (!located) return { deleted: false, reminderId: reminderId };
+  const record = rowToObject_(TIK_REMINDER_HEADERS, located.values);
+  if (text_(record.status).toUpperCase() !== 'DRAFT') {
+    throw new Error('Hanya draft Kartu TIK yang belum dikirim yang dapat dibersihkan otomatis.');
+  }
+
+  const folderId = text_(record.folderId);
+  if (folderId) {
+    try { DriveApp.getFolderById(folderId).setTrashed(true); } catch (error) { console.error('Folder draft TIK gagal dipindahkan ke sampah: ' + error.message); }
+  }
+
+  deleteRowsByKey_(getSheet_(SHEETS.TIK_FILES), 'reminderId', reminderId);
+  sheet.deleteRow(located.row);
+  writeLog_(user, 'DELETE_TIK_REMINDER_DRAFT', reminderId, 'Draft Kartu TIK dibersihkan karena proses upload/pengiriman tidak selesai.');
+  return { deleted: true, reminderId: reminderId };
+}
+
+function getTikFiles_(reminderId) {
+  return sheetToObjects_(getSheet_(SHEETS.TIK_FILES)).filter(function (item) {
+    return text_(item.reminderId) === text_(reminderId);
+  }).sort(function (a, b) {
+    return (parseDate_(a.uploadedAt) || new Date(0)).getTime() - (parseDate_(b.uploadedAt) || new Date(0)).getTime();
+  });
+}
+
+function buildTikReminderMessages_(record, files) {
+  const maxChars = 3200;
+  const intro = [
+    '*REMINDER KARTU TIK*',
+    '',
+    'Yth. Tim Intelijen,',
+    'Ada informasi Tahap 2 dengan tersangka *' + (text_(record.suspectName) || '-') + '*.',
+    '',
+    '*Identitas tersangka:*'
+  ];
+  const footer = [
+    '',
+    'Mohon informasi dan dokumen tersebut ditindaklanjuti sesuai kewenangan.',
+    '',
+    '_Pesan otomatis SIAP PIDUM. Mohon jaga kerahasiaan data dan tautan dokumen._'
+  ];
+
+  const chunks = [];
+  let current = intro.slice();
+  files.forEach(function (file, index) {
+    const entry = [
+      String(index + 1) + '. ' + (text_(file.fileName) || 'Dokumen identitas'),
+      'Download: ' + (text_(file.downloadUrl) || text_(file.fileUrl))
+    ];
+    const candidate = current.concat(entry, footer).join('\n');
+    if (candidate.length > maxChars && current.length > intro.length) {
+      chunks.push(current.join('\n'));
+      current = [
+        '*REMINDER KARTU TIK — LANJUTAN*',
+        'Tersangka: *' + (text_(record.suspectName) || '-') + '*',
+        ''
+      ].concat(entry);
+    } else {
+      current = current.concat(entry);
+    }
+  });
+  chunks.push(current.concat(footer).join('\n'));
+
+  if (chunks.length > 1) {
+    return chunks.map(function (message, index) {
+      return '*Bagian ' + (index + 1) + '/' + chunks.length + '*\n' + message;
+    });
+  }
+  return chunks;
+}
+
+function writeTikLog_(record, contact, status, response) {
+  try {
+    appendObject_(getSheet_(SHEETS.TIK_LOGS), TIK_LOG_HEADERS, {
+      logId: Utilities.getUuid(),
+      reminderId: text_(record.reminderId),
+      suspectName: text_(record.suspectName),
+      intelijenId: text_(contact.id),
+      intelijenName: text_(contact.name),
+      phone: text_(contact.phone),
+      status: text_(status),
+      response: truncateText_(response, 3000),
+      sentAt: new Date()
+    });
+  } catch (error) {
+    console.error('Gagal menulis ReminderKartuTIKLogs: ' + error.message);
+  }
+}
+
+function validateTikIdentityFile_(file) {
+  if (!file || !text_(file.name)) throw new Error('Nama file identitas tidak valid.');
+  if (!file.dataBase64 || String(file.dataBase64).length < 10) {
+    throw new Error('Isi file identitas tidak valid atau kosong.');
+  }
+}
+
+function getIntelijenContacts_() {
+  const sheet = getSheet_(SHEETS.LIST_INTELIJEN);
+  const values = sheet.getDataRange().getDisplayValues();
+  if (values.length < 2) return [];
+  const headers = values[0].map(function (value) { return text_(value); });
+  const indexes = intelijenHeaderIndexes_(headers);
+  if (indexes.name < 0) throw new Error("Sheet 'List Intelijen' belum memiliki kolom Nama Intelijen.");
+  if (indexes.phone < 0) throw new Error("Sheet 'List Intelijen' belum memiliki kolom Nomor WhatsApp.");
+
+  return values.slice(1).map(function (row, index) {
+    const name = text_(row[indexes.name]);
+    if (!name) return null;
+    const activeRaw = indexes.active >= 0 ? text_(row[indexes.active]).toLowerCase() : 'ya';
+    const active = ['tidak', 'nonaktif', 'inactive', '0', 'false'].indexOf(activeRaw) === -1;
+    if (!active) return null;
+    const phoneDisplay = text_(row[indexes.phone]);
+    return {
+      id: indexes.id >= 0 && text_(row[indexes.id]) ? text_(row[indexes.id]) : 'INTEL-' + String(index + 1).padStart(3, '0'),
+      name: name,
+      phone: normalizeWhatsappNumber_(phoneDisplay),
+      phoneDisplay: phoneDisplay
+    };
+  }).filter(Boolean).sort(function (a, b) {
+    return a.name.localeCompare(b.name, 'id');
+  });
+}
+
+function ensureListIntelijenSheet_(spreadsheet) {
+  let sheet = spreadsheet.getSheetByName(SHEETS.LIST_INTELIJEN);
+  if (!sheet) sheet = spreadsheet.insertSheet(SHEETS.LIST_INTELIJEN);
+  if (sheet.getLastRow() === 0 || sheet.getLastColumn() === 0) {
+    sheet.getRange(1, 1, 1, LIST_INTELIJEN_HEADERS.length).setValues([LIST_INTELIJEN_HEADERS]);
+    sheet.setFrozenRows(1);
+    return sheet;
+  }
+
+  let headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getDisplayValues()[0].map(function (value) { return text_(value); });
+  const required = [
+    { aliases: ['id intelijen', 'id intel', 'id'], canonical: 'ID Intelijen' },
+    { aliases: ['nama intelijen', 'nama intel', 'nama', 'name'], canonical: 'Nama Intelijen' },
+    { aliases: ['nomor whatsapp', 'no whatsapp', 'nomor wa', 'no wa', 'nomor telepon', 'no telp', 'phone', 'whatsapp'], canonical: 'Nomor WhatsApp' },
+    { aliases: ['aktif', 'status', 'active'], canonical: 'Aktif' }
+  ];
+  required.forEach(function (definition) {
+    if (findHeaderIndex_(headers, definition.aliases) >= 0) return;
+    sheet.getRange(1, sheet.getLastColumn() + 1).setValue(definition.canonical);
+    headers.push(definition.canonical);
+  });
+
+  headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getDisplayValues()[0].map(function (value) { return text_(value); });
+  const indexes = intelijenHeaderIndexes_(headers);
+  if (indexes.id >= 0 && indexes.name >= 0 && sheet.getLastRow() >= 2) {
+    const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getDisplayValues();
+    rows.forEach(function (row, index) {
+      if (text_(row[indexes.name]) && !text_(row[indexes.id])) {
+        sheet.getRange(index + 2, indexes.id + 1).setValue('INTEL-' + String(index + 1).padStart(3, '0'));
+      }
+    });
+  }
+  sheet.setFrozenRows(1);
+  return sheet;
+}
+
+function intelijenHeaderIndexes_(headers) {
+  return {
+    id: findHeaderIndex_(headers, ['id intelijen', 'id intel', 'id']),
+    name: findHeaderIndex_(headers, ['nama intelijen', 'nama intel', 'nama', 'name']),
+    phone: findHeaderIndex_(headers, ['nomor whatsapp', 'no whatsapp', 'nomor wa', 'no wa', 'nomor telepon', 'no telp', 'phone', 'whatsapp']),
+    active: findHeaderIndex_(headers, ['aktif', 'status', 'active'])
+  };
+}
+
+function setupIntelijenSheet() {
+  const spreadsheet = SpreadsheetApp.openById(APP_CONFIG.SPREADSHEET_ID);
+  const sheet = ensureListIntelijenSheet_(spreadsheet);
+  formatSheets_(spreadsheet);
+  return "Sheet '" + sheet.getName() + "' siap. Isi Nama Intelijen, Nomor WhatsApp, dan Aktif=Ya.";
+}
+
+function addIntelijenContact(name, phone) {
+  name = text_(name);
+  const normalizedPhone = normalizeWhatsappNumber_(phone);
+  if (!name) throw new Error('Nama Intelijen wajib diisi.');
+  if (!normalizedPhone) throw new Error('Nomor WhatsApp Intelijen tidak valid.');
+
+  const spreadsheet = SpreadsheetApp.openById(APP_CONFIG.SPREADSHEET_ID);
+  const sheet = ensureListIntelijenSheet_(spreadsheet);
+  const contacts = getIntelijenContacts_();
+  const duplicate = contacts.some(function (item) {
+    return item.phone === normalizedPhone || item.name.toLowerCase() === name.toLowerCase();
+  });
+  if (duplicate) throw new Error('Nama atau nomor WhatsApp Intelijen sudah tersedia.');
+
+  const id = 'INTEL-' + String(Math.max(1, sheet.getLastRow())).padStart(3, '0');
+  appendObject_(sheet, LIST_INTELIJEN_HEADERS, {
+    'ID Intelijen': id,
+    'Nama Intelijen': name,
+    'Nomor WhatsApp': normalizedPhone,
+    'Aktif': 'Ya'
+  });
+  return 'Kontak ' + name + ' berhasil ditambahkan dengan ID ' + id + '.';
+}
+
+function deleteRowsByKey_(sheet, key, value) {
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) return 0;
+  const headers = values[0].map(function (item) { return text_(item); });
+  const keyIndex = headers.indexOf(key);
+  if (keyIndex < 0) return 0;
+  const rows = [];
+  for (let i = 1; i < values.length; i++) {
+    if (text_(values[i][keyIndex]) === text_(value)) rows.push(i + 1);
+  }
+  rows.sort(function (a, b) { return b - a; }).forEach(function (row) { sheet.deleteRow(row); });
+  return rows.length;
+}
+
+function getProsecutorById_(id) {
+  const target = text_(id);
+  return getProsecutors_().find(function (item) { return text_(item.id) === target; }) || null;
+}
+
+function ensureListJaksaSheet_(spreadsheet) {
+  let sheet = spreadsheet.getSheetByName(SHEETS.LIST_JAKSA);
+  if (!sheet) sheet = spreadsheet.insertSheet(SHEETS.LIST_JAKSA);
+  if (sheet.getLastRow() === 0 || sheet.getLastColumn() === 0) {
+    sheet.getRange(1, 1, 1, LIST_JAKSA_HEADERS.length).setValues([LIST_JAKSA_HEADERS]);
+    sheet.setFrozenRows(1);
+    return sheet;
+  }
+
+  let headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getDisplayValues()[0].map(function (value) { return text_(value); });
+  const required = [
+    { aliases: ['id jaksa', 'jaks id', 'jaksaid', 'id'], canonical: 'ID Jaksa' },
+    { aliases: ['nama jaksa', 'nama', 'name', 'namajaksa'], canonical: 'Nama Jaksa' },
+    { aliases: ['nip', 'nip jaksa'], canonical: 'NIP' },
+    { aliases: ['nomor whatsapp', 'no whatsapp', 'nomor wa', 'no wa', 'nomor telepon', 'no telp', 'phone', 'whatsapp'], canonical: 'Nomor WhatsApp' },
+    { aliases: ['aktif', 'status', 'active'], canonical: 'Aktif' }
+  ];
+  required.forEach(function (definition) {
+    if (findHeaderIndex_(headers, definition.aliases) >= 0) return;
+    sheet.getRange(1, sheet.getLastColumn() + 1).setValue(definition.canonical);
+    headers.push(definition.canonical);
+  });
+
+  headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getDisplayValues()[0].map(function (value) { return text_(value); });
+  const indexes = prosecutorHeaderIndexes_(headers);
+  if (indexes.id >= 0 && indexes.name >= 0 && sheet.getLastRow() >= 2) {
+    const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getDisplayValues();
+    rows.forEach(function (row, index) {
+      if (text_(row[indexes.name]) && !text_(row[indexes.id])) {
+        sheet.getRange(index + 2, indexes.id + 1).setValue('JAKSA-' + String(index + 1).padStart(3, '0'));
+      }
+    });
+  }
+  sheet.setFrozenRows(1);
+  return sheet;
+}
+
+function prosecutorHeaderIndexes_(headers) {
+  return {
+    id: findHeaderIndex_(headers, ['id jaksa', 'jaks id', 'jaksaid', 'id']),
+    name: findHeaderIndex_(headers, ['nama jaksa', 'nama', 'name', 'namajaksa']),
+    nip: findHeaderIndex_(headers, ['nip', 'nip jaksa']),
+    phone: findHeaderIndex_(headers, ['nomor whatsapp', 'no whatsapp', 'nomor wa', 'no wa', 'nomor telepon', 'no telp', 'phone', 'whatsapp']),
+    active: findHeaderIndex_(headers, ['aktif', 'status', 'active'])
+  };
+}
+
+function findHeaderIndex_(headers, aliases) {
+  const normalizedAliases = aliases.map(normalizeHeader_);
+  for (let i = 0; i < headers.length; i++) {
+    if (normalizedAliases.indexOf(normalizeHeader_(headers[i])) !== -1) return i;
+  }
+  return -1;
+}
+
+function normalizeHeader_(value) {
+  return text_(value).toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function normalizeWhatsappNumber_(value) {
+  let number = text_(value).replace(/[^0-9]/g, '');
+  if (!number) return '';
+  if (number.indexOf('00') === 0) number = number.substring(2);
+  if (number.indexOf('0') === 0) number = '62' + number.substring(1);
+  if (number.indexOf('8') === 0) number = '62' + number;
+  if (number.length < 10 || number.length > 16) return '';
+  return number;
+}
+
+function writeReminderLog_(record, triggerType, status, response) {
+  try {
+    appendObject_(getSheet_(SHEETS.REMINDER_LOGS), REMINDER_LOG_HEADERS, {
+      logId: Utilities.getUuid(),
+      reminderId: record.reminderId || '',
+      caseId: record.caseId || '',
+      administrationType: record.administrationType || '',
+      prosecutorName: record.prosecutorName || '',
+      prosecutorPhone: record.prosecutorPhone || '',
+      triggerType: triggerType || '',
+      status: status || '',
+      response: truncateText_(response, 3000),
+      sentAt: new Date()
+    });
+  } catch (error) {
+    console.error('Gagal menulis ReminderLogs: ' + error.message);
+  }
+}
+
+function setFonnteToken(token) {
+  token = text_(token);
+  if (!token || token.length < 8) throw new Error('Token Fonnte tidak valid.');
+  PropertiesService.getScriptProperties().setProperty(FONNTE_TOKEN_PROPERTY, token);
+  return 'Token Fonnte tersimpan pada Script Properties.';
+}
+
+function clearFonnteToken() {
+  PropertiesService.getScriptProperties().deleteProperty(FONNTE_TOKEN_PROPERTY);
+  return 'Token Fonnte dihapus.';
+}
+
+function getFonnteToken_() {
+  return text_(PropertiesService.getScriptProperties().getProperty(FONNTE_TOKEN_PROPERTY));
+}
+
+function installReminderTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function (trigger) {
+    if (trigger.getHandlerFunction() === REMINDER_TRIGGER_HANDLER) {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+  ScriptApp.newTrigger(REMINDER_TRIGGER_HANDLER)
+    .timeBased()
+    .atHour(8)
+    .nearMinute(0)
+    .everyDays(1)
+    .inTimezone(APP_CONFIG.TIMEZONE)
+    .create();
+  return 'Trigger reminder harian terpasang sekitar pukul 08.00 WITA.';
+}
+
+function removeReminderTrigger() {
+  let removed = 0;
+  ScriptApp.getProjectTriggers().forEach(function (trigger) {
+    if (trigger.getHandlerFunction() === REMINDER_TRIGGER_HANDLER) {
+      ScriptApp.deleteTrigger(trigger);
+      removed++;
+    }
+  });
+  return removed + ' trigger reminder dihapus.';
+}
+
+function hasReminderTrigger_() {
+  return ScriptApp.getProjectTriggers().some(function (trigger) {
+    return trigger.getHandlerFunction() === REMINDER_TRIGGER_HANDLER;
+  });
+}
+
+function generateReminderSpdpId_() {
+  const year = Utilities.formatDate(new Date(), APP_CONFIG.TIMEZONE, 'yyyy');
+  const key = 'REMINDER_SPDP_SEQUENCE_' + year;
+  const properties = PropertiesService.getScriptProperties();
+  const next = Number(properties.getProperty(key) || 0) + 1;
+  properties.setProperty(key, String(next));
+  return 'REM-SPDP-' + year + '-' + String(next).padStart(4, '0');
+}
+
+function testFonnteFromListJaksa() {
+  const prosecutor = getProsecutors_().find(function (item) { return Boolean(item.phone); });
+  if (!prosecutor) {
+    throw new Error("Belum ada nomor WhatsApp Jaksa yang valid pada sheet 'List Jaksa'.");
+  }
+  return sendFonnteTest(prosecutor.phone);
+}
+
+function sendFonnteTest(number) {
+  const target = normalizeWhatsappNumber_(number);
+  if (!target) throw new Error('Nomor pengujian tidak valid.');
+  return sendFonnteMessage_(target,
+    '*Tes SIAP PIDUM*\nIntegrasi Fonnte berhasil pada ' + Utilities.formatDate(new Date(), APP_CONFIG.TIMEZONE, 'dd/MM/yyyy HH:mm') + ' WITA.');
+}
+
+function signedDayDifference_(fromValue, toValue) {
+  const from = parseDate_(fromValue);
+  const to = parseDate_(toValue);
+  if (!from || !to) return 999999;
+  return Math.round((stripTime_(to).getTime() - stripTime_(from).getTime()) / 86400000);
+}
+
+function dateKey_(value) {
+  const date = parseDate_(value);
+  return date ? Utilities.formatDate(date, APP_CONFIG.TIMEZONE, 'yyyy-MM-dd') : '';
+}
+
+function formatDateId_(value) {
+  const date = parseDate_(value);
+  if (!date) return '-';
+
+  const bulanIndo = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
+
+  const tanggal = date.getDate();
+  const bulan = bulanIndo[date.getMonth()];
+  const tahun = date.getFullYear();
+
+  return tanggal + ' ' + bulan + ' ' + tahun;
+}
+
+function truncateText_(value, limit) {
+  value = String(value === undefined || value === null ? '' : value);
+  limit = Number(limit || 1000);
+  return value.length > limit ? value.substring(0, limit) : value;
+}
+
+function addUser(username, password, role, name, unit) {
+  username = normalizeUsername_(username);
+  role = normalizeRole_(role);
+
+  if (!username || !password || ['jaksa', 'penyidik'].indexOf(role) === -1) {
+    throw new Error('Username, password, dan Role Jaksa/Penyidik wajib diisi.');
+  }
+
+  const sheet = getSheet_(SHEETS.USERS);
+  validateAccessHeaders_(sheet);
+
+  const existing = sheetToObjects_(sheet).some(function (item) {
+    return normalizeUsername_(item.Username) === username;
+  });
+  if (existing) throw new Error('Username sudah ada pada sheet akses.');
+
+  appendObject_(sheet, ACCESS_HEADERS, {
+    Username: username,
+    password: String(password),
+    Name: text_(name || username),
+    Role: role === 'jaksa' ? 'Jaksa' : 'Penyidik',
+    Unit: text_(unit || '')
+  });
+
+  return 'Akun ' + username + ' berhasil ditambahkan ke sheet akses.';
+}
+
+function resetPassword(username, newPassword) {
+  username = normalizeUsername_(username);
+  if (!username || newPassword === undefined || newPassword === null || String(newPassword) === '') {
+    throw new Error('Username dan password baru wajib diisi.');
+  }
+
+  const sheet = getSheet_(SHEETS.USERS);
+  validateAccessHeaders_(sheet);
+  const located = findRowByKey_(sheet, 'Username', username, true);
+  if (!located) throw new Error('Akun tidak ditemukan pada sheet akses.');
+
+  const record = rowToObject_(ACCESS_HEADERS, located.values);
+  record.password = String(newPassword);
+  writeObjectToRow_(sheet, located.row, ACCESS_HEADERS, record);
+  return 'Password ' + username + ' berhasil diubah.';
+}
+
+function requireAuth_(token) {
+  const decoded = verifyToken_(token);
+  const sheet = getSheet_(SHEETS.USERS);
+  validateAccessHeaders_(sheet);
+
+  const users = sheetToObjects_(sheet);
+  const account = users.find(function (item) {
+    return normalizeUsername_(item.Username) === normalizeUsername_(decoded.username);
+  });
+
+  if (!account) {
+    throw new Error('Sesi tidak valid atau akun sudah dihapus dari sheet akses.');
+  }
+
+  const user = sanitizeUser_(account);
+  if (user.role !== normalizeRole_(decoded.role)) {
+    throw new Error('Role akun telah berubah. Silakan masuk kembali.');
+  }
+  return user;
+}
+
+function assertRole_(user, role) {
+  if (!user || user.role !== role) throw new Error('Anda tidak memiliki akses untuk tindakan ini.');
+}
+
+function sanitizeUser_(user) {
+  const username = normalizeUsername_(user.Username !== undefined ? user.Username : user.username);
+  const role = normalizeRole_(user.Role !== undefined ? user.Role : user.role);
+  const name = user.Name !== undefined ? user.Name : user.fullName;
+  const unit = user.Unit !== undefined ? user.Unit : user.unit;
+
+  return {
+    userId: username,
+    username: username,
+    role: role,
+    fullName: String(name || username),
+    unit: String(unit || '')
+  };
+}
+
+function createToken_(user) {
+  const payload = {
+    userId: user.userId,
+    username: user.username,
+    role: user.role,
+    exp: Math.floor(Date.now() / 1000) + APP_CONFIG.TOKEN_TTL_SECONDS
+  };
+  const encoded = base64UrlEncode_(JSON.stringify(payload));
+  const signature = sign_(encoded);
+  return encoded + '.' + signature;
+}
+
+function verifyToken_(token) {
+  if (!token) throw new Error('Sesi tidak tersedia. Silakan masuk kembali.');
+  const parts = String(token).split('.');
+  if (parts.length !== 2) throw new Error('Format sesi tidak valid.');
+  const expected = sign_(parts[0]);
+  if (!safeEqual_(parts[1], expected)) throw new Error('Tanda tangan sesi tidak valid.');
+
+  let payload;
+  try {
+    payload = JSON.parse(base64UrlDecode_(parts[0]));
+  } catch (error) {
+    throw new Error('Data sesi tidak valid.');
+  }
+  if (!payload.exp || payload.exp < Math.floor(Date.now() / 1000)) {
+    throw new Error('Sesi telah berakhir. Silakan masuk kembali.');
+  }
+  return payload;
+}
+
+function sign_(value) {
+  const bytes = Utilities.computeHmacSha256Signature(String(value), getTokenSecret_());
+  return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/g, '');
+}
+
+function base64UrlEncode_(value) {
+  return Utilities.base64EncodeWebSafe(String(value), Utilities.Charset.UTF_8).replace(/=+$/g, '');
+}
+
+function base64UrlDecode_(value) {
+  let padded = String(value);
+  while (padded.length % 4) padded += '=';
+  return Utilities.newBlob(Utilities.base64DecodeWebSafe(padded)).getDataAsString('UTF-8');
+}
+
+function getTokenSecret_() {
+  const properties = PropertiesService.getScriptProperties();
+  let secret = properties.getProperty('TOKEN_SECRET');
+  if (!secret) {
+    secret = Utilities.getUuid() + Utilities.getUuid() + Utilities.getUuid();
+    properties.setProperty('TOKEN_SECRET', secret);
+  }
+  return secret;
+}
+
+function getPasswordSalt_() {
+  const properties = PropertiesService.getScriptProperties();
+  let salt = properties.getProperty('PASSWORD_SALT');
+  if (!salt) {
+    salt = Utilities.getUuid() + Utilities.getUuid();
+    properties.setProperty('PASSWORD_SALT', salt);
+  }
+  return salt;
+}
+
+function hashPassword_(password) {
+  const bytes = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    getPasswordSalt_() + String(password),
+    Utilities.Charset.UTF_8
+  );
+  return Utilities.base64Encode(bytes);
+}
+
+function safeEqual_(a, b) {
+  a = String(a || '');
+  b = String(b || '');
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return result === 0;
+}
+
+function validateFile_(file) {
+  const fileName = String(file.name || '');
+  const extension = fileName.split('.').pop().toLowerCase();
+  if (['pdf', 'docx'].indexOf(extension) === -1) {
+    throw new Error('Dokumen SPDP harus berformat PDF atau DOCX.');
+  }
+  if (!file.dataBase64 || String(file.dataBase64).length < 10) {
+    throw new Error('Isi dokumen SPDP tidak valid.');
+  }
+}
+
+function createDriveFile_(folder, caseId, documentType, filePayload) {
+  const bytes = Utilities.base64Decode(String(filePayload.dataBase64));
+  const originalName = sanitizeFileName_(filePayload.name);
+  const mimeType = String(filePayload.mimeType || mimeFromName_(originalName));
+  const fileName = caseId + '_' + documentType + '_' + originalName;
+  const blob = Utilities.newBlob(bytes, mimeType, fileName);
+  const file = folder.createFile(blob);
+  file.setDescription(APP_CONFIG.APP_NAME + ' - ' + documentType + ' - ' + caseId);
+  return file;
+}
+
+function validateAdministrationFile_(file) {
+  const fileName = String(file.name || '');
+  const extension = fileName.split('.').pop().toLowerCase();
+  if (['pdf', 'docx'].indexOf(extension) === -1) {
+    throw new Error('Lampiran administrasi harus berformat PDF atau DOCX.');
+  }
+  if (!file.dataBase64 || String(file.dataBase64).length < 10) {
+    throw new Error('Isi lampiran administrasi tidak valid.');
+  }
+}
+
+function getAdministrationFieldMap_() {
+  const fields = sheetToObjects_(getSheet_(SHEETS.ADMINISTRATION_FIELDS));
+  const map = {};
+  fields.forEach(function (field) {
+    const administrationId = text_(field.administrationId);
+    if (!administrationId) return;
+    if (!map[administrationId]) map[administrationId] = [];
+    map[administrationId].push(field);
+  });
+  Object.keys(map).forEach(function (administrationId) {
+    map[administrationId].sort(function (a, b) {
+      return Number(a.sortOrder || 0) - Number(b.sortOrder || 0);
+    });
+  });
+  return map;
+}
+
+function attachFieldsToAdministration_(record, fieldMap) {
+  const normalized = normalizeObjectForJson_(record);
+  const fields = (fieldMap[text_(record.administrationId)] || []).map(function (field) {
+    return normalizeObjectForJson_({
+      key: field.fieldKey,
+      label: field.fieldLabel,
+      value: field.fieldValue,
+      source: field.fieldSource,
+      sortOrder: Number(field.sortOrder || 0)
+    });
+  });
+  const formData = {};
+  fields.forEach(function (field) {
+    formData[text_(field.key)] = field.value;
+  });
+  normalized.formFields = fields;
+  normalized.formData = formData;
+  return normalized;
+}
+
+function getAdministrationsForCase_(caseId) {
+  const fieldMap = getAdministrationFieldMap_();
+  const items = sheetToObjects_(getSheet_(SHEETS.ADMINISTRATIONS)).filter(function (item) {
+    return text_(item.caseId) === text_(caseId);
+  }).map(function (item) {
+    return attachFieldsToAdministration_(item, fieldMap);
+  });
+
+  items.sort(function (a, b) {
+    const aIndex = ADMINISTRATION_ORDER.indexOf(text_(a.type).toUpperCase());
+    const bIndex = ADMINISTRATION_ORDER.indexOf(text_(b.type).toUpperCase());
+    if (aIndex !== bIndex) return aIndex - bIndex;
+    return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+  });
+
+  return items;
+}
+
+/* =====================================================================
+ * V4.3 — Validasi file administrasi di Google Drive.
+ * Administrasi yang file Docs/lampirannya sudah DIHAPUS / dipindah ke
+ * Sampah tidak lagi dianggap "sudah dibuat" sehingga statusnya kembali
+ * menjadi "Belum dibuat" dan tombol "Buka dokumen" hilang.
+ * Hasil pengecekan di-cache 5 menit agar daftar perkara tetap cepat.
+ * ===================================================================== */
+const FILE_CHECK_TTL_SECONDS = 300;
+let FILE_CHECK_FORCE_ = false;
+
+function checkDriveFiles_(fileIds, force) {
+  const result = {};
+  const ids = fileIds.map(text_).filter(function (id, index, list) { return id && list.indexOf(id) === index; });
+  if (!ids.length) return result;
+  let cache = null;
+  try { cache = CacheService.getScriptCache(); } catch (error) { cache = null; }
+  let cached = {};
+  if (cache && !force) {
+    try { cached = cache.getAll(ids.map(function (id) { return 'fileok_' + id; })) || {}; } catch (error) { cached = {}; }
+  }
+  const toStore = {};
+  ids.forEach(function (id) {
+    const hit = cached['fileok_' + id];
+    if (hit === '1' || hit === '0') { result[id] = hit === '1'; return; }
+    let ok = false;
+    try {
+      const file = DriveApp.getFileById(id);
+      ok = !file.isTrashed();
+    } catch (error) {
+      ok = false; // file dihapus permanen / tidak dapat diakses
+    }
+    result[id] = ok;
+    toStore['fileok_' + id] = ok ? '1' : '0';
+  });
+  if (cache && Object.keys(toStore).length) {
+    try { cache.putAll(toStore, FILE_CHECK_TTL_SECONDS); } catch (error) { /* abaikan */ }
+  }
+  return result;
+}
+
+function markDriveFileAvailable_(fileId) {
+  try { if (fileId) CacheService.getScriptCache().put('fileok_' + fileId, '1', FILE_CHECK_TTL_SECONDS); } catch (error) { /* abaikan */ }
+}
+
+function filterAvailableAdministrations_(administrations, force) {
+  const list = administrations || [];
+  const status = checkDriveFiles_(list.map(function (item) { return item.fileId; }), force);
+  return list.filter(function (item) {
+    const id = text_(item.fileId);
+    return !id || status[id] !== false; // administrasi tanpa file (data saja) tetap dihitung
+  });
+}
+
+/**
+ * Jalankan manual dari editor Apps Script untuk MENGHAPUS baris Administrations &
+ * AdministrationFields yang file Drive-nya sudah dihapus. (Tidak wajib — aplikasi
+ * sudah otomatis menyembunyikannya.)
+ */
+function cleanupMissingAdministrationFiles() {
+  const adminSheet = getSheet_(SHEETS.ADMINISTRATIONS);
+  const admins = sheetToObjects_(adminSheet);
+  const status = checkDriveFiles_(admins.map(function (item) { return item.fileId; }), true);
+  const missingIds = admins.filter(function (item) {
+    const id = text_(item.fileId);
+    return id && status[id] === false;
+  }).map(function (item) { return text_(item.administrationId); });
+  missingIds.forEach(function (administrationId) {
+    deleteRowsByKey_(adminSheet, 'administrationId', administrationId);
+    deleteRowsByKey_(getSheet_(SHEETS.ADMINISTRATION_FIELDS), 'administrationId', administrationId);
+  });
+  return missingIds.length + ' administrasi tanpa file telah dihapus dari sheet.';
+}
+
+function attachAdministrationsToCase_(record, administrations) {
+  const normalized = normalizeObjectForJson_(record);
+  administrations = filterAvailableAdministrations_(administrations, FILE_CHECK_FORCE_);
+  const ordered = (administrations || []).slice().sort(function (a, b) {
+    return ADMINISTRATION_ORDER.indexOf(text_(a.type).toUpperCase()) -
+      ADMINISTRATION_ORDER.indexOf(text_(b.type).toUpperCase());
+  });
+  normalized.administrations = ordered.map(function (item) {
+    return normalizeObjectForJson_(item);
+  });
+  normalized.administrationProgress = {
+    completed: ordered.length,
+    total: ADMINISTRATION_ORDER.length
+  };
+  return normalized;
+}
+
+function resolveAdministrationDeadline_(type, documentDate, currentCase) {
+  const baseDate = dateCell_(documentDate) || new Date();
+  const received = parseDate_(currentCase.receivedDate);
+  const today = stripTime_(new Date());
+
+  if (type === 'P-16' || type === 'SOP FORM 1') {
+    // Pedoman B-310: koordinasi ≤ 3 hari sejak SPDP diterima, berkas Tahap I dipantau 30 hari.
+    const base = received || baseDate;
+    const coordination = addDays_(base, 3);
+    if (type === 'P-16' && coordination && stripTime_(coordination).getTime() >= today.getTime()) {
+      return { date: coordination, type: 'Koordinasi awal ≤3 hari sejak SPDP (SOP FORM-6)' };
+    }
+    return { date: addDays_(base, 30), type: 'Berkas Tahap I ≤30 hari sejak SPDP (bila lewat: P-17)' };
+  }
+
+  const rules = {
+    'P-17': { days: 30, type: 'Berkas Tahap I ≤30 hari sejak P-17 (bila lewat: SOP FORM-2)' },
+    'SOP FORM 2': { days: 30, type: 'Berkas Tahap I ≤30 hari sejak SOP FORM-2 (bila lewat: SOP FORM-3)' },
+    'P-19': { days: 14, type: 'Penyidikan tambahan ≤14 hari sejak P-19 (bila lewat: P-20)' },
+    'P-21': { days: 14, type: 'Penyerahan tersangka & barang bukti (Tahap II) ≤14 hari' }
+  };
+  if (rules[type]) {
+    return { date: addDays_(baseDate, rules[type].days), type: rules[type].type };
+  }
+
+  if (type === 'SOP FORM 3') return { date: '', type: 'SPDP dikembalikan kepada penyidik' };
+  if (type === 'P-29') return { date: '', type: 'Pelimpahan perkara ke Pengadilan Negeri' };
+
+  const labels = {
+    'P-24': 'Penetapan sikap hasil penelitian berkas (P-19 / P-21)'
+  };
+  return {
+    date: currentCase.deadlineDate || '',
+    type: labels[type] || currentCase.deadlineType || ''
+  };
+}
+
+function resolveDeadline_(status, suppliedDate, nextHearingDate, baseDate) {
+  if (suppliedDate) {
+    return { date: dateCell_(suppliedDate), type: deadlineTypeForStatus_(status) };
+  }
+  if (status === 'SIDANG' && nextHearingDate) {
+    return { date: dateCell_(String(nextHearingDate).substring(0, 10)), type: 'Jadwal sidang berikutnya' };
+  }
+
+  const rules = {
+    P16_DITERBITKAN: { days: 3, type: 'Koordinasi awal paling lama 3 hari' },
+    MENUNGGU_BERKAS_TAHAP_I: { days: 30, type: 'Pemantauan pengiriman berkas Tahap I' },
+    P19_PENGEMBALIAN_BERKAS: { days: 14, type: 'Penyidikan tambahan setelah P-19' },
+    PENYIDIKAN_TAMBAHAN: { days: 14, type: 'Penyidikan tambahan setelah P-19' },
+    P21_LENGKAP: { days: 14, type: 'Penyerahan tersangka dan barang bukti' },
+    MENUNGGU_TAHAP_II: { days: 14, type: 'Penyerahan tersangka dan barang bukti' }
+  };
+
+  if (rules[status]) {
+    return { date: addDays_(baseDate, rules[status].days), type: rules[status].type };
+  }
+  return { date: '', type: deadlineTypeForStatus_(status) };
+}
+
+function deadlineTypeForStatus_(status) {
+  const labels = {
+    SPDP_DITERIMA: 'Koordinasi awal',
+    P16_DITERBITKAN: 'Koordinasi awal',
+    MENUNGGU_BERKAS_TAHAP_I: 'Pengiriman berkas Tahap I',
+    P19_PENGEMBALIAN_BERKAS: 'Penyidikan tambahan',
+    PENYIDIKAN_TAMBAHAN: 'Penyidikan tambahan',
+    P21_LENGKAP: 'Penyerahan Tahap II',
+    MENUNGGU_TAHAP_II: 'Penyerahan Tahap II',
+    SIDANG: 'Jadwal sidang'
+  };
+  return labels[status] || '';
+}
+
+function generateCaseId_() {
+  const year = Utilities.formatDate(new Date(), APP_CONFIG.TIMEZONE, 'yyyy');
+  const key = 'CASE_SEQUENCE_' + year;
+  const properties = PropertiesService.getScriptProperties();
+  const next = Number(properties.getProperty(key) || 0) + 1;
+  properties.setProperty(key, String(next));
+  return 'PIDUM-MUNA-' + year + '-' + String(next).padStart(4, '0');
+}
+
+function calculateDayDifference_(startValue, endValue) {
+  const start = parseDate_(startValue);
+  const end = parseDate_(endValue);
+  if (!start || !end) return 0;
+  return Math.max(0, Math.floor((stripTime_(end).getTime() - stripTime_(start).getTime()) / 86400000));
+}
+
+function calculateAge_(birthValue) {
+  const birth = parseDate_(birthValue);
+  if (!birth) return 0;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const month = today.getMonth() - birth.getMonth();
+  if (month < 0 || (month === 0 && today.getDate() < birth.getDate())) age--;
+  return Math.max(0, age);
+}
+
+function addDays_(dateValue, days) {
+  const date = dateValue instanceof Date ? new Date(dateValue.getTime()) : parseDate_(dateValue);
+  if (!date) return '';
+  date.setDate(date.getDate() + Number(days || 0));
+  return date;
+}
+
+function parseDate_(value) {
+  if (!value) return null;
+  if (value instanceof Date && !isNaN(value.getTime())) return new Date(value.getTime());
+  
+  const matchIso = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (matchIso) return new Date(Number(matchIso[1]), Number(matchIso[2]) - 1, Number(matchIso[3]));
+
+  const matchId = String(value).match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+  if (matchId) return new Date(Number(matchId[3]), Number(matchId[2]) - 1, Number(matchId[1]));
+
+  const parsed = new Date(value);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+function stripTime_(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function dateCell_(value) {
+  return value ? (parseDate_(value) || '') : '';
+}
+
+function dateTimeCell_(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  return isNaN(date.getTime()) ? '' : date;
+}
+
+function validateRequired_(payload, fields) {
+  const missing = fields.filter(function (field) {
+    return payload[field] === undefined || payload[field] === null || String(payload[field]).trim() === '';
+  });
+  if (missing.length) throw new Error('Data wajib belum lengkap: ' + missing.join(', '));
+}
+
+function ensureSheet_(spreadsheet, name, headers) {
+  let sheet = spreadsheet.getSheetByName(name);
+  if (!sheet) sheet = spreadsheet.insertSheet(name);
+
+  if (sheet.getLastRow() === 0 || sheet.getLastColumn() === 0) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  } else {
+    // V4: jangan menimpa header yang sudah ada (bisa membuat data bergeser);
+    // cukup tambahkan header yang belum tersedia di sebelah kanan.
+    const existing = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(function (h) { return text_(h); });
+    const missing = headers.filter(function (header) { return existing.indexOf(header) === -1; });
+    if (missing.length) {
+      sheet.getRange(1, existing.length + 1, 1, missing.length).setValues([missing]);
+    }
+  }
+  sheet.setFrozenRows(1);
+  return sheet;
+}
+
+function formatSheets_(spreadsheet) {
+  Object.keys(SHEETS).forEach(function (key) {
+    const sheet = spreadsheet.getSheetByName(SHEETS[key]);
+    if (!sheet || sheet.getLastColumn() === 0) return;
+    sheet.getRange(1, 1, 1, sheet.getLastColumn())
+      .setFontWeight('bold')
+      .setBackground('#0b5d3b')
+      .setFontColor('#ffffff');
+    sheet.autoResizeColumns(1, sheet.getLastColumn());
+  });
+}
+
+function getSheet_(name) {
+  const sheet = SpreadsheetApp.openById(APP_CONFIG.SPREADSHEET_ID).getSheetByName(name);
+  if (!sheet) throw new Error('Sheet ' + name + ' belum tersedia. Jalankan setupProject().');
+  return sheet;
+}
+
+function appendObject_(sheet, headers, object) {
+  const row = headers.map(function (header) {
+    return object[header] !== undefined ? object[header] : '';
+  });
+  sheet.appendRow(row);
+}
+
+/** Tambahkan baris berdasarkan header aktual pada baris pertama sheet. */
+function appendObjectByHeaders_(sheet, object) {
+  const lastColumn = Math.max(sheet.getLastColumn(), 1);
+  const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0].map(function (h) { return text_(h); });
+  const row = headers.map(function (header) {
+    return header && object[header] !== undefined ? object[header] : '';
+  });
+  sheet.appendRow(row);
+}
+
+function appendObjects_(sheet, headers, objects) {
+  if (!Array.isArray(objects) || !objects.length) return;
+  const rows = objects.map(function (object) {
+    return headers.map(function (header) {
+      return object[header] !== undefined ? object[header] : '';
+    });
+  });
+  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, headers.length).setValues(rows);
+}
+
+function sheetToObjects_(sheet) {
+  const range = sheet.getDataRange();
+  const values = range.getValues();
+  if (values.length < 2) return [];
+  const headers = values[0].map(String);
+  return values.slice(1).filter(function (row) {
+    return row.some(function (cell) { return cell !== ''; });
+  }).map(function (row) {
+    return normalizeObjectForJson_(rowToObject_(headers, row));
+  });
+}
+
+function rowToObject_(headers, row) {
+  const object = {};
+  headers.forEach(function (header, index) { object[header] = row[index]; });
+  return object;
+}
+
+function writeObjectToRow_(sheet, rowNumber, headers, object) {
+  const row = headers.map(function (header) {
+    return object[header] !== undefined ? object[header] : '';
+  });
+  sheet.getRange(rowNumber, 1, 1, headers.length).setValues([row]);
+}
+
+function findRowByKey_(sheet, key, value, caseInsensitive) {
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) return null;
+  const headers = values[0].map(function (item) { return text_(item); });
+  const keyIndex = headers.indexOf(key);
+  if (keyIndex === -1) throw new Error('Kolom ' + key + ' tidak ditemukan.');
+
+  const rawTarget = text_(value);
+  const target = caseInsensitive ? rawTarget.toLowerCase() : rawTarget;
+  for (let i = 1; i < values.length; i++) {
+    const rawCell = text_(values[i][keyIndex]);
+    const cell = caseInsensitive ? rawCell.toLowerCase() : rawCell;
+    if (cell === target) return { row: i + 1, values: values[i] };
+  }
+  return null;
+}
+
+function findObjectByKey_(sheet, key, value) {
+  const located = findRowByKey_(sheet, key, value, key === 'username');
+  if (!located) return null;
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+  return normalizeObjectForJson_(rowToObject_(headers, located.values));
+}
+
+function normalizeObjectForJson_(object) {
+  const normalized = {};
+  Object.keys(object).forEach(function (key) {
+    const value = object[key];
+    if (value instanceof Date && !isNaN(value.getTime())) {
+      normalized[key] = Utilities.formatDate(value, APP_CONFIG.TIMEZONE, "yyyy-MM-dd'T'HH:mm:ssXXX");
+    } else {
+      normalized[key] = value;
+    }
+  });
+  return normalized;
+}
+
+function writeLog_(user, action, caseId, description) {
+  try {
+    appendObject_(getSheet_(SHEETS.LOGS), LOG_HEADERS, {
+      logId: Utilities.getUuid(),
+      userId: user.userId || '',
+      username: user.username || '',
+      role: user.role || '',
+      action: action,
+      caseId: caseId || '',
+      description: description || '',
+      timestamp: new Date()
+    });
+  } catch (error) {
+    console.error('Gagal menulis log: ' + error.message);
+  }
+}
+
+function jsonResponse_(success, data, message) {
+  return ContentService
+    .createTextOutput(JSON.stringify({ success: success, data: data, message: message }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function validateAccessHeaders_(sheet) {
+  const actual = sheet.getRange(1, 1, 1, ACCESS_HEADERS.length).getDisplayValues()[0];
+  ACCESS_HEADERS.forEach(function (header, index) {
+    if (String(actual[index] || '').trim() !== header) {
+      throw new Error(
+        "Header sheet akses tidak sesuai. Gunakan tepat: Username | password | Name | Role | Unit"
+      );
+    }
+  });
+}
+
+function text_(value) { return value === undefined || value === null ? '' : String(value).trim(); }
+function normalizeUsername_(value) { return text_(value).toLowerCase(); }
+function normalizeRole_(value) {
+  const role = text_(value).toLowerCase();
+  if (role === 'jaksa') return 'jaksa';
+  if (role === 'penyidik') return 'penyidik';
+  return role;
+}
+function sanitizeFileName_(value) { return text_(value).replace(/[\\/:*?"<>|#%{}~&]/g, '_').replace(/\s+/g, ' ').substring(0, 120) || 'dokumen'; }
+function mimeFromName_(name) { return String(name).toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'; }
+function cleanErrorMessage_(error) { return error && error.message ? String(error.message) : 'Terjadi kesalahan pada server.'; }
+
+function getOrCreateSubfolder_(parentFolder, folderName) {
+  if (!parentFolder) {
+    throw new Error('Folder induk tidak tersedia.');
+  }
+  const safeFolderName = sanitizeFileName_(folderName);
+  if (!safeFolderName) {
+    throw new Error('Nama folder tidak boleh kosong.');
+  }
+  const folders = parentFolder.getFoldersByName(safeFolderName);
+  if (folders.hasNext()) {
+    return folders.next();
+  }
+  return parentFolder.createFolder(safeFolderName);
+}
+
+function getIndonesianMonthFolderName_(dateValue) {
+  const date = parseDate_(dateValue);
+  if (!date) {
+    throw new Error('Tanggal untuk menentukan folder bulan tidak valid.');
+  }
+  const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  const monthNumber = Utilities.formatDate(date, APP_CONFIG.TIMEZONE, 'MM');
+  const monthIndex = Number(monthNumber) - 1;
+  return (monthNumber + ' - ' + monthNames[monthIndex]);
+}
+
+// ====================================================================
+// FUNGSI PENGAMBILAN DATA JAKSA DARI SPREADSHEET (V4)
+// Dibaca berdasarkan NAMA kolom sheet "List Jaksa" (bukan indeks tetap),
+// dapat dicari memakai ID Jaksa ATAU nama lengkap.
+// ====================================================================
+let PROSECUTOR_CACHE_ = null;
+function getJaksaData(idOrName) {
+  const target = text_(idOrName).toLowerCase();
+  if (!target) return null;
+  if (!PROSECUTOR_CACHE_) {
+    try { PROSECUTOR_CACHE_ = getProsecutors_(); } catch (error) { PROSECUTOR_CACHE_ = []; }
+  }
+  const found = PROSECUTOR_CACHE_.find(function (item) {
+    return text_(item.id).toLowerCase() === target || text_(item.name).toLowerCase() === target;
+  });
+  if (!found) return null;
+  return { id: found.id, nama: found.name, nip: found.nip, pangkat: found.pangkat, jabatan: found.jabatan };
+}
+
+/**
+ * =========================================================================
+ * FITUR TAMBAHAN: ANALISA PERKARA BERBASIS GEMINI AI
+ * =========================================================================
+ */
+
+
+// ---- Header kolom untuk 2 sheet baru -------------------------------------
+const CASE_ANALYSIS_HEADERS = [
+  'analysisId', 'caseId', 'suspectName', 'requestedBy', 'requestedByName',
+  'model', 'lawsReferenced', 'asasDilanggar', 'unsurFormil', 'unsurMateril',
+  'pasalDisarankan', 'kesimpulan', 'catatanKehatihatian', 'rawResponseJson',
+  'createdAt', 'jenisKasus', 'identifikasiKorban'
+];
+
+const LEGAL_CORPUS_HEADERS = [
+  'lawId', 'lawName', 'lawShort', 'articleNumber', 'articleText', 'keywords'
+];
+
+
+// ---- Konfigurasi Gemini ---------------------------------------------------
+// GEMINI_API_KEY_PROPERTY adalah NAMA label penyimpanan, BUKAN kunci API itu
+// sendiri. Kunci API asli disimpan lewat fungsi setGeminiApiKey() di bawah,
+// dipanggil SEKALI dari editor Apps Script (lihat panduan setup).
+const GEMINI_MODEL = 'gemini-3.1-flash-lite'; // model stabil per medio 2026; alternatif lebih pintar (masih preview): 'gemini-3-flash-preview' atau 'gemini-3.1-pro-preview'
+const GEMINI_API_KEY_PROPERTY =  'GEMINI_API_KEY';
+const GEMINI_MAX_ARTICLES_IN_PROMPT = 18; // jangan diperbesar drastis: makin banyak pasal dikirim, makin mahal & makin lambat tiap analisa
+
+
+/**
+ * Jalankan SEKALI dari editor Apps Script (pilih fungsi ini lalu klik Run)
+ * untuk menyimpan API key secara aman di Script Properties.
+ * API key TIDAK PERNAH dikirim ke frontend/Vercel — hanya hidup di server Apps Script.
+ * Dapatkan key gratis di https://aistudio.google.com/app/apikey
+ */
+function setGeminiApiKey(apiKey) {
+  PropertiesService.getScriptProperties().setProperty(GEMINI_API_KEY_PROPERTY, String(apiKey || '').trim());
+  return 'Gemini API key tersimpan.';
+}
+
+function getGeminiApiKey_() {
+  const key = PropertiesService.getScriptProperties().getProperty(GEMINI_API_KEY_PROPERTY);
+  if (!key) throw new Error('GEMINI_API_KEY belum diatur. Jalankan setGeminiApiKey("API_KEY_ANDA") sekali dari editor Apps Script.');
+  return key;
+}
+
+/**
+ * Pastikan 2 sheet baru ada. Panggil sekali dari fungsi setupProject()
+ * yang sudah ada (tambahkan baris pemanggilan di sana), atau jalankan
+ * manual dari editor.
+ */
+function ensureAiSheets_(spreadsheet) {
+  ensureSheet_(spreadsheet, SHEETS.CASE_ANALYSIS, CASE_ANALYSIS_HEADERS);
+  ensureSheet_(spreadsheet, SHEETS.LEGAL_CORPUS, LEGAL_CORPUS_HEADERS);
+}
+
+// (setupProject() di atas sudah memanggil ensureAiSheets_ secara otomatis)
+
+
+/**
+ * Tambahkan satu pasal ke basis pengetahuan (sheet LegalCorpus).
+ * Dipakai oleh skrip import (lihat build_legal_corpus.py) atau bisa
+ * diisi manual langsung di Google Sheets pada sheet "LegalCorpus".
+ */
+function addLegalArticle_(lawId, lawName, lawShort, articleNumber, articleText, keywords) {
+  appendObject_(getSheet_(SHEETS.LEGAL_CORPUS), LEGAL_CORPUS_HEADERS, {
+    lawId: text_(lawId),
+    lawName: text_(lawName),
+    lawShort: text_(lawShort),
+    articleNumber: text_(articleNumber),
+    articleText: text_(articleText),
+    keywords: text_(keywords)
+  });
+}
+
+/**
+ * Retrieval sederhana: cari pasal yang paling relevan dengan uraian
+ * perkara + pasal yang sudah disangkakan penyidik, berdasarkan
+ * kecocokan kata kunci. Ini menghindari mengirim seluruh isi 3 UU
+ * (ratusan pasal) ke Gemini setiap kali — lebih murah, lebih cepat,
+ * dan mengurangi risiko halusinasi karena model hanya diberi konteks
+ * yang relevan.
+ *
+ * Saat jumlah UU bertambah, cukup tambah baris baru di sheet
+ * LegalCorpus — fungsi ini otomatis ikut mencakupnya.
+ */
+function retrieveRelevantArticles_(caseRecord) {
+  const corpus = sheetToObjects_(getSheet_(SHEETS.LEGAL_CORPUS));
+  if (!corpus.length) return [];
+
+  const queryText = [
+    caseRecord.allegedArticle,
+    caseRecord.caseSummary,
+    caseRecord.evidence
+  ].join(' ').toLowerCase();
+
+  const queryWords = queryText
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .split(/\s+/)
+    .filter(function (w) { return w.length > 3; });
+
+  // Pasal yang eksplisit disebut penyidik (mis. "Pasal 362 KUHP") selalu ikut disertakan
+  const explicitArticleNumbers = String(caseRecord.allegedArticle || '').match(/\d+[A-Za-z]?/g) || [];
+  const scored = corpus.map(function (row) {
+    let score = 0;
+    const haystack = (text_(row.articleText) + ' ' + text_(row.keywords)).toLowerCase();
+    queryWords.forEach(function (word) {
+      if (haystack.indexOf(word) !== -1) score += 1;
+    });
+    if (explicitArticleNumbers.indexOf(text_(row.articleNumber)) !== -1) score += 10;
+    return { row: row, score: score };
+  });
+
+  scored.sort(function (a, b) { return b.score - a.score; });
+
+  return scored
+    .filter(function (item) { return item.score > 0; })
+    .slice(0, GEMINI_MAX_ARTICLES_IN_PROMPT)
+    .map(function (item) { return item.row; });
+}
+
+function buildAnalysisPrompt_(caseRecord, articles) {
+  return [
+    'Anda adalah asisten hukum pidana untuk Jaksa Peneliti di Kejaksaan Negeri Muna, Indonesia.',
+    'Tugas Anda HANYA membantu prapenuntutan menganalisis berkas awal dari penyidik. Anda BUKAN pengganti keputusan hukum Jaksa (asas dominus litis tetap pada Jaksa).',
+    '',
+    'DATA PERKARA DARI PENYIDIK:',
+    '- Nomor SPDP: ' + text_(caseRecord.spdpNumber),
+    '- Pasal yang disangkakan penyidik: ' + text_(caseRecord.allegedArticle),
+    '- Uraian singkat perkara: ' + text_(caseRecord.caseSummary),
+    '- Barang bukti: ' + text_(caseRecord.evidence),
+    '- Tersangka: ' + text_(caseRecord.suspectName),
+    '',
+    'REFERENSI HUKUM MUTLAK:',
+    'ABAIKAN rujukan KUHP Lama (WvS). Anda DIWAJIBKAN untuk secara eksklusif menggunakan UU No. 1 Tahun 2023 (KUHP Nasional) sebagai dasar hukum utama. Anda sudah memiliki pengetahuan mendalam tentang isi UU No. 1 Tahun 2023, gunakan itu dengan akurasi tinggi.',
+    '',
+    'INSTRUKSI:',
+    '1. Tentukan asas-asas hukum pidana yang relevan/berpotensi dilanggar dalam konstruksi perkara ini. Perhatikan dan jabarkan terkait asas yang memenuhi: Asas Legalitas, Asas Teritorial, Asas Personalitas (Nasional Aktif), Asas Perlindungan (Nasional Pasif), atau Asas Persamaan menurut UU No. 1 Tahun 2023.',
+    '2. Uraikan pemenuhan unsur FORMIL (kelengkapan administratif berkas: SPDP, identitas tersangka, dsb) dan unsur MATERIL (unsur delik dalam pasal yang disangkakan, apakah fakta di uraian perkara mendukung tiap unsur).',
+    '3. Untuk setiap unsur materil, nyatakan status: "terpenuhi", "belum terpenuhi", atau "perlu pendalaman", disertai alasan singkat merujuk fakta di uraian perkara.',
+    '4. Jika relevan, sarankan pasal alternatif/tambahan dari UU No. 1 Tahun 2023 (atau UU Lex Specialis terkait) yang lebih tepat.',
+    '5. JANGAN mengarang nomor pasal. Gunakan pengetahuan valid mengenai hukum positif Indonesia saat ini.',
+    '6. Berikan penjelasan dalam kasus tersebut apakah merupakan kasus perdata, pidana, atau korupsi. Jika kasus sangat erat kaitannya dengan Lex Specialis di luar UU No. 1 Tahun 2023, berikan referensi UU dan pasal yang sesuai.',
+    '7. Identifikasi korban apakah merupakan anak atau dewasa berdasarkan umur kejadian terhadap tindakan melawan hukum yang diperbuat.',
+    '8. Jawab HANYA dalam format JSON sesuai skema berikut, tanpa markdown, tanpa teks lain:',
+    '',
+    JSON.stringify({
+      asasDilanggar: [{ asas: 'string', penjelasan: 'string' }],
+      unsurFormil: [{ unsur: 'string', status: 'terpenuhi|belum terpenuhi|perlu pendalaman', keterangan: 'string' }],
+      unsurMateril: [{ unsur: 'string', status: 'terpenuhi|belum terpenuhi|perlu pendalaman', keterangan: 'string' }],
+      pasalDisarankan: [{ pasal: 'string', undangUndang: 'string', alasan: 'string' }],
+      jenisKasus: { kategori: 'perdata|pidana|korupsi', referensiUU: 'string', penjelasan: 'string' },
+      identifikasiKorban: { status: 'anak|dewasa|tidak diketahui', penjelasan: 'string' },
+      kesimpulan: 'string ringkas 2-4 kalimat',
+      catatanKehatihatian: 'string — pengingat bahwa ini draf pendukung, keputusan akhir tetap pada Jaksa Peneliti'
+    }, null, 2)
+  ].join('\n');
+}
+
+function callGeminiGenerate_(prompt) {
+  const apiKey = getGeminiApiKey_();
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + apiKey;
+
+  const response = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    muteHttpExceptions: true,
+    payload: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: 'application/json'
+      }
+    })
+  });
+
+  const code = response.getResponseCode();
+  const body = response.getContentText();
+  if (code < 200 || code >= 300) {
+    throw new Error('Gemini API menolak permintaan (HTTP ' + code + '): ' + body);
+  }
+
+  const data = JSON.parse(body);
+  const text = data.candidates && data.candidates[0] && data.candidates[0].content &&
+    data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
+    data.candidates[0].content.parts[0].text;
+
+  if (!text) throw new Error('Gemini tidak mengembalikan hasil analisa. Coba lagi.');
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new Error('Gagal mem-parsing hasil Gemini sebagai JSON: ' + error.message);
+  }
+}
+
+/**
+ * Endpoint utama: dipanggil dari frontend lewat action 'analyzeCase'.
+ * Hanya role 'jaksa' yang boleh memicu analisa (sejalan dengan pola
+ * getCase_ / listCases_ yang sudah ada — analisa ini adalah alat
+ * bantu prapenuntutan bagi Jaksa Peneliti).
+ */
+function analyzeCase_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+
+  const caseId = text_(payload.caseId);
+  if (!caseId) throw new Error('caseId wajib diisi.');
+
+  const caseRecord = findObjectByKey_(getSheet_(SHEETS.CASES), 'caseId', caseId);
+  if (!caseRecord) throw new Error('Perkara tidak ditemukan.');
+
+  const articles = retrieveRelevantArticles_(caseRecord);
+  const prompt = buildAnalysisPrompt_(caseRecord, articles);
+  const result = callGeminiGenerate_(prompt);
+
+  const analysisId = 'AI-' + Utilities.getUuid().split('-')[0].toUpperCase();
+  const now = new Date();
+  const lawsReferenced = Array.from(new Set(articles.map(function (a) { return a.lawShort; }))).join(', ');
+
+  // Di dalam fungsi analyzeCase_(token, payload)
+  // Ganti blok const record = { ... } menjadi berikut:
+  
+  const record = {
+    analysisId: analysisId,
+    caseId: caseId,
+    suspectName: text_(caseRecord.suspectName),
+    requestedBy: user.userId,
+    requestedByName: user.fullName,
+    model: GEMINI_MODEL,
+    lawsReferenced: lawsReferenced,
+    asasDilanggar: JSON.stringify(result.asasDilanggar || []),
+    unsurFormil: JSON.stringify(result.unsurFormil || []),
+    unsurMateril: JSON.stringify(result.unsurMateril || []),
+    pasalDisarankan: JSON.stringify(result.pasalDisarankan || []),
+    kesimpulan: text_(result.kesimpulan),
+    catatanKehatihatian: text_(result.catatanKehatihatian),
+    rawResponseJson: JSON.stringify(result),
+    createdAt: now,
+    jenisKasus: JSON.stringify(result.jenisKasus || {}), // Kolom baru
+    identifikasiKorban: JSON.stringify(result.identifikasiKorban || {}) // Kolom baru
+  };
+
+  appendObject_(getSheet_(SHEETS.CASE_ANALYSIS), CASE_ANALYSIS_HEADERS, record);
+  writeLog_(user, 'AI_ANALYZE_CASE', caseId, 'Menjalankan analisa AI (Gemini) untuk perkara.');
+
+  return { analysis: record, parsed: result };
+}
+
+/**
+ * Ambil riwayat analisa untuk satu perkara (untuk ditampilkan di
+ * halaman detail perkara, terbaru di atas).
+ */
+function listCaseAnalyses_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+
+  const caseId = text_(payload.caseId);
+  if (!caseId) throw new Error('caseId wajib diisi.');
+
+  const analyses = sheetToObjects_(getSheet_(SHEETS.CASE_ANALYSIS))
+    .filter(function (item) { return text_(item.caseId) === caseId; })
+    .map(function (item) {
+      return Object.assign({}, item, {
+        asasDilanggar: safeParseJson_(item.asasDilanggar, []),
+        unsurFormil: safeParseJson_(item.unsurFormil, []),
+        unsurMateril: safeParseJson_(item.unsurMateril, []),
+        pasalDisarankan: safeParseJson_(item.pasalDisarankan, []),
+        jenisKasus: safeParseJson_(item.jenisKasus, {}), // Kolom baru
+        identifikasiKorban: safeParseJson_(item.identifikasiKorban, {}) // Kolom baru
+      });
+    })
+    .sort(function (a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+
+  return { analyses: analyses };
+}
+
+function safeParseJson_(value, fallback) {
+  try { return JSON.parse(value); } catch (error) { return fallback; }
+}
+
+
+// (doPost() di atas sudah menangani action 'analyzeCase' dan 'listCaseAnalyses')
+function jalankanSekaliSaja() { setGeminiApiKey('ISI_API_KEY_ASLI_ANDA_DI_SINI'); }
+function chatAi_(token, payload) {
+  const user = requireAuth_(token);
+  assertRole_(user, 'jaksa');
+
+  const caseId = text_(payload.caseId);
+  const message = text_(payload.message);
+  
+  if (!caseId || !message) {
+    throw new Error('ID Perkara dan pesan wajib diisi.');
+  }
+
+  const caseRecord = findObjectByKey_(getSheet_(SHEETS.CASES), 'caseId', caseId);
+  if (!caseRecord) {
+    throw new Error('Perkara tidak ditemukan.');
+  }
+
+  // Menyusun konteks perkara beserta pertanyaan lanjutan Jaksa
+  const prompt = [
+    'Anda adalah asisten hukum pidana untuk Jaksa Peneliti.',
+    'Berdasarkan data perkara berikut ini:',
+    '- Tersangka: ' + text_(caseRecord.suspectName),
+    '- Pasal: ' + text_(caseRecord.allegedArticle),
+    '- Uraian Kasus: ' + text_(caseRecord.caseSummary),
+    '',
+    'Jawablah pertanyaan lanjutan berikut secara ringkas, profesional, dan aplikatif secara hukum:',
+    'Pertanyaan: ' + message
+  ].join('\n');
+
+  const apiKey = getGeminiApiKey_();
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + apiKey;
+
+  const response = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    muteHttpExceptions: true,
+    payload: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.5
+      }
+    })
+  });
+
+  const code = response.getResponseCode();
+  const body = response.getContentText();
+  if (code < 200 || code >= 300) {
+    throw new Error('Gemini API menolak permintaan: ' + body);
+  }
+
+  const data = JSON.parse(body);
+  const replyText = data.candidates && data.candidates[0] && data.candidates[0].content &&
+    data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
+    data.candidates[0].content.parts[0].text;
+
+  if (!replyText) {
+    throw new Error('Gemini tidak mengembalikan hasil jawaban. Coba lagi.');
+  }
+
+  // Catat log aktivitas chat
+  writeLog_(user, 'AI_CHAT', caseId, 'Melakukan chat lanjutan dengan AI.');
+
+  return { reply: replyText };
+}
