@@ -2325,3 +2325,41 @@ body.modal-open { overflow: hidden; }
 .pidum-case-grid-row .phase-tag { display: inline-block; }
 .pidum-case-register span, .pidum-case-register strong { overflow-wrap: anywhere; }
 .pidum-deadline-pill.none { color: var(--v4-muted); background: var(--v4-soft); }
+
+/* ---------- V4.1: Daftar administrasi di Ringkasan detail ---------- */
+.adm-overview { margin-bottom: 22px; padding: 16px; border: 1px solid var(--v4-line); border-radius: 14px; background: #fff; }
+.adm-overview-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.adm-overview-head p { margin: 4px 0 0; color: var(--v4-muted); font-size: 12px; }
+.adm-overview-meta { display: flex; align-items: center; gap: 10px; }
+.adm-pct { color: var(--v4-ink); font-family: "Source Serif 4", Georgia, serif; font-size: 20px; font-weight: 700; }
+.adm-group-label { display: flex; align-items: center; gap: 6px; margin: 16px 0 8px; color: var(--v4-muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.adm-group-label b { min-width: 20px; padding: 1px 6px; border-radius: 999px; background: var(--v4-soft); color: var(--v4-ink); text-align: center; letter-spacing: 0; }
+.adm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.adm-card { display: flex; flex-direction: column; gap: 4px; padding: 12px; border: 1px solid #cfe6d8; border-radius: 12px; background: linear-gradient(180deg, #f6fbf8, #fff); }
+.adm-card-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.adm-code { padding: 3px 8px; border-radius: 7px; background: var(--v4-green-bg); color: var(--v4-green); font-size: 11px; font-weight: 800; white-space: nowrap; }
+.adm-code.muted { background: var(--v4-soft); color: var(--v4-ink); }
+.adm-status { color: var(--v4-green); font-size: 10px; font-weight: 700; }
+.adm-card strong { margin-top: 4px; color: var(--v4-text); font-size: 13px; line-height: 1.35; }
+.adm-card small { color: var(--v4-muted); font-size: 11px; line-height: 1.4; }
+.adm-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.adm-file { display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 0 10px; border-radius: 8px; background: var(--v4-green); color: #fff; font-size: 11px; font-weight: 700; text-decoration: none; }
+.adm-file .pidum-svg-icon { width: 13px; height: 13px; }
+.adm-file:hover { filter: brightness(1.08); }
+.adm-file.none { background: var(--v4-soft); color: var(--v4-muted); }
+.adm-history { margin-top: 6px; font-size: 11px; }
+.adm-history summary { color: var(--v4-muted); cursor: pointer; }
+.adm-history ul { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.adm-history li { display: flex; justify-content: space-between; gap: 8px; padding: 5px 8px; border-radius: 7px; background: var(--v4-soft); color: var(--v4-text); }
+.adm-history a { color: var(--v4-ink); font-weight: 700; }
+.adm-pending-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.adm-pending { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 9px 12px; border: 1px dashed var(--v4-line); border-radius: 11px; }
+.adm-pending .adm-code { justify-self: start; }
+.adm-pending-copy strong { display: block; color: var(--v4-text); font-size: 13px; }
+.adm-pending-copy small { display: block; margin-top: 2px; color: var(--v4-muted); font-size: 11px; }
+.adm-empty { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--v4-soft); }
+@media (max-width: 560px) {
+  .adm-pending { grid-template-columns: minmax(0, 1fr) auto; }
+  .adm-pending-copy { grid-column: 1 / -1; grid-row: 2; }
+  .adm-overview { padding: 12px; }
+}
