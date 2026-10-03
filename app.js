@@ -407,7 +407,6 @@
 
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape") return;
-      if (isAiSidebarOpen()) { closeAiSidebar(); return; }
       if (els.modalRoot.querySelector(".modal-backdrop")) { closeModal(); return; }
       if (els.sidebar.classList.contains("open")) els.sidebar.classList.remove("open");
     });
@@ -4140,15 +4139,18 @@ function detectTeamRoleFromLabel(label) {
     return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
   }
 
-  // ---- Analisa AI (Gemini) — panel kanan (drawer) V4 ----
-  // Tidak lagi mendorong layout (padding-right) sehingga animasi ringan & tidak patah-patah.
+  // ---- Analisa AI (Gemini) — panel kanan persisten V4.2 ----
+  // • Tidak memblokir klik: tanpa lapisan gelap; di layar lebar konten bergeser (docked).
+  // • Tetap terbuka saat pindah menu / membuka detail; hanya tertutup lewat tombol ×.
+  // • Tombol "–" mengecilkan panel menjadi tombol mengambang.
+  // • Hasil & percakapan per perkara disimpan di memori (berpindah perkara tidak menghapus).
   let aiRequestToken = 0;
+  const aiCache = new Map(); // caseId -> { resultHtml, chatHtml, ready }
 
   function ensureAiSidebar() {
     let sidebar = document.getElementById("ai-right-sidebar");
     if (sidebar) return sidebar;
     document.body.insertAdjacentHTML("beforeend", `
-      <div id="ai-scrim" class="ai-scrim" hidden></div>
       <aside id="ai-right-sidebar" class="ai-drawer" aria-hidden="true" aria-label="Panel analisa AI">
         <header class="ai-drawer-head">
           <div>
@@ -4158,7 +4160,8 @@ function detectTeamRoleFromLabel(label) {
           </div>
           <div class="ai-drawer-head-actions">
             <button type="button" id="ai-rerun" class="case-ghost-button small" title="Jalankan ulang analisa">↻ Ulang</button>
-            <button type="button" id="ai-close" class="case-modal-close" aria-label="Tutup panel AI">×</button>
+            <button type="button" id="ai-minimize" class="case-modal-close" aria-label="Kecilkan panel AI" title="Kecilkan">–</button>
+            <button type="button" id="ai-close" class="case-modal-close" aria-label="Tutup panel AI" title="Tutup">×</button>
           </div>
         </header>
         <div id="ai-scroll-container" class="ai-drawer-body">
@@ -4170,10 +4173,16 @@ function detectTeamRoleFromLabel(label) {
           <input type="text" id="ai-chat-input" autocomplete="off" placeholder="Tanyakan lebih lanjut soal berkas ini…" />
           <button id="ai-chat-btn" class="case-primary-button" type="submit">Kirim</button>
         </form>
-      </aside>`);
+      </aside>
+      <button type="button" id="ai-pill" class="ai-pill" hidden>
+        <span class="ai-pill-spark">✦</span>
+        <span class="ai-pill-copy"><b>Analisa AI</b><small id="ai-pill-label"></small></span>
+        <i id="ai-pill-dot" class="ai-pill-dot" hidden></i>
+      </button>`);
     sidebar = document.getElementById("ai-right-sidebar");
     document.getElementById("ai-close").addEventListener("click", closeAiSidebar);
-    document.getElementById("ai-scrim").addEventListener("click", closeAiSidebar);
+    document.getElementById("ai-minimize").addEventListener("click", minimizeAiSidebar);
+    document.getElementById("ai-pill").addEventListener("click", restoreAiSidebar);
     document.getElementById("ai-rerun").addEventListener("click", () => {
       const caseId = sidebar.dataset.caseId;
       if (caseId) runSidebarAnalysis(caseId, { force: true });
@@ -4186,17 +4195,52 @@ function detectTeamRoleFromLabel(label) {
     return sidebar;
   }
 
-  function closeAiSidebar() {
+  function saveAiSnapshot() {
     const sidebar = document.getElementById("ai-right-sidebar");
-    const scrim = document.getElementById("ai-scrim");
+    const caseId = sidebar?.dataset.caseId;
+    if (!caseId) return;
+    const previous = aiCache.get(caseId) || {};
+    aiCache.set(caseId, {
+      ...previous,
+      resultHtml: document.getElementById("ai-sidebar-result").innerHTML,
+      chatHtml: document.getElementById("ai-chat-history").innerHTML
+    });
+  }
+
+  function showAiDrawer() {
+    const sidebar = ensureAiSidebar();
+    document.getElementById("ai-pill").hidden = true;
+    sidebar.setAttribute("aria-hidden", "false");
+    requestAnimationFrame(() => sidebar.classList.add("open"));
+    document.body.classList.add("ai-docked");
+  }
+
+  function minimizeAiSidebar() {
+    const sidebar = document.getElementById("ai-right-sidebar");
     if (!sidebar) return;
+    saveAiSnapshot();
     sidebar.classList.remove("open");
     sidebar.setAttribute("aria-hidden", "true");
-    if (scrim) {
-      scrim.classList.remove("open");
-      setTimeout(() => { if (!sidebar.classList.contains("open")) scrim.hidden = true; }, 220);
-    }
-    document.body.classList.remove("ai-open");
+    document.body.classList.remove("ai-docked");
+    const pill = document.getElementById("ai-pill");
+    document.getElementById("ai-pill-label").textContent = document.getElementById("ai-drawer-title").textContent;
+    pill.hidden = false;
+  }
+
+  function restoreAiSidebar() {
+    document.getElementById("ai-pill-dot").hidden = true;
+    showAiDrawer();
+  }
+
+  function closeAiSidebar() {
+    const sidebar = document.getElementById("ai-right-sidebar");
+    if (!sidebar) return;
+    saveAiSnapshot();
+    sidebar.classList.remove("open");
+    sidebar.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("ai-docked");
+    const pill = document.getElementById("ai-pill");
+    if (pill) pill.hidden = true;
   }
 
   function isAiSidebarOpen() {
@@ -4210,25 +4254,25 @@ function detectTeamRoleFromLabel(label) {
     }
     const item = state.cases.find((entry) => entry.caseId === caseId);
     const sidebar = ensureAiSidebar();
-    const scrim = document.getElementById("ai-scrim");
-    const sameCase = sidebar.dataset.caseId === caseId;
+    const currentCase = sidebar.dataset.caseId;
+    if (currentCase && currentCase !== caseId) saveAiSnapshot();
     sidebar.dataset.caseId = caseId;
 
     document.getElementById("ai-drawer-title").textContent = item?.suspectName || caseId;
     document.getElementById("ai-drawer-sub").textContent = `${item?.courtCaseNumber || caseId}${item?.allegedArticle ? " · " + item.allegedArticle.slice(0, 80) : ""}`;
+    showAiDrawer();
 
-    scrim.hidden = false;
-    requestAnimationFrame(() => {
-      scrim.classList.add("open");
-      sidebar.classList.add("open");
-    });
-    sidebar.setAttribute("aria-hidden", "false");
-    document.body.classList.add("ai-open");
-
-    if (sameCase && document.getElementById("ai-sidebar-result").childElementCount) return; // percakapan tetap
+    if (currentCase === caseId && document.getElementById("ai-sidebar-result").childElementCount) return; // tetap seperti terakhir
+    const cached = aiCache.get(caseId);
+    document.getElementById("ai-chat-input").value = "";
+    if (cached && cached.ready) {
+      document.getElementById("ai-sidebar-result").innerHTML = cached.resultHtml || "";
+      document.getElementById("ai-chat-history").innerHTML = cached.chatHtml || "";
+      document.getElementById("ai-chat-divider").hidden = false;
+      return;
+    }
     document.getElementById("ai-chat-history").innerHTML = "";
     document.getElementById("ai-chat-divider").hidden = true;
-    document.getElementById("ai-chat-input").value = "";
     runSidebarAnalysis(caseId, { force: false });
   };
 
@@ -4242,9 +4286,11 @@ function detectTeamRoleFromLabel(label) {
         <div class="skeleton" style="height:12px;width:92%"></div>
         <div class="skeleton" style="height:12px;width:80%"></div>
         <div class="skeleton" style="height:120px"></div>
-        <p>${force ? "Menjalankan analisa baru" : "Memuat analisa"} untuk ${escapeHtml(caseId)}…</p>
+        <p>${force ? "Menjalankan analisa baru" : "Memuat analisa"} untuk ${escapeHtml(caseId)}… Anda tetap dapat membuka menu lain.</p>
       </div>`;
     if (rerun) rerun.disabled = true;
+    let html = "";
+    let ok = false;
     try {
       let parsed = null;
       let meta = null;
@@ -4254,19 +4300,25 @@ function detectTeamRoleFromLabel(label) {
         if (latest) { parsed = latest; meta = latest; }
       }
       if (!parsed) {
-        const data = await gasRequest("analyzeCase", { caseId }, { timeout: 120000 });
+        const data = await gasRequest("analyzeCase", { caseId }, { timeout: 120000, silent: true });
         parsed = data.parsed;
         meta = data.analysis;
       }
-      if (token !== aiRequestToken) return; // pengguna sudah membuka perkara lain
-      renderAiAnalysisResult(parsed, meta, "ai-sidebar-result");
-      document.getElementById("ai-chat-divider").hidden = false;
+      html = buildAiAnalysisHtml(parsed, meta);
+      ok = true;
     } catch (error) {
-      if (token !== aiRequestToken) return;
-      resultBox.innerHTML = `<div class="ai-error"><strong>Analisa gagal</strong><p>${escapeHtml(error.message || String(error))}</p></div>`;
-    } finally {
-      if (rerun && token === aiRequestToken) rerun.disabled = false;
+      html = `<div class="ai-error"><strong>Analisa gagal</strong><p>${escapeHtml(error.message || String(error))}</p></div>`;
     }
+    // Simpan ke cache walaupun pengguna sudah berpindah ke perkara lain
+    const entry = aiCache.get(caseId) || {};
+    aiCache.set(caseId, { ...entry, resultHtml: html, ready: ok, chatHtml: entry.chatHtml || "" });
+    if (token !== aiRequestToken || document.getElementById("ai-right-sidebar")?.dataset.caseId !== caseId) return;
+    resultBox.innerHTML = html;
+    document.getElementById("ai-chat-divider").hidden = !ok;
+    if (rerun) rerun.disabled = false;
+    // Beri tanda pada tombol mengambang bila panel sedang dikecilkan
+    const pill = document.getElementById("ai-pill");
+    if (pill && !pill.hidden) document.getElementById("ai-pill-dot").hidden = false;
   }
 
   async function runAiAnalysis(caseId) {
@@ -4307,6 +4359,11 @@ function detectTeamRoleFromLabel(label) {
   function renderAiAnalysisResult(parsed, meta, targetId = "ai-analysis-result") {
     const resultBox = document.getElementById(targetId);
     if (!resultBox || !parsed) return;
+    resultBox.innerHTML = buildAiAnalysisHtml(parsed, meta);
+  }
+
+  function buildAiAnalysisHtml(parsed, meta) {
+    if (!parsed) return `<p class="case-muted">Belum ada hasil analisa.</p>`;
 
     const statusTone = (status) => {
       const value = String(status || "").toLowerCase();
@@ -4324,7 +4381,7 @@ function detectTeamRoleFromLabel(label) {
     const jenis = parsed.jenisKasus && typeof parsed.jenisKasus === "object" ? parsed.jenisKasus : null;
     const korban = parsed.identifikasiKorban && typeof parsed.identifikasiKorban === "object" ? parsed.identifikasiKorban : null;
 
-    resultBox.innerHTML = `
+    return `
       <article class="ai-result">
         <div class="ai-summary">
           <span class="case-eyebrow">Kesimpulan</span>
@@ -4378,6 +4435,7 @@ function detectTeamRoleFromLabel(label) {
       document.getElementById(loadingId)?.remove();
       if (document.getElementById("ai-right-sidebar")?.dataset.caseId !== caseId) return;
       chatHistory.insertAdjacentHTML("beforeend", `<div class="ai-bubble bot"><b>AI</b><span>${formatMarkdown(response.reply || "-")}</span></div>`);
+      saveAiSnapshot();
     } catch (error) {
       document.getElementById(loadingId)?.remove();
       chatHistory.insertAdjacentHTML("beforeend", `<div class="ai-error"><strong>Sistem gagal</strong><p>${escapeHtml(error.message)}</p></div>`);
