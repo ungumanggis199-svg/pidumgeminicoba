@@ -2,42 +2,21 @@
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#6f1d32" />
 
-<meta
-  name="description"
-  content="Sistem Informasi Alur Administrasi Pidana Umum Kejaksaan Negeri Muna"
-/>
-
-<!-- Logo pada tab browser -->
-<link
-  rel="icon"
-  type="image/png"
-  href="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/refs/heads/main/LOGO/Pidum.png?v=1"
-/>
-
-<link
-  rel="shortcut icon"
-  type="image/png"
-  href="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/refs/heads/main/LOGO/Pidum.png?v=1"
-/>
-
-<!-- Logo ketika website disimpan pada layar utama HP -->
-<link
-  rel="apple-touch-icon"
-  href="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/refs/heads/main/LOGO/Pidum.png?v=1"
-/>
-
-<title>SIAP PIDUM Kejari Muna</title>
   <meta name="description" content="Sistem Informasi Alur Administrasi Pidana Umum Kejaksaan Negeri Muna" />
+  <meta name="color-scheme" content="light" />
+
+  <!-- Logo pada tab browser & layar utama HP -->
+  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/refs/heads/main/LOGO/Pidum.png?v=1" />
+  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/refs/heads/main/LOGO/Pidum.png?v=1" />
+
   <title>SIAP PIDUM Kejari Muna</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+  <link rel="stylesheet" href="styles.css?v=4" />
 </head>
 <body>
   <noscript>Aplikasi ini membutuhkan JavaScript.</noscript>
@@ -209,17 +188,9 @@
     </div>
   </section>
 
-  <script src="config.js"></script>
-  <script src="administration-forms.js"></script>
-  <script src="app.js"></script>
-<!-- URUTAN PEMUATAN SKRIP (Sangat Penting: Choices.js harus pertama) -->
-  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-  <script src="config.js"></script>
-  <script src="administration-forms.js"></script>
-  <script src="app.js"></script>
-</body>
-</html>
-</body>
-</html>
+  <!-- Skrip dimuat SEKALI saja (versi lama memuat app.js dua kali → event ganda & crash) -->
+  <script src="config.js?v=4" defer></script>
+  <script src="administration-forms.js?v=4" defer></script>
+  <script src="app.js?v=4" defer></script>
 </body>
 </html>
