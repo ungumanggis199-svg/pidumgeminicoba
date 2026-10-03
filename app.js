@@ -5,6 +5,12 @@
 (() => {
   "use strict";
 
+  // Bila index.html lama masih memuat app.js dua kali, salinan kedua berhenti di sini.
+  // (Salinan kedua dulu menimpa window.openAiSidebar dengan state kosong → error
+  //  "Cannot read properties of undefined (reading 'classList')" saat Analisa AI.)
+  if (window.__SIAP_PIDUM_LOADED__) return;
+  window.__SIAP_PIDUM_LOADED__ = true;
+
   const CONFIG = window.APP_CONFIG;
   const ADMIN_FORM_SCHEMAS = window.SIAP_ADMIN_FORM_SCHEMAS || {};
   const STORAGE_KEY = "siap_pidum_session_v1";
@@ -1517,6 +1523,9 @@
                 ${item.deadlineDate ? `<small>${escapeHtml(info.type)} — ${formatDate(item.deadlineDate)} (${escapeHtml(info.text.toLowerCase())})</small>` : ""}
               </div>
 
+              ${renderAdministrationOverview(item)}
+
+              <h3 class="case-section-title">Data pokok perkara</h3>
               <div class="case-facts">
                 ${fact("Nomor SPDP", item.spdpNumber, { mono: true })}
                 ${fact("Tanggal SPDP", formatDate(item.spdpDate))}
@@ -1640,6 +1649,86 @@
     if (!number) return "";
     if (number.startsWith("0")) number = `62${number.slice(1)}`;
     return ` <a class="case-wa" href="https://wa.me/${escapeAttr(number)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>`;
+  }
+
+  /* Daftar administrasi pada tab Ringkasan: file yang sudah dibuat + tombol buat yang belum. */
+  function renderAdministrationOverview(item) {
+    const administrations = (Array.isArray(item.administrations) ? item.administrations : [])
+      .slice()
+      .sort((a, b) => dateValue(b.createdAt) - dateValue(a.createdAt));
+    const byType = new Map();
+    administrations.forEach((record) => {
+      const key = String(record.type || "").toUpperCase();
+      if (!byType.has(key)) byType.set(key, []);
+      byType.get(key).push(record);
+    });
+    const knownCodes = new Set(ADMINISTRATION_STAGES.map((stage) => stage.code));
+    const done = [];
+    const pending = [];
+    ADMINISTRATION_STAGES.forEach((stage) => (byType.has(stage.code) ? done : pending).push(stage));
+    // Jenis administrasi lain yang tersimpan tetapi tidak ada di daftar tahapan
+    byType.forEach((records, code) => {
+      if (!knownCodes.has(code)) done.push({ code, title: records[0].title || code, detail: "" });
+    });
+
+    const fileLink = (record, label) => record.fileUrl
+      ? `<a class="adm-file" href="${escapeAttr(record.fileUrl)}" target="_blank" rel="noopener noreferrer" title="${escapeAttr(record.fileName || "Buka file")}">${dashboardIcon("file")}<span>${escapeHtml(label)}</span></a>`
+      : `<span class="adm-file none">Tanpa file</span>`;
+
+    const doneCards = done.map((stage) => {
+      const records = byType.get(stage.code) || [];
+      const latest = records[0];
+      const older = records.slice(1);
+      return `
+        <article class="adm-card done">
+          <div class="adm-card-top">
+            <span class="adm-code">${escapeHtml(stage.code)}</span>
+            <span class="adm-status">✓ Dibuat${records.length > 1 ? ` · ${records.length} versi` : ""}</span>
+          </div>
+          <strong>${escapeHtml(stage.title)}</strong>
+          <small>${latest.documentNumber ? `No. ${escapeHtml(latest.documentNumber)} · ` : ""}${formatDate(latest.documentDate || latest.createdAt)}${latest.responsibleOfficer ? ` · ${escapeHtml(latest.responsibleOfficer)}` : ""}</small>
+          <div class="adm-card-actions">
+            ${fileLink(latest, latest.fileUrl ? "Buka dokumen" : "")}
+            <button type="button" class="case-ghost-button small" data-create-administration="${escapeAttr(stage.code)}">Buat ulang</button>
+          </div>
+          ${older.length ? `
+            <details class="adm-history">
+              <summary>Versi sebelumnya (${older.length})</summary>
+              <ul>${older.map((record) => `<li><span>${formatDateTime(record.createdAt)}${record.documentNumber ? ` · ${escapeHtml(record.documentNumber)}` : ""}</span>${record.fileUrl ? `<a href="${escapeAttr(record.fileUrl)}" target="_blank" rel="noopener noreferrer">Buka</a>` : ""}</li>`).join("")}</ul>
+            </details>` : ""}
+        </article>`;
+    }).join("");
+
+    const pendingRows = pending.map((stage) => `
+      <li class="adm-pending">
+        <span class="adm-code muted">${escapeHtml(stage.code)}</span>
+        <span class="adm-pending-copy"><strong>${escapeHtml(stage.title)}</strong><small>${escapeHtml(stage.detail)}</small></span>
+        <button type="button" class="case-primary-button small" data-create-administration="${escapeAttr(stage.code)}">＋ Buat</button>
+      </li>`).join("");
+
+    const total = ADMINISTRATION_STAGES.length;
+    const doneKnown = ADMINISTRATION_STAGES.filter((stage) => byType.has(stage.code)).length;
+    const pct = Math.round((doneKnown / total) * 100);
+    const folder = item.caseFolderUrl
+      ? `<a class="case-ghost-button small" href="${escapeAttr(item.caseFolderUrl)}" target="_blank" rel="noopener noreferrer">Folder Drive</a>` : "";
+
+    return `
+      <section class="adm-overview">
+        <header class="adm-overview-head">
+          <div>
+            <h3 class="case-section-title" style="margin:0">Administrasi perkara</h3>
+            <p>${doneKnown} dari ${total} jenis dibuat · ${administrations.length} file tersimpan</p>
+          </div>
+          <div class="adm-overview-meta">${folder}<span class="adm-pct">${pct}%</span></div>
+        </header>
+        <div class="administration-progress"><span style="width:${pct}%"></span></div>
+
+        <div class="adm-group-label">Sudah dibuat <b>${done.length}</b></div>
+        ${done.length ? `<div class="adm-grid">${doneCards}</div>` : `<p class="case-muted adm-empty">Belum ada administrasi yang dibuat untuk perkara ini.</p>`}
+
+        <div class="adm-group-label">Belum dibuat <b>${pending.length}</b></div>
+        ${pending.length ? `<ul class="adm-pending-list">${pendingRows}</ul>` : `<p class="case-muted adm-empty">Semua jenis administrasi telah dibuat.</p>`}
+      </section>`;
   }
 
   function renderCaseFlowTimeline(item) {
@@ -3618,9 +3707,12 @@ function detectTeamRoleFromLabel(label) {
 
   function setConnection(online) {
     state.connected = online;
-    els.connectionIndicator.classList.toggle("online", online);
-    els.connectionIndicator.classList.toggle("offline", !online);
-    els.connectionIndicator.querySelector("small").textContent = online ? "Backend terhubung" : "Backend tidak terhubung";
+    const indicator = els.connectionIndicator || document.getElementById("connection-indicator");
+    if (!indicator) return;
+    indicator.classList.toggle("online", online);
+    indicator.classList.toggle("offline", !online);
+    const label = indicator.querySelector("small");
+    if (label) label.textContent = online ? "Backend terhubung" : "Backend tidak terhubung";
   }
 
   const READ_ONLY_ACTIONS = new Set(["health", "me", "listCases", "getCase", "listAdministrations", "listProsecutors", "listReminders", "listTikReminders", "listCaseAnalyses"]);
@@ -4112,6 +4204,10 @@ function detectTeamRoleFromLabel(label) {
   }
 
   window.openAiSidebar = function (caseId) {
+    if (!state.session?.token) {
+      toast("warning", "Sesi belum siap", "Silakan masuk kembali, lalu ulangi Analisa AI.");
+      return;
+    }
     const item = state.cases.find((entry) => entry.caseId === caseId);
     const sidebar = ensureAiSidebar();
     const scrim = document.getElementById("ai-scrim");
@@ -4296,7 +4392,7 @@ function detectTeamRoleFromLabel(label) {
 })(); // === PENUTUP BLOK UTAMA APLIKASI (IIFE) HARUS BERADA DI SINI ===
 
 // --- Kalkulasi otomatis tanggal akhir perpanjangan penahanan (T-4) ---
-document.addEventListener('input', function(e) {
+if (!window.__SIAP_T4_LISTENER__) window.__SIAP_T4_LISTENER__ = true, document.addEventListener('input', function(e) {
     const targetKey = e.target?.dataset?.fieldKey || e.target?.name || e.target?.id;
 
     if (targetKey === 'penahananDays' || targetKey === 'penahananStartDate') {
