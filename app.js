@@ -29,30 +29,162 @@
     DIHENTIKAN: { label: "Dihentikan", tone: "gray" }
   });
 
+  /*
+   * Tahapan dashboard diselaraskan dengan Lampiran Surat JAM-Pidum
+   * Nomor B-310/E/Ejp/01/2026 (Alur Kerja & Daftar Formulir Pola Koordinasi).
+   * phase: "pra" = Prapenuntutan, "tut" = Penuntutan.
+   */
   const DASHBOARD_STAGES = Object.freeze([
-    { label: "SPDP masuk", statuses: ["SPDP_DITERIMA", "VERIFIKASI_SPDP"] },
-    { label: "P-16 terbit", statuses: ["P16_DITERBITKAN", "KOORDINASI", "MENUNGGU_BERKAS_TAHAP_I"] },
-    { label: "Tahap I", statuses: ["BERKAS_TAHAP_I_DITERIMA"] },
-    { label: "Pra-tuntutan", statuses: ["PENELITIAN_BERKAS", "P19_PENGEMBALIAN_BERKAS", "PENYIDIKAN_TAMBAHAN"] },
-    { label: "P-21 lengkap", statuses: ["P21_LENGKAP", "MENUNGGU_TAHAP_II"] },
-    { label: "Tahap II", statuses: ["TAHAP_II"] },
-    { label: "Susun dakwaan", statuses: ["PENUNTUTAN"] },
-    { label: "Ke pengadilan", statuses: ["DILIMPAHKAN_KE_PN", "SIDANG", "SELESAI"] }
+    { key: "spdp", label: "SPDP & verifikasi", short: "SPDP", phase: "pra", statuses: ["SPDP_DITERIMA", "VERIFIKASI_SPDP"] },
+    { key: "p16", label: "Penunjukan PU (P-16)", short: "P-16", phase: "pra", statuses: ["P16_DITERBITKAN"] },
+    { key: "koordinasi", label: "Koordinasi & pemantauan", short: "Koordinasi", phase: "pra", statuses: ["KOORDINASI", "MENUNGGU_BERKAS_TAHAP_I"] },
+    { key: "tahap1", label: "Tahap I · penelitian berkas", short: "Tahap I", phase: "pra", statuses: ["BERKAS_TAHAP_I_DITERIMA", "PENELITIAN_BERKAS"] },
+    { key: "p19", label: "P-19 · penyidikan tambahan", short: "P-19", phase: "pra", statuses: ["P19_PENGEMBALIAN_BERKAS", "PENYIDIKAN_TAMBAHAN"] },
+    { key: "p21", label: "P-21 · berkas lengkap", short: "P-21", phase: "pra", statuses: ["P21_LENGKAP", "MENUNGGU_TAHAP_II"] },
+    { key: "tahap2", label: "Tahap II", short: "Tahap II", phase: "tut", statuses: ["TAHAP_II"] },
+    { key: "dakwaan", label: "Penuntutan · dakwaan (P-29)", short: "Dakwaan", phase: "tut", statuses: ["PENUNTUTAN"] },
+    { key: "sidang", label: "Pelimpahan & persidangan", short: "Sidang", phase: "tut", statuses: ["DILIMPAHKAN_KE_PN", "SIDANG", "SELESAI"] }
   ]);
 
-  const WORKFLOW_STAGES = [
-    { code: "P-1A", title: "Penerimaan dan verifikasi SPDP", detail: "Catat penerimaan SPDP, Sprindik, kesetaraan instansi, dan selisih waktu penyampaian." },
-    { code: "P-16", title: "Penunjukan Penuntut Umum", detail: "Pimpinan menunjuk tim Penuntut Umum untuk mengikuti perkembangan penyidikan." },
-    { code: "3 hari", title: "Koordinasi awal", detail: "Penyidik dan Penuntut Umum berkoordinasi paling lama tiga hari sejak SPDP diterima." },
-    { code: "30 hari", title: "Pemantauan berkas Tahap I", detail: "Apabila berkas belum dikirim, sistem menandai pengingat perkembangan penyidikan secara bertahap." },
-    { code: "P-1B", title: "Penerimaan berkas Tahap I", detail: "Berkas diterima dan penelitian dilanjutkan menggunakan check list hasil penyidikan." },
-    { code: "P-24", title: "Nota pendapat hasil penelitian", detail: "Jaksa menilai kelengkapan formil dan materil serta menentukan sikap terhadap hasil penyidikan." },
-    { code: "P-19", title: "Berkas belum lengkap", detail: "Petunjuk dilampirkan pada pengembalian berkas; penyidikan tambahan dipantau selama 14 hari." },
-    { code: "P-21", title: "Berkas lengkap", detail: "Penyidik diminta menyerahkan tersangka dan barang bukti dalam jangka waktu 14 hari." },
-    { code: "Tahap II", title: "Tersangka dan barang bukti", detail: "Pemeriksaan tersangka, audit fisik barang bukti, bantuan hukum, dan nota pendapat penerimaan." },
-    { code: "P-29", title: "Surat dakwaan", detail: "Rencana dakwaan disempurnakan untuk pelimpahan perkara ke Pengadilan Negeri." },
-    { code: "PN", title: "Pelimpahan dan persidangan", detail: "Catat nomor perkara, jadwal sidang, agenda, saksi, tuntutan, putusan, dan tindak lanjut." }
-  ];
+  /* Langkah berikutnya yang disarankan per status (berdasarkan B-310). */
+  const NEXT_STEP_BY_STATUS = Object.freeze({
+    SPDP_DITERIMA: { code: "P-16", text: "Verifikasi SPDP (≤7 hari & kesetaraan) lalu terbitkan P-16" },
+    VERIFIKASI_SPDP: { code: "P-16", text: "Terbitkan P-16 atau SOP FORM-1A/1 bila SPDP cacat formil" },
+    P16_DITERBITKAN: { code: "SOP FORM-6", text: "Koordinasi dengan penyidik ≤3 hari sejak SPDP" },
+    KOORDINASI: { code: "P-1B", text: "Pantau berkas Tahap I (30 hari) · isi check list SOP FORM-5" },
+    MENUNGGU_BERKAS_TAHAP_I: { code: "P-17", text: "Bila 30 hari berkas belum masuk: SOP FORM-1B → P-17 → SOP FORM-2" },
+    BERKAS_TAHAP_I_DITERIMA: { code: "P-24", text: "Teliti berkas (SOP FORM-5), ekspose (SOP FORM-5A), buat P-24" },
+    PENELITIAN_BERKAS: { code: "P-19/P-21", text: "Tetapkan sikap: P-19 (belum lengkap) atau P-21 (lengkap)" },
+    P19_PENGEMBALIAN_BERKAS: { code: "P-18 · P-1C", text: "Kirim petunjuk P-19 dengan P-18 & P-1C · pantau 14 hari" },
+    PENYIDIKAN_TAMBAHAN: { code: "P-1B", text: "Terima berkas susulan (P-1B) atau P-20 bila >14 hari" },
+    P21_LENGKAP: { code: "Tahap II", text: "Penyerahan tersangka & barang bukti ≤14 hari" },
+    MENUNGGU_TAHAP_II: { code: "BA-4 · BA-5", text: "Siapkan Tahap II: BA-4, BA-4A, BA-5, BA-5A" },
+    TAHAP_II: { code: "P-29", text: "Sempurnakan surat dakwaan (P-29) untuk pelimpahan" },
+    PENUNTUTAN: { code: "PN", text: "Limpahkan perkara ke Pengadilan Negeri" },
+    DILIMPAHKAN_KE_PN: { code: "Sidang", text: "Catat nomor perkara PN & jadwal sidang" },
+    SIDANG: { code: "Sidang", text: "Ikuti agenda sidang hingga putusan" },
+    SELESAI: { code: "Selesai", text: "Perkara selesai" },
+    SPDP_DIKEMBALIKAN: { code: "Arsip", text: "SPDP dikembalikan · tunggu SPDP/Sprindik baru" },
+    DIHENTIKAN: { code: "Arsip", text: "Perkara dihentikan" }
+  });
+
+  /*
+   * Alur kerja lengkap Prapenuntutan → Penuntutan sesuai Lampiran B-310/E/Ejp/01/2026.
+   * no = nomor butir pada lampiran; tone: main | branch | optional.
+   */
+  const B310_FLOW = Object.freeze([
+    {
+      id: "spdp", phase: "pra", title: "Penerimaan & verifikasi SPDP", range: "Butir 1–5",
+      summary: "SPDP diterima PTSP, diverifikasi tenggat 7 hari sejak Sprindik dan kesetaraan instansi penyidik.",
+      deadline: "SPDP ≤ 7 hari sejak Sprindik",
+      steps: [
+        { no: "1", code: "SOP FORM-6A", title: "BA Konsultasi Penyelidik dan Jaksa", detail: "Opsional, sebelum SPDP dikirim.", tone: "optional" },
+        { no: "2", code: "P-1A", title: "Tanda Terima Penerimaan SPDP", detail: "Oleh Kabag TU/Kasubbag Bin/Kaur Bin; catat selisih hari Sprindik–SPDP.", tone: "main" },
+        { no: "3", code: "SOP FORM-1A", title: "Nota Pendapat Pengembalian SPDP", detail: "Bila SPDP > 7 hari atau penyidik tidak setara.", tone: "branch" },
+        { no: "4", code: "SOP FORM-1", title: "Surat Pengembalian SPDP kepada Penyidik", detail: "Tindak lanjut nota pendapat pengembalian.", tone: "branch" },
+        { no: "5", code: "SK", title: "Pengangkatan Jaksa Sementara", detail: "Untuk SPDP di Jampidum/Kejati (menunggu Kepja pendelegasian).", tone: "optional" }
+      ]
+    },
+    {
+      id: "p16", phase: "pra", title: "Penunjukan Penuntut Umum", range: "Butir 6–7",
+      summary: "Pimpinan menerbitkan Surat Perintah Penunjukan Jaksa dan P-16 untuk mengikuti perkembangan penyidikan.",
+      deadline: "Segera setelah SPDP terverifikasi",
+      steps: [
+        { no: "6", code: "Sprint", title: "Surat Perintah Penunjukan Jaksa selaku PU", detail: "Komposisi tim sesuai tempat SPDP diterima (Kejari: Kajari, Kasi, Jaksa).", tone: "main" },
+        { no: "7", code: "P-16", title: "Surat Perintah Mengikuti Perkembangan Penyidikan", detail: "Dasar tim PU untuk koordinasi & penelitian berkas.", tone: "main" }
+      ]
+    },
+    {
+      id: "koordinasi", phase: "pra", title: "Koordinasi & pemantauan penyidikan", range: "Butir 8–29",
+      summary: "PU berkoordinasi dengan penyidik, mengisi check list sejak awal, menangani perpanjangan penahanan, dan menagih berkas.",
+      deadline: "Koordinasi ≤ 3 hari · berkas Tahap I ≤ 30 hari",
+      steps: [
+        { no: "8–10", code: "SOP FORM-6", title: "BA Koordinasi Penyidik dan PU", detail: "Penetapan tersangka, upaya paksa, alat bukti, keadilan restoratif, pemeriksaan lapangan.", tone: "main" },
+        { no: "9", code: "SOP FORM-5", title: "Check List Penelitian Hasil Penyidikan", detail: "Diisi sejak SPDP diterima untuk aspek formil & materil.", tone: "main" },
+        { no: "11", code: "SOP FORM-1B", title: "Laporan PU bila tidak ada koordinasi 3 hari", detail: "Dilaporkan kepada pimpinan.", tone: "branch" },
+        { no: "12", code: "SOP FORM-1C", title: "Pemberitahuan Kewajiban Koordinasi", detail: "Pimpinan memberitahu atasan penyidik.", tone: "branch" },
+        { no: "13", code: "SOP FORM-4", title: "Nota Pendapat Perpanjangan Penahanan", detail: "Atas permintaan perpanjangan penahanan penyidik.", tone: "branch" },
+        { no: "14", code: "T-4", title: "Surat Perpanjangan Penahanan", detail: "Bila permintaan disetujui.", tone: "branch" },
+        { no: "15", code: "T-5", title: "Penolakan Perpanjangan Penahanan", detail: "Bila permintaan ditolak, disertai alasan.", tone: "branch" },
+        { no: "16–22", code: "SM-2 s.d. SM-6", title: "Penetapan Saksi Mahkota", detail: "Koordinasi, nota pendapat, surat tugas, panggilan, kesepakatan, permohonan & pemberitahuan penetapan.", tone: "optional" },
+        { no: "23", code: "SOP FORM-6", title: "Koordinasi pengakuan bersalah tersangka", detail: "Bila penyidik akan menerima pengakuan bersalah.", tone: "optional" },
+        { no: "24–25", code: "SOP FORM-1B · P-17", title: "Permintaan Perkembangan Penyidikan Pertama", detail: "30 hari sejak SPDP berkas belum dikirim.", tone: "branch" },
+        { no: "26", code: "SOP FORM-2", title: "Permintaan Perkembangan Penyidikan Kedua", detail: "30 hari sejak P-17 berkas belum dikirim.", tone: "branch" },
+        { no: "27–28", code: "SOP FORM-3", title: "Pengembalian SPDP karena hasil penyidikan belum diterima", detail: "30 hari sejak SOP FORM-2; bundel administrasi diarsipkan.", tone: "branch" },
+        { no: "29", code: "P-16", title: "P-16 baru bila SPDP dikirim kembali", detail: "Komposisi tim sedapat mungkin sama.", tone: "optional" },
+        { no: "32–43", code: "PRAPID-1 s.d. 7A", title: "Praperadilan pada tahap penyidikan", detail: "Bila PU menjadi turut termohon atau perlu derden verzet.", tone: "optional" }
+      ]
+    },
+    {
+      id: "tahap1", phase: "pra", title: "Tahap I · penelitian berkas perkara", range: "Butir 30–31, 44–49",
+      summary: "Berkas hasil penyidikan diterima, diteliti melalui check list dan ekspose, lalu dituangkan dalam P-24.",
+      deadline: "Sikap PU dituangkan dalam P-24",
+      steps: [
+        { no: "30", code: "P-1B", title: "Tanda Terima Berkas Perkara oleh PU", detail: "Penelitian dilanjutkan dengan SOP FORM-5.", tone: "main" },
+        { no: "31", code: "SOP FORM-5A", title: "BA Pelaksanaan Ekspose", detail: "Masukan konstruktif sebelum P-24.", tone: "main" },
+        { no: "44", code: "P-24", title: "Berita Acara Pendapat Hasil Penelitian Berkas", detail: "Melampirkan SOP FORM-6 dan SOP FORM-5.", tone: "main" },
+        { no: "45–46", code: "P-29 · P-30 (Rencana)", title: "Rencana Surat Dakwaan / Catatan PU", detail: "Dilampirkan bila berkas dinilai lengkap (P-30 untuk APS).", tone: "main" },
+        { no: "48–49", code: "Pernyataan Pendapat", title: "Untuk berkas yang diteliti Jampidum/Kejati", detail: "Disertai surat pengantar ke Kejari.", tone: "optional" }
+      ]
+    },
+    {
+      id: "p19", phase: "pra", title: "Berkas belum lengkap · penyidikan tambahan", range: "Butir 50–68",
+      summary: "PU memberi petunjuk P-19 dan mengembalikan berkas; penyidikan tambahan dipantau 14 hari hingga gelar perkara bersama bila perlu.",
+      deadline: "Penyidikan tambahan ≤ 14 hari",
+      steps: [
+        { no: "50", code: "P-19", title: "Petunjuk hal yang harus dilengkapi", detail: "Konsisten dengan koordinasi, check list, dan P-24.", tone: "main" },
+        { no: "51", code: "P-18", title: "Pengantar pengembalian berkas disertai petunjuk", detail: "Dikirim pimpinan kepada penyidik.", tone: "main" },
+        { no: "52", code: "P-1C", title: "Keterangan penyerahan berkas untuk dilengkapi", detail: "Bukti pengembalian berkas.", tone: "main" },
+        { no: "53–54", code: "SOP FORM-1B · P-20", title: "Pengembalian SPDP (penyidikan tambahan > 14 hari)", detail: "Bundel administrasi diarsipkan; P-16 baru bila dikirim kembali.", tone: "branch" },
+        { no: "55–57", code: "P-1B · SOP FORM-5 · P-24", title: "Penelitian berkas hasil penyidikan tambahan", detail: "Berkas susulan diterima & diteliti ulang.", tone: "main" },
+        { no: "58", code: "SOP FORM-6", title: "Koordinasi bila petunjuk belum dipenuhi", detail: "Berkas dikembalikan dengan berita acara koordinasi.", tone: "branch" },
+        { no: "59–61", code: "SOP FORM-5A · 5B · 6E", title: "Ekspose & Gelar Perkara Bersama", detail: "Dapat menghadirkan korban, tersangka, pengawas PU, atau ahli.", tone: "branch" },
+        { no: "62–64", code: "P-1B · P-24 · P-21", title: "Berkas lengkap hasil gelar perkara bersama", detail: "Dilampiri BA gelar & rencana dakwaan.", tone: "branch" },
+        { no: "65–68", code: "SOP FORM-5A · 8", title: "Perbedaan sikap: dapat/tidaknya penyerahan tersangka & BB", detail: "Ditentukan ekspose bersama pimpinan.", tone: "branch" }
+      ]
+    },
+    {
+      id: "p21", phase: "pra", title: "Berkas lengkap (P-21)", range: "Butir 47, 68–72",
+      summary: "Kajari menerbitkan P-21 dan meminta penyerahan tersangka serta barang bukti dalam 14 hari (dapat dua tahap).",
+      deadline: "Tahap II ≤ 14 hari sejak P-21",
+      steps: [
+        { no: "47", code: "P-21", title: "Pemberitahuan hasil penyidikan sudah lengkap", detail: "Penyerahan dapat dibagi: penelitian barang bukti, lalu tersangka.", tone: "main" },
+        { no: "68", code: "SOP FORM-1B", title: "Laporan bila 14 hari Tahap II tidak dilaksanakan", detail: "Pimpinan mengembalikan berkas & SPDP.", tone: "branch" },
+        { no: "69", code: "SOP FORM-7", title: "Pengembalian SPDP dan Berkas Perkara", detail: "Setelah dibuat salinan arsip.", tone: "branch" },
+        { no: "70–72", code: "P-16 · P-24B · SOP FORM-8A", title: "Pengiriman ulang SPDP & berkas", detail: "Cukup verifikasi (P-24B) lalu minta penyerahan tersangka & BB.", tone: "branch" }
+      ]
+    },
+    {
+      id: "tahap2", phase: "tut", title: "Tahap II · tersangka & barang bukti", range: "Butir 73–77",
+      summary: "Tanggung jawab tersangka dan barang bukti beralih dari penyidik ke Penuntut Umum.",
+      deadline: "Saat penyerahan",
+      steps: [
+        { no: "73", code: "BA-5", title: "Penerimaan & penelitian benda sitaan/barang bukti", detail: "Audit fisik barang bukti secara komprehensif.", tone: "main" },
+        { no: "74", code: "BA-4", title: "Penerimaan & penelitian tersangka", detail: "Pemeriksaan tersangka pada Tahap II.", tone: "main" },
+        { no: "75", code: "BA-4A", title: "Pemenuhan hak bantuan hukum", detail: "Penunjukan advokat/pemberi bantuan hukum.", tone: "main" },
+        { no: "76", code: "BA-5A", title: "Nota pendapat hasil penyerahan tersangka & BB", detail: "Dapat/tidaknya pelimpahan tanggung jawab diterima.", tone: "main" },
+        { no: "77", code: "BA-5C", title: "Serah terima pengelolaan fisik barang bukti", detail: "Ke bagian Pemulihan Aset bila dititipkan/dilelang/dimusnahkan.", tone: "optional" }
+      ]
+    },
+    {
+      id: "dakwaan", phase: "tut", title: "Penuntutan · surat dakwaan", range: "Lanjutan Tahap II",
+      summary: "Rencana dakwaan disempurnakan menjadi P-29 (atau catatan PU P-30 untuk APS) sebagai dasar pelimpahan.",
+      deadline: "Sebelum pelimpahan",
+      steps: [
+        { no: "—", code: "P-29", title: "Surat Dakwaan", detail: "Cermat, jelas, lengkap; memuat tempus, locus, dan unsur pasal.", tone: "main" },
+        { no: "—", code: "P-30", title: "Catatan Penuntut Umum (APS)", detail: "Untuk perkara acara pemeriksaan singkat.", tone: "optional" }
+      ]
+    },
+    {
+      id: "sidang", phase: "tut", title: "Pelimpahan & persidangan", range: "Lanjutan",
+      summary: "Perkara dilimpahkan ke Pengadilan Negeri; catat nomor perkara PN, agenda sidang, tuntutan, dan putusan.",
+      deadline: "Mengikuti penetapan hari sidang",
+      steps: [
+        { no: "—", code: "Pelimpahan", title: "Pelimpahan perkara ke Pengadilan Negeri", detail: "Nomor perkara PN dicatat di detail perkara.", tone: "main" },
+        { no: "—", code: "Sidang", title: "Persidangan hingga putusan", detail: "Agenda: dakwaan, saksi, tuntutan, pledoi, putusan.", tone: "main" }
+      ]
+    }
+  ]);
 
   const ADMINISTRATION_STAGES = Object.freeze([
     {
@@ -181,7 +313,10 @@
     tikReminders: [],
     tikMeta: { intelijenCount: 0, validPhoneCount: 0, fonnteConfigured: false },
     tikLoaded: false,
-    tikSelectedFiles: []
+    tikSelectedFiles: [],
+    caseModalTab: "ringkasan",
+    lastLoadedAt: null,
+    prosecutorsLoadedAt: 0
   };
 
   const els = {};
@@ -189,10 +324,35 @@
   document.addEventListener("DOMContentLoaded", init);
 
   function init() {
+    if (window.__SIAP_PIDUM_BOOTED__) return; // cegah inisialisasi ganda bila skrip termuat dua kali
+    window.__SIAP_PIDUM_BOOTED__ = true;
     cacheElements();
     bindGlobalEvents();
+    bindPageDelegation();
+    installGlobalSafetyNet();
     setCurrentDate();
     restoreSession();
+  }
+
+  /* Tangkap error tak terduga agar aplikasi tidak "crash" diam-diam. */
+  function installGlobalSafetyNet() {
+    let lastErrorAt = 0;
+    const report = (message) => {
+      console.error(message);
+      const now = Date.now();
+      if (now - lastErrorAt < 4000) return; // hindari banjir toast
+      lastErrorAt = now;
+      toast("error", "Terjadi kendala", "Sebagian tampilan gagal dimuat. Data Anda aman — coba segarkan halaman bila berlanjut.");
+    };
+    window.addEventListener("error", (event) => {
+      if (!event.error) return; // abaikan error pemuatan gambar/font
+      report(event.error);
+    });
+    window.addEventListener("unhandledrejection", (event) => {
+      const reason = event.reason;
+      if (reason && reason.name === "AbortError") return;
+      report(reason);
+    });
   }
 
   function cacheElements() {
@@ -238,6 +398,13 @@
     els.loginForm.addEventListener("submit", handleLogin);
     els.logoutButton.addEventListener("click", logout);
     els.mobileMenuButton.addEventListener("click", () => els.sidebar.classList.toggle("open"));
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      if (isAiSidebarOpen()) { closeAiSidebar(); return; }
+      if (els.modalRoot.querySelector(".modal-backdrop")) { closeModal(); return; }
+      if (els.sidebar.classList.contains("open")) els.sidebar.classList.remove("open");
+    });
 
     document.addEventListener("click", (event) => {
       if (window.innerWidth <= 920 && els.sidebar.classList.contains("open")) {
@@ -337,8 +504,21 @@
     state.tikLoaded = false;
     state.tikSelectedFiles = [];
     els.modalRoot.innerHTML = "";
+    document.body.classList.remove("modal-open");
+    closeAiSidebar();
     showLogin();
     toast("info", "Sesi diakhiri", "Anda telah keluar dari aplikasi.");
+  }
+
+  let sessionExpiredShown = false;
+  function handleSessionExpired() {
+    if (sessionExpiredShown) return;
+    sessionExpiredShown = true;
+    setTimeout(() => {
+      logout();
+      toast("warning", "Sesi berakhir", "Silakan masuk kembali untuk melanjutkan.");
+      sessionExpiredShown = false;
+    }, 300);
   }
 
   function hydrateUserPanel() {
@@ -401,18 +581,34 @@
     });
   }
 
-  async function loadCases({ quiet = false } = {}) {
-    if (!quiet) renderLoadingPage("Memuat data perkara");
-    try {
-      const result = await gasRequest("listCases");
-      state.cases = Array.isArray(result.cases) ? result.cases : [];
-      setConnection(true);
-      renderSidebar();
-      renderActivePage();
-    } catch (error) {
-      setConnection(false);
-      renderErrorPage("Data perkara tidak dapat dimuat", error.message);
-    }
+  let casesInFlight = null;
+  async function loadCases({ quiet = false, button = null } = {}) {
+    if (casesInFlight) return casesInFlight; // cegah permintaan ganda saat tombol ditekan berulang
+    if (!quiet || !state.cases.length) renderLoadingPage("Memuat data perkara");
+    button?.classList.add("is-spinning");
+    if (button) button.disabled = true;
+    casesInFlight = (async () => {
+      try {
+        const result = await gasRequest("listCases", {}, { retries: 1 });
+        state.cases = Array.isArray(result.cases) ? result.cases : [];
+        state.lastLoadedAt = new Date();
+        setConnection(true);
+        renderSidebar();
+        renderActivePage();
+        if (quiet) toast("success", "Data diperbarui", `${state.cases.length} perkara dimuat.`);
+      } catch (error) {
+        setConnection(false);
+        if (quiet && state.cases.length) toast("error", "Gagal menyegarkan", error.message);
+        else renderErrorPage("Data perkara tidak dapat dimuat", error.message);
+      } finally {
+        casesInFlight = null;
+        if (button && document.body.contains(button)) {
+          button.classList.remove("is-spinning");
+          button.disabled = false;
+        }
+      }
+    })();
+    return casesInFlight;
   }
 
   function renderActivePage() {
@@ -423,7 +619,7 @@
       deadlines: ["Tenggat Waktu", "PENGAWASAN", renderDeadlinesPage],
       documents: ["Dokumen SPDP", "ARSIP DIGITAL", renderDocumentsPage],
       investigators: ["Data Penyidik", "MITRA KERJA", renderInvestigatorsPage],
-      workflow: ["Alur Administrasi", "PEDOMAN KERJA", renderWorkflowPage],
+      workflow: ["Alur Perkara B-310", "PEDOMAN KERJA", renderWorkflowPage],
       reminders: ["Reminder WhatsApp", "PENGAWASAN ADMINISTRASI", renderRemindersPage],
       "tik-reminders": ["Kartu TIK", "REMINDER INTELIJEN", renderTikReminderPage],
       "administration-builder": ["Buat Administrasi", "FORM OTOMATIS", renderAdministrationBuilderPage],
@@ -434,7 +630,21 @@
     const current = pages[page] || pages.dashboard;
     els.pageTitle.textContent = current[0];
     els.pageEyebrow.textContent = current[1];
-    current[2]();
+    const changedPage = els.pageContent.dataset.page !== page;
+    els.pageContent.dataset.page = page;
+    try {
+      current[2]();
+    } catch (error) {
+      console.error(error);
+      renderErrorPage("Halaman gagal ditampilkan", error.message);
+      return;
+    }
+    if (changedPage) {
+      els.pageContent.classList.remove("page-enter");
+      void els.pageContent.offsetWidth; // restart animasi
+      els.pageContent.classList.add("page-enter");
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
   }
 
   function renderLoadingPage(label) {
@@ -470,36 +680,41 @@
   }
 
   function renderPidumDashboard({ showKpi = true, page = "dashboard" } = {}) {
-    const filtered = filterDashboardCases(state.cases);
     const activeCases = state.cases.filter((item) => !["SELESAI", "DIHENTIKAN", "SPDP_DIKEMBALIKAN"].includes(item.status));
     const overdue = state.cases.filter((item) => getDeadlineState(item).state === "overdue").length;
     const dueSoon = state.cases.filter((item) => getDeadlineState(item).state === "warning").length;
-    const tahapIPlus = state.cases.filter((item) => dashboardStageIndex(item.status) >= 2).length;
+    const tahapIPlus = state.cases.filter((item) => dashboardStageIndex(item.status) >= 3).length;
 
     els.pageContent.innerHTML = `
-      <section class="pidum-dashboard-reference">
+      <section class="pidum-dashboard-reference page-enter">
         ${showKpi ? `
           <div class="pidum-kpi-grid">
             ${renderPidumKpiCard("clipboard", "Perkara aktif", activeCases.length, "berjalan saat ini")}
-            ${renderPidumKpiCard("alert", "Lewat tenggat", overdue, "perlu tindakan segera")}
-            ${renderPidumKpiCard("clock", "Jatuh tempo ≤3 hari", dueSoon, "pantau minggu ini")}
+            ${renderPidumKpiCard("alert", "Lewat tenggat", overdue, overdue ? "perlu tindakan segera" : "tidak ada yang terlambat", overdue ? "danger" : "")}
+            ${renderPidumKpiCard("clock", "Jatuh tempo ≤3 hari", dueSoon, "pantau minggu ini", dueSoon ? "warning" : "")}
             ${renderPidumKpiCard("gavel", "Tahap I ke atas", tahapIPlus, "sudah masuk proses pemberkasan")}
-          </div>` : ""}
+          </div>
+          ${renderPhasePipeline()}` : ""}
 
         <div class="pidum-dashboard-toolbar">
           <label class="pidum-dashboard-search" for="dashboard-case-search">
             ${dashboardIcon("search")}
-            <input id="dashboard-case-search" type="search" autocomplete="off" value="${escapeAttr(state.search)}" placeholder="Cari nomor register atau nama tersangka" />
+            <input id="dashboard-case-search" type="search" autocomplete="off" value="${escapeAttr(state.search)}" placeholder="Cari register, tersangka, SPDP, penyidik" />
           </label>
 
           <select id="dashboard-stage-filter" class="pidum-dashboard-select" aria-label="Filter tahapan perkara">
             <option value="ALL" ${state.stageFilter === "ALL" ? "selected" : ""}>Semua tahap</option>
-            ${DASHBOARD_STAGES.map((stage, index) => `<option value="${index}" ${String(state.stageFilter) === String(index) ? "selected" : ""}>${escapeHtml(stage.label)}</option>`).join("")}
+            <optgroup label="Prapenuntutan">
+              ${DASHBOARD_STAGES.map((stage, index) => stage.phase === "pra" ? `<option value="${index}" ${String(state.stageFilter) === String(index) ? "selected" : ""}>${escapeHtml(stage.label)}</option>` : "").join("")}
+            </optgroup>
+            <optgroup label="Penuntutan">
+              ${DASHBOARD_STAGES.map((stage, index) => stage.phase === "tut" ? `<option value="${index}" ${String(state.stageFilter) === String(index) ? "selected" : ""}>${escapeHtml(stage.label)}</option>` : "").join("")}
+            </optgroup>
           </select>
 
           <button id="dashboard-create-administration" class="pidum-dashboard-primary" type="button">
             ${dashboardIcon("plus")}
-            Buat administrasi
+            <span>Buat administrasi</span>
           </button>
 
           <button id="dashboard-refresh" class="pidum-dashboard-refresh" type="button" aria-label="Segarkan data" title="Segarkan data">
@@ -511,31 +726,81 @@
           <div class="pidum-case-list-summary">
             <div>
               <h2>Daftar perkara</h2>
-              <p>${filtered.length} dari ${state.cases.length} perkara ditampilkan.</p>
+              <p id="dashboard-case-count"></p>
             </div>
-            <span class="pidum-case-list-updated">Data terhubung ke Google Spreadsheet</span>
+            <span class="pidum-case-list-updated">${state.lastLoadedAt ? `Diperbarui ${formatTime(state.lastLoadedAt)} · ` : ""}Google Spreadsheet</span>
           </div>
-          ${renderDashboardCaseList(filtered)}
+          <div id="dashboard-case-list"></div>
         </div>
 
         <div class="pidum-dashboard-footnote">
           ${dashboardIcon("file")}
-          <span>Status, tahapan, dan tenggat diperbarui dari administrasi perkara yang tersimpan.</span>
+          <span>Tahapan mengikuti Lampiran Surat JAM-Pidum B-310/E/Ejp/01/2026. Status & tenggat diperbarui otomatis dari administrasi yang tersimpan.</span>
         </div>
       </section>`;
 
-    const rerender = () => page === "cases" ? renderCasesPage() : renderDashboard();
+    const updateList = () => {
+      const filtered = filterDashboardCases(state.cases);
+      const listRoot = document.getElementById("dashboard-case-list");
+      const countRoot = document.getElementById("dashboard-case-count");
+      if (listRoot) listRoot.innerHTML = renderDashboardCaseList(filtered);
+      if (countRoot) countRoot.textContent = `${filtered.length} dari ${state.cases.length} perkara ditampilkan.`;
+      els.pageContent.querySelectorAll("[data-pipeline-stage]").forEach((chip) => {
+        chip.classList.toggle("active", String(state.stageFilter) === chip.dataset.pipelineStage);
+      });
+    };
+    updateList();
+
+    // Pencarian hanya memperbarui daftar (input tidak kehilangan fokus)
     document.getElementById("dashboard-case-search")?.addEventListener("input", debounce((event) => {
       state.search = event.target.value;
-      rerender();
-    }, 180));
+      updateList();
+    }, 160));
     document.getElementById("dashboard-stage-filter")?.addEventListener("change", (event) => {
       state.stageFilter = event.target.value;
-      rerender();
+      updateList();
+    });
+    els.pageContent.querySelectorAll("[data-pipeline-stage]").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        const value = chip.dataset.pipelineStage;
+        state.stageFilter = String(state.stageFilter) === value ? "ALL" : value;
+        const select = document.getElementById("dashboard-stage-filter");
+        if (select) select.value = state.stageFilter;
+        updateList();
+      });
     });
     document.getElementById("dashboard-create-administration")?.addEventListener("click", () => navigate("administration-builder"));
-    document.getElementById("dashboard-refresh")?.addEventListener("click", () => loadCases());
-    bindCaseTableActions();
+    document.getElementById("dashboard-refresh")?.addEventListener("click", () => loadCases({ quiet: true, button: document.getElementById("dashboard-refresh") }));
+  }
+
+  function renderPhasePipeline() {
+    const counts = DASHBOARD_STAGES.map(() => 0);
+    state.cases.forEach((item) => {
+      if (["DIHENTIKAN", "SPDP_DIKEMBALIKAN"].includes(item.status)) return;
+      counts[dashboardStageIndex(item.status)] += 1;
+    });
+    const total = counts.reduce((sum, value) => sum + value, 0) || 1;
+    const pra = DASHBOARD_STAGES.map((stage, index) => ({ stage, index })).filter((entry) => entry.stage.phase === "pra");
+    const tut = DASHBOARD_STAGES.map((stage, index) => ({ stage, index })).filter((entry) => entry.stage.phase === "tut");
+    const praTotal = pra.reduce((sum, entry) => sum + counts[entry.index], 0);
+    const tutTotal = tut.reduce((sum, entry) => sum + counts[entry.index], 0);
+    const chip = ({ stage, index }) => `
+      <button type="button" class="pipeline-chip ${counts[index] ? "has-cases" : ""}" data-pipeline-stage="${index}" title="${escapeAttr(stage.label)}">
+        <span class="pipeline-chip-count">${counts[index]}</span>
+        <span class="pipeline-chip-label">${escapeHtml(stage.short)}</span>
+        <i style="--fill:${Math.round((counts[index] / total) * 100)}%"></i>
+      </button>`;
+    return `
+      <section class="pipeline-card" aria-label="Sebaran perkara per tahapan">
+        <div class="pipeline-group">
+          <div class="pipeline-group-head"><span>Prapenuntutan</span><b>${praTotal}</b></div>
+          <div class="pipeline-chips">${pra.map(chip).join("")}</div>
+        </div>
+        <div class="pipeline-group tut">
+          <div class="pipeline-group-head"><span>Penuntutan</span><b>${tutTotal}</b></div>
+          <div class="pipeline-chips">${tut.map(chip).join("")}</div>
+        </div>
+      </section>`;
   }
 
   function filterDashboardCases(cases) {
@@ -564,13 +829,28 @@
     return index < 0 ? 0 : index;
   }
 
+  function getNextStep(item) {
+    return NEXT_STEP_BY_STATUS[item?.status] || NEXT_STEP_BY_STATUS.SPDP_DITERIMA;
+  }
+
   function renderDashboardStagePips(status) {
     const current = dashboardStageIndex(status);
+    const stage = DASHBOARD_STAGES[current];
+    const closed = ["SPDP_DIKEMBALIKAN", "DIHENTIKAN"].includes(String(status || ""));
     return `
-      <div class="pidum-stage-pips" aria-label="Tahap: ${escapeAttr(DASHBOARD_STAGES[current].label)}">
-        ${DASHBOARD_STAGES.map((stage, index) => `<span title="${escapeAttr(stage.label)}" class="${index <= current ? "complete" : ""} ${index === current ? "current" : ""}"></span>`).join("")}
+      <div class="pidum-stage-pips ${closed ? "closed" : ""}" role="img" aria-label="Tahap ${current + 1} dari ${DASHBOARD_STAGES.length}: ${escapeAttr(stage.label)}">
+        ${DASHBOARD_STAGES.map((entry, index) => `${index === 6 ? '<em class="pip-divider" aria-hidden="true"></em>' : ""}<span title="${escapeAttr(entry.label)}" class="${index <= current ? "complete" : ""} ${index === current ? "current" : ""} ${entry.phase}"></span>`).join("")}
       </div>
-      <span class="pidum-stage-label">${escapeHtml(DASHBOARD_STAGES[current].label)}</span>`;
+      <span class="pidum-stage-label"><b class="phase-tag ${stage.phase}">${stage.phase === "pra" ? "Prapenuntutan" : "Penuntutan"}</b> ${escapeHtml(closed ? getStatus(status).label : stage.label)}</span>`;
+  }
+
+  function describeDeadline(item) {
+    const deadline = getDeadlineState(item);
+    const type = item.deadlineType || "Tenggat";
+    if (!item.deadlineDate) return { deadline: { ...deadline, state: "none" }, icon: "clock", text: "Belum ditentukan", type };
+    const icon = deadline.state === "overdue" ? "alert" : deadline.state === "warning" ? "clock" : "check";
+    const text = deadline.state === "overdue" ? `Lewat ${Math.abs(deadline.days)} hari` : deadline.label;
+    return { deadline, icon, text, type };
   }
 
   function renderDashboardCaseList(cases) {
@@ -585,56 +865,52 @@
         <span>Tahapan alur</span>
         <span>Jaksa &amp; penyidik</span>
         <span>Tenggat waktu</span>
-        <span aria-label="Aksi"></span>
+        <span class="sr-only">Aksi</span>
       </div>
-      <div class="pidum-case-grid-body">
+      <div class="pidum-case-grid-body" role="rowgroup">
         ${cases.map((item) => {
-          const deadline = getDeadlineState(item);
+          const info = describeDeadline(item);
+          const next = getNextStep(item);
           const prosecutor = item.prosecutorName || "Belum ditunjuk";
-          const deadlineCopy = !item.deadlineDate
-            ? "Belum ditentukan"
-            : deadline.state === "overdue"
-              ? `${item.deadlineType || "Tenggat"} · lewat ${Math.abs(deadline.days)} hari`
-              : `${item.deadlineType || "Tenggat"} · ${deadline.label}`;
-          const deadlineIcon = deadline.state === "overdue" ? "alert" : deadline.state === "warning" ? "clock" : "check";
           return `
-            <article class="pidum-case-grid pidum-case-grid-row" role="row">
-              <div class="pidum-case-register">
+            <article class="pidum-case-grid pidum-case-grid-row" role="row" data-row-case="${escapeAttr(item.caseId)}">
+              <div class="pidum-case-register" data-label="Register">
                 <strong>${escapeHtml(item.courtCaseNumber || item.caseId || "-")}</strong>
                 <span>SPDP ${escapeHtml(item.spdpNumber || "-")}</span>
               </div>
-              <div class="pidum-case-suspect">
+              <div class="pidum-case-suspect" data-label="Tersangka">
                 <strong>${escapeHtml(item.suspectName || "-")}</strong>
-                <span>${escapeHtml(item.allegedArticle || "Pasal belum diisi")}</span>
+                <span class="clamp-3">${escapeHtml(item.allegedArticle || "Pasal belum diisi")}</span>
               </div>
-              <div class="pidum-case-stage">
+              <div class="pidum-case-stage" data-label="Tahapan">
                 ${renderDashboardStagePips(item.status)}
+                <span class="pidum-next-step" title="Langkah berikutnya menurut B-310">→ <b>${escapeHtml(next.code)}</b> ${escapeHtml(next.text)}</span>
               </div>
-              <div class="pidum-case-officers">
-                <strong>${escapeHtml(prosecutor)}</strong>
+              <div class="pidum-case-officers" data-label="Jaksa & penyidik">
+                <strong class="${item.prosecutorName ? "" : "muted"}">${escapeHtml(prosecutor)}</strong>
                 <span>${dashboardIcon("users")} ${escapeHtml(item.investigatorInstitution || item.investigatorName || "Penyidik belum diisi")}</span>
               </div>
-              <div class="pidum-case-deadline" style="padding-right: 12px;">
-                <span class="pidum-deadline-pill ${escapeAttr(deadline.state)}" style="font-size: 10px; white-space: normal; line-height: 1.4; padding: 4px 8px; display: inline-flex; align-items: flex-start; text-align: left; gap: 4px; max-width: 160px; word-break: break-word;">
-                  <span style="flex-shrink:0; display:flex; margin-top:2px;">${dashboardIcon(deadlineIcon)}</span>
-                  <span>${escapeHtml(deadlineCopy)}</span>
+              <div class="pidum-case-deadline" data-label="Tenggat">
+                <span class="pidum-deadline-pill ${escapeAttr(info.deadline.state)}" title="${escapeAttr(info.type)}">
+                  ${dashboardIcon(info.icon)}
+                  <span class="pill-copy"><b>${escapeHtml(info.type)}</b><em>${escapeHtml(info.text)}</em></span>
                 </span>
-                ${item.deadlineDate ? `<small style="display:block; margin-top:4px; font-size:10px;">${formatDate(item.deadlineDate)}</small>` : ""}
+                ${item.deadlineDate ? `<small>${formatDate(item.deadlineDate)}</small>` : ""}
               </div>
-             <div class="pidum-case-action" style="display:flex; gap:6px; justify-content:flex-end; align-items:center; flex-shrink:0; background-color:#ffffff; padding-left:12px; position:relative; z-index:2;">
-                <button onclick="window.openAiSidebar('${escapeAttr(item.caseId)}')" style="background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%); border: 1px solid #450a0a; color: #ffffff; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 6px rgba(127,29,29,0.3); display: flex; align-items: center; gap: 4px; white-space: nowrap; transition: all 0.2s;" type="button">
-                  <span style="font-size:12px">✨</span> Analisa AI
+              <div class="pidum-case-action">
+                <button class="pidum-ai-button" data-action="ai" data-case="${escapeAttr(item.caseId)}" type="button" title="Analisa AI perkara ini">
+                  <span aria-hidden="true">✦</span><span class="btn-text">Analisa AI</span>
                 </button>
-                <button class="pidum-detail-button table-action" data-case-id="${escapeAttr(item.caseId)}" type="button" style="padding:5px 10px; font-size:11px; white-space: nowrap; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; color: #334155; cursor: pointer;">Detail</button>
+                <button class="pidum-detail-button" data-action="detail" data-case="${escapeAttr(item.caseId)}" type="button">Detail</button>
               </div>
             </article>`;
         }).join("")}
       </div>`;
   }
 
-  function renderPidumKpiCard(icon, label, value, sub) {
+  function renderPidumKpiCard(icon, label, value, sub, tone = "") {
     return `
-      <article class="pidum-kpi-card">
+      <article class="pidum-kpi-card ${tone}">
         <div class="pidum-kpi-card-top"><span>${escapeHtml(label)}</span>${dashboardIcon(icon)}</div>
         <strong>${Number(value || 0).toLocaleString("id-ID")}</strong>
         <small>${escapeHtml(sub || "")}</small>
@@ -761,23 +1037,116 @@
   }
 
   function renderWorkflowPage() {
-    els.pageContent.innerHTML = `
-      <div class="form-intro">
-        <h2>Alur administrasi perkara</h2>
-        <p>Ringkasan tahapan operasional yang diimplementasikan pada aplikasi. Tahap pelimpahan dan persidangan disediakan sebagai pengembangan lanjutan setelah Tahap II.</p>
-      </div>
-      <div class="panel">
-        <div class="panel-header"><div><h3>SPDP hingga persidangan</h3><p>Setiap tahapan dapat dipilih sebagai status perkara pada halaman detail.</p></div></div>
-        <div class="panel-body">
-          <div class="timeline">
-            ${WORKFLOW_STAGES.map((stage) => `
-              <div class="timeline-item">
-                <div class="timeline-track"><div class="timeline-node"></div><div class="timeline-line"></div></div>
-                <div class="timeline-content"><strong>${escapeHtml(stage.code)} — ${escapeHtml(stage.title)}</strong><small>${escapeHtml(stage.detail)}</small></div>
-              </div>`).join("")}
+    const counts = {};
+    state.cases.forEach((item) => {
+      const key = DASHBOARD_STAGES[dashboardStageIndex(item.status)].key;
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    const openId = state.workflowOpen || "spdp";
+    const phaseBlock = (phase, title, subtitle) => {
+      const items = B310_FLOW.filter((entry) => entry.phase === phase);
+      return `
+        <section class="flow-phase ${phase}">
+          <header class="flow-phase-head">
+            <span class="flow-phase-tag">${phase === "pra" ? "I" : "II"}</span>
+            <div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(subtitle)}</p></div>
+          </header>
+          <div class="flow-stage-list">
+            ${items.map((entry) => {
+              const stageIndex = DASHBOARD_STAGES.findIndex((stage) => stage.key === entry.id);
+              const count = counts[entry.id] || 0;
+              const open = entry.id === openId;
+              return `
+                <article class="flow-stage ${open ? "open" : ""}" data-flow-stage="${entry.id}">
+                  <button type="button" class="flow-stage-toggle" aria-expanded="${open}">
+                    <span class="flow-stage-index">${stageIndex + 1}</span>
+                    <span class="flow-stage-copy">
+                      <strong>${escapeHtml(entry.title)}</strong>
+                      <small>${escapeHtml(entry.range)} · ${escapeHtml(entry.deadline)}</small>
+                    </span>
+                    <span class="flow-stage-count ${count ? "has" : ""}" title="Perkara pada tahap ini">${count} perkara</span>
+                    <span class="flow-stage-chevron" aria-hidden="true">⌄</span>
+                  </button>
+                  <div class="flow-stage-body">
+                    <div class="flow-stage-inner">
+                      <p class="flow-stage-summary">${escapeHtml(entry.summary)}</p>
+                      <ol class="flow-steps">
+                        ${entry.steps.map((step) => `
+                          <li class="flow-step ${step.tone}">
+                            <span class="flow-step-no">${escapeHtml(step.no)}</span>
+                            <span class="flow-step-code">${escapeHtml(step.code)}</span>
+                            <span class="flow-step-copy"><strong>${escapeHtml(step.title)}</strong><small>${escapeHtml(step.detail)}</small></span>
+                            ${step.tone !== "main" ? `<span class="flow-step-tag">${step.tone === "branch" ? "Cabang" : "Opsional"}</span>` : ""}
+                          </li>`).join("")}
+                      </ol>
+                      ${count ? `<button type="button" class="case-ghost-button small" data-flow-filter="${stageIndex}">Lihat ${count} perkara di tahap ini →</button>` : ""}
+                    </div>
+                  </div>
+                </article>`;
+            }).join("")}
           </div>
+        </section>`;
+    };
+
+    els.pageContent.innerHTML = `
+      <section class="flow-page">
+        <header class="flow-hero">
+          <div>
+            <p class="case-eyebrow">Pedoman alur kerja</p>
+            <h2>Prapenuntutan hingga Penuntutan</h2>
+            <p>Disusun dari Lampiran Surat JAM-Pidum Nomor B-310/E/Ejp/01/2026 tanggal 23 Januari 2026 tentang Alur Kerja dan Daftar Formulir Administrasi Pola Koordinasi Penanganan Perkara Tindak Pidana Umum.</p>
+          </div>
+          <div class="flow-legend">
+            <span><i class="main"></i>Alur utama</span>
+            <span><i class="branch"></i>Cabang / kondisi tertentu</span>
+            <span><i class="optional"></i>Opsional</span>
+          </div>
+        </header>
+
+        <ol class="flow-rail" aria-label="Ringkasan tahapan">
+          ${DASHBOARD_STAGES.map((stage, index) => `
+            ${index === 6 ? '<li class="flow-rail-divider" aria-hidden="true"><span>Penuntutan</span></li>' : ""}
+            <li class="${stage.phase}"><button type="button" data-flow-jump="${stage.key}"><span>${index + 1}</span><small>${escapeHtml(stage.short)}</small>${counts[stage.key] ? `<b>${counts[stage.key]}</b>` : ""}</button></li>`).join("")}
+        </ol>
+
+        <div class="flow-deadlines">
+          <div><strong>≤ 7 hari</strong><span>Sprindik → SPDP diterima</span></div>
+          <div><strong>≤ 3 hari</strong><span>Koordinasi sejak SPDP</span></div>
+          <div><strong>30 hari</strong><span>Berkas Tahap I → P-17 → SOP FORM-2 → SOP FORM-3</span></div>
+          <div><strong>14 hari</strong><span>Penyidikan tambahan setelah P-19 (lewat: P-20)</span></div>
+          <div><strong>14 hari</strong><span>Tahap II setelah P-21 (lewat: SOP FORM-7)</span></div>
         </div>
-      </div>`;
+
+        ${phaseBlock("pra", "Prapenuntutan", "Dari penerimaan SPDP sampai berkas dinyatakan lengkap (P-21).")}
+        ${phaseBlock("tut", "Penuntutan", "Penyerahan tersangka & barang bukti (Tahap II), dakwaan, hingga persidangan.")}
+      </section>`;
+
+    els.pageContent.querySelectorAll(".flow-stage-toggle").forEach((toggle) => {
+      toggle.addEventListener("click", () => {
+        const article = toggle.closest(".flow-stage");
+        const willOpen = !article.classList.contains("open");
+        article.classList.toggle("open", willOpen);
+        toggle.setAttribute("aria-expanded", String(willOpen));
+        if (willOpen) state.workflowOpen = article.dataset.flowStage;
+      });
+    });
+    els.pageContent.querySelectorAll("[data-flow-jump]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const article = els.pageContent.querySelector(`[data-flow-stage="${button.dataset.flowJump}"]`);
+        if (!article) return;
+        article.classList.add("open");
+        article.querySelector(".flow-stage-toggle")?.setAttribute("aria-expanded", "true");
+        state.workflowOpen = button.dataset.flowJump;
+        article.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+    els.pageContent.querySelectorAll("[data-flow-filter]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.stageFilter = button.dataset.flowFilter;
+        state.search = "";
+        navigate("cases");
+      });
+    });
   }
 
   function renderSettingsPage() {
@@ -800,7 +1169,7 @@
         </section>
         <section class="settings-card">
           <h3>Keamanan akun</h3>
-          <p>Kata sandi disimpan dalam bentuk hash. Ubah akun awal melalui fungsi <code>addUser()</code> atau <code>resetPassword()</code> di Apps Script.</p>
+          <p>Akun dibaca dari sheet <code>akses</code>. Batasi akses Spreadsheet karena kata sandi tersimpan di sheet tersebut; ubah akun melalui <code>addUser()</code> atau <code>resetPassword()</code> di Apps Script.</p>
           <button id="settings-logout" class="danger-button" type="button">Keluar dari aplikasi</button>
         </section>
       </div>`;
@@ -997,7 +1366,7 @@
   }
 
   function showSubmissionReceipt(result) {
-    els.modalRoot.innerHTML = `
+    openModal(`
       <div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Bukti pengiriman">
         <div class="modal-card" style="max-width:560px">
           <div class="modal-header"><h2>SPDP berhasil diterima</h2><button class="modal-close" data-close-modal type="button">×</button></div>
@@ -1011,33 +1380,30 @@
           </div>
           <div class="modal-footer"><button class="primary-button" data-close-modal type="button">Tutup</button></div>
         </div>
-      </div>`;
-    bindModalClose();
+      </div>`);
   }
 
-  function renderCaseTable(cases, options = {}) {
+  function renderCaseTable(cases) {
     if (!cases.length) return `<div class="panel-body">${emptyState("▤", "Belum ada perkara", "Data perkara belum tersedia atau tidak sesuai filter.")}</div>`;
     return `
       <div class="table-wrap">
-        <table>
-          <thead><tr><th>Nomor register perkara</th><th>Tersangka</th><th>Penyidik</th><th>Status</th><th>Tenggat</th><th>Pembaruan</th><th></th></tr></thead>
+        <table class="case-table">
+          <thead><tr><th>Nomor register perkara</th><th>Tersangka</th><th>Penyidik</th><th>Status</th><th>Tenggat</th><th>Pembaruan</th><th><span class="sr-only">Aksi</span></th></tr></thead>
           <tbody>
             ${cases.map((item) => {
               const status = getStatus(item.status);
               const deadline = getDeadlineState(item);
               return `<tr>
-                <td><div class="case-primary">${escapeHtml(item.courtCaseNumber || item.caseId)}</div><div class="case-secondary">SPDP ${escapeHtml(item.spdpNumber || "-")}</div></td>
-                <td><div class="case-primary">${escapeHtml(item.suspectName || "-")}</div><div class="case-secondary">${escapeHtml(item.allegedArticle || "Pasal belum diisi")}</div></td>
-                <td><div>${escapeHtml(item.investigatorName || "-")}</div><div class="case-secondary">${escapeHtml(item.investigatorInstitution || "-")}</div></td>
-                <td><span class="status-badge ${status.tone}">${escapeHtml(status.label)}</span></td>
-                <td>${item.deadlineDate ? `<span class="deadline-badge ${deadline.state}">${escapeHtml(deadline.label)}</span><div class="case-secondary">${formatDate(item.deadlineDate)}</div>` : `<span class="case-secondary">Belum ditentukan</span>`}</td>
-                <td>${formatDateTime(item.updatedAt || item.createdAt)}</td>
-             <td style="padding-right: 16px; width: 1%; white-space: nowrap;">
-                  <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
-                    <button onclick="window.openAiSidebar('${escapeAttr(item.caseId)}')" style="background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%); border: 1px solid #450a0a; color: #ffffff; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 6px rgba(127,29,29,0.3); display: flex; align-items: center; gap: 4px; white-space: nowrap; transition: all 0.2s;" type="button">
-                      <span style="font-size:12px">✨</span> Analisa AI
-                    </button>
-                    <button class="table-action" data-case-id="${escapeAttr(item.caseId)}" type="button" style="padding:5px 10px; font-size:11px; white-space: nowrap; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; color: #334155; cursor: pointer;">Detail</button>
+                <td data-label="Register"><div class="case-primary">${escapeHtml(item.courtCaseNumber || item.caseId)}</div><div class="case-secondary">SPDP ${escapeHtml(item.spdpNumber || "-")}</div></td>
+                <td data-label="Tersangka"><div class="case-primary">${escapeHtml(item.suspectName || "-")}</div><div class="case-secondary clamp-2">${escapeHtml(item.allegedArticle || "Pasal belum diisi")}</div></td>
+                <td data-label="Penyidik"><div>${escapeHtml(item.investigatorName || "-")}</div><div class="case-secondary">${escapeHtml(item.investigatorInstitution || "-")}</div></td>
+                <td data-label="Status"><span class="status-badge ${status.tone}">${escapeHtml(status.label)}</span></td>
+                <td data-label="Tenggat">${item.deadlineDate ? `<span class="deadline-badge ${deadline.state}">${escapeHtml(deadline.label)}</span><div class="case-secondary">${formatDate(item.deadlineDate)}</div>` : `<span class="case-secondary">Belum ditentukan</span>`}</td>
+                <td data-label="Pembaruan">${formatDateTime(item.updatedAt || item.createdAt)}</td>
+                <td class="case-table-actions">
+                  <div class="row-actions">
+                    <button class="pidum-ai-button" data-action="ai" data-case="${escapeAttr(item.caseId)}" type="button"><span aria-hidden="true">✦</span><span class="btn-text">Analisa AI</span></button>
+                    <button class="pidum-detail-button" data-action="detail" data-case="${escapeAttr(item.caseId)}" type="button">Detail</button>
                   </div>
                 </td>
               </tr>`;
@@ -1047,172 +1413,355 @@
       </div>`;
   }
 
-  function bindCaseTableActions() {
-    els.pageContent.querySelectorAll("[data-case-id]").forEach((button) => {
-      button.addEventListener("click", () => openCaseModal(button.dataset.caseId));
+  /* Tombol aksi pada halaman memakai event delegation (lihat bindPageDelegation). */
+  function bindCaseTableActions() { /* dipertahankan untuk kompatibilitas */ }
+
+  function bindPageDelegation() {
+    els.pageContent.addEventListener("click", (event) => {
+      const actionButton = event.target.closest("[data-action]");
+      if (actionButton && els.pageContent.contains(actionButton)) {
+        const caseId = actionButton.dataset.case;
+        if (actionButton.dataset.action === "detail") openCaseModal(caseId);
+        if (actionButton.dataset.action === "ai") window.openAiSidebar(caseId);
+        return;
+      }
+      const opener = event.target.closest("[data-open-case]");
+      if (opener && els.pageContent.contains(opener)) openCaseModal(opener.dataset.openCase);
     });
   }
 
-  function openCaseModal(caseId) {
-    const item = state.cases.find((entry) => entry.caseId === caseId);
-    if (!item) return;
-    const status = getStatus(item.status);
-    const lateFlag = String(item.spdpLate).toLowerCase() === "true" || Number(item.spdpDelayDays) > 7;
+  /* ===================== DETAIL PERKARA (V4) ===================== */
+  const CASE_MODAL_TABS = [
+    { id: "ringkasan", label: "Ringkasan" },
+    { id: "penyidik", label: "Penyidik & SPDP" },
+    { id: "tersangka", label: "Tersangka" },
+    { id: "alur", label: "Alur & administrasi" },
+    { id: "ai", label: "Analisa AI" }
+  ];
 
-    // Logika pengecekan nomor register sementara
+  function openCaseModal(caseId, options = {}) {
+    const item = state.cases.find((entry) => entry.caseId === caseId);
+    if (!item) {
+      toast("warning", "Perkara tidak ditemukan", "Segarkan data lalu coba lagi.");
+      return;
+    }
+    const activeTab = options.tab || state.caseModalTab || "ringkasan";
+    state.caseModalTab = activeTab;
+    state.selectedAdministrationFile = null;
+
+    const status = getStatus(item.status);
+    const stageIndex = dashboardStageIndex(item.status);
+    const stage = DASHBOARD_STAGES[stageIndex];
+    const lateFlag = String(item.spdpLate).toLowerCase() === "true" || Number(item.spdpDelayDays) > 7;
     const isRegEdited = Boolean(item.courtCaseNumber && item.courtCaseNumber !== item.caseId);
     const displayReg = isRegEdited ? item.courtCaseNumber : item.caseId;
-    
-    // Notifikasi akan hilang otomatis jika isRegEdited bernilai true
-    const regWarning = isRegEdited ? "" : `
-      <div style="margin-top:12px; display:inline-flex; align-items:flex-start; gap:8px; padding:10px 14px; background:#fffbeb; color:#b45309; border:1px solid #fde68a; border-radius:8px; font-size:13px; line-height:1.4;">
-        <span style="font-size:16px">⚠️</span>
-        <div>
-          <strong>Nomor register masih sementara</strong><br/>
-          Harap edit dan sesuaikan dengan nomor register perkara yang terdaftar pada sistem CMS.
-        </div>
-      </div>`;
+    const info = describeDeadline(item);
+    const next = getNextStep(item);
+    const admins = Array.isArray(item.administrations) ? item.administrations : [];
+    const p24 = [...admins].reverse().find((record) => String(record.type || "").toUpperCase() === "P-24");
+    const dossierNumber = item.nomorBerkas || p24?.formData?.dossierNumber || "";
+    const dossierDate = item.tanggalBerkas || p24?.formData?.dossierDate || "";
 
-    state.selectedAdministrationFile = null;
-    els.modalRoot.innerHTML = `
-      <div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Detail perkara ${escapeAttr(item.caseId)}">
-        <div class="modal-card">
-          <div class="modal-header">
-            <div style="width: 100%;">
-              <div class="case-secondary">Nomor register perkara</div>
-              <div style="display:flex; align-items:center; gap:12px; margin-top:4px;">
-                <h2 style="margin:0; font-size: 24px;">${escapeHtml(displayReg)}</h2>
-                <button id="edit-reg-btn" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#334155; border-radius:6px; padding:4px 12px; font-size:12px; font-weight:600; cursor:pointer;" type="button">Edit Nomor</button>
+    const html = `
+      <div class="modal-backdrop case-modal-backdrop" role="presentation">
+        <div class="modal-card case-modal" role="dialog" aria-modal="true" aria-labelledby="case-modal-title">
+          <header class="case-modal-head">
+            <div class="case-modal-topline">
+              <span class="case-eyebrow">Nomor register perkara</span>
+              <button class="case-modal-close" data-close-modal type="button" aria-label="Tutup">×</button>
+            </div>
+
+            <div class="case-reg-row" id="case-reg-view">
+              <h2 id="case-modal-title">${escapeHtml(displayReg)}</h2>
+              <button id="edit-reg-btn" class="case-ghost-button" type="button" title="Sesuaikan dengan nomor register CMS">✎ Edit nomor</button>
+            </div>
+            <form id="case-reg-form" class="case-reg-form" hidden>
+              <input id="case-reg-input" type="text" value="${escapeAttr(item.courtCaseNumber || "")}" placeholder="Nomor register sesuai CMS" required />
+              <button class="case-primary-button" type="submit"><span class="button-label">Simpan</span><span class="button-spinner" hidden></span></button>
+              <button class="case-ghost-button" type="button" id="case-reg-cancel">Batal</button>
+            </form>
+            ${isRegEdited ? `<p class="case-reg-sub">Nomor sementara sistem: ${escapeHtml(item.caseId)}</p>` : `<p class="case-reg-warning">Nomor register masih sementara — sesuaikan dengan nomor register perkara pada CMS.</p>`}
+
+            <div class="case-identity">
+              <div class="case-identity-avatar" aria-hidden="true">${escapeHtml(initials(item.suspectName || "?"))}</div>
+              <div>
+                <strong>${escapeHtml(item.suspectName || "Tersangka belum diisi")}</strong>
+                <span>${escapeHtml(item.allegedArticle || "Pasal belum diisi")}</span>
               </div>
-              ${regWarning}
-              <div class="case-secondary" style="margin-top:12px;">SPDP ${escapeHtml(item.spdpNumber || "-")}</div>
             </div>
-            <button class="modal-close" data-close-modal type="button">×</button>
+
+            <div class="case-chip-row">
+              <span class="case-chip tone-${status.tone}">${escapeHtml(status.label)}</span>
+              <span class="case-chip phase-${stage.phase}">${stage.phase === "pra" ? "Prapenuntutan" : "Penuntutan"} · ${escapeHtml(stage.short)}</span>
+              <span class="case-chip ${lateFlag ? "tone-red" : "tone-green"}">${lateFlag ? `SPDP ${escapeHtml(String(item.spdpDelayDays ?? "?"))} hari (> 7)` : "SPDP tepat waktu"}</span>
+              ${item.deadlineDate ? `<span class="case-chip deadline-${info.deadline.state}">${escapeHtml(info.text)} · ${formatDate(item.deadlineDate)}</span>` : ""}
+            </div>
+
+            <ol class="case-mini-track" aria-label="Posisi tahapan perkara">
+              ${DASHBOARD_STAGES.map((entry, index) => `
+                <li class="${index < stageIndex ? "done" : ""} ${index === stageIndex ? "current" : ""} ${entry.phase}" title="${escapeAttr(entry.label)}">
+                  <span></span><small>${escapeHtml(entry.short)}</small>
+                </li>`).join("")}
+            </ol>
+
+            <nav class="case-tabs" role="tablist" aria-label="Bagian detail perkara">
+              ${CASE_MODAL_TABS.map((tab) => `<button type="button" role="tab" class="case-tab ${tab.id === activeTab ? "active" : ""}" data-case-tab="${tab.id}" aria-selected="${tab.id === activeTab}">${escapeHtml(tab.label)}${tab.id === "alur" ? `<i>${admins.length}</i>` : ""}</button>`).join("")}
+            </nav>
+          </header>
+
+          <div class="case-modal-body">
+            <section class="case-panel" data-case-panel="ringkasan" ${activeTab === "ringkasan" ? "" : "hidden"}>
+              <div class="case-next-card">
+                <span>Langkah berikutnya · B-310</span>
+                <strong><b>${escapeHtml(next.code)}</b> ${escapeHtml(next.text)}</strong>
+                ${item.deadlineDate ? `<small>${escapeHtml(info.type)} — ${formatDate(item.deadlineDate)} (${escapeHtml(info.text.toLowerCase())})</small>` : ""}
+              </div>
+
+              <div class="case-facts">
+                ${fact("Nomor SPDP", item.spdpNumber, { mono: true })}
+                ${fact("Tanggal SPDP", formatDate(item.spdpDate))}
+                ${fact("SPDP diterima", formatDate(item.receivedDate))}
+                ${fact("Instansi penyidik", item.investigatorInstitution)}
+                ${fact("Penyidik", item.investigatorName, { sub: [item.investigatorRank, item.investigatorNipNrp].filter(Boolean).join(" · ") })}
+                ${fact("Jaksa / Penuntut Umum", item.prosecutorName || "Belum ditunjuk", { muted: !item.prosecutorName })}
+                ${fact("Sprindik", item.sprindikNumber, { sub: item.sprindikDate ? formatDate(item.sprindikDate) : "" })}
+                ${fact("Nomor berkas perkara", dossierNumber || "Belum ada", { muted: !dossierNumber, sub: dossierDate ? formatDate(dossierDate) : "" })}
+                ${fact("Nomor perkara PN", item.courtCaseNumber && item.courtCaseNumber !== displayReg ? item.courtCaseNumber : "-")}
+              </div>
+
+              <div class="case-prose">
+                <h4>Uraian singkat perkara</h4>
+                <p>${escapeHtml(item.caseSummary || "Belum ada uraian.")}</p>
+              </div>
+              <div class="case-prose">
+                <h4>Barang bukti</h4>
+                <p>${escapeHtml(item.evidence || "Belum ada data barang bukti.")}</p>
+              </div>
+              ${item.notes ? `<div class="case-prose note"><h4>Catatan sistem</h4><p>${escapeHtml(item.notes)}</p></div>` : ""}
+            </section>
+
+            <section class="case-panel" data-case-panel="penyidik" ${activeTab === "penyidik" ? "" : "hidden"}>
+              <div class="case-split">
+                <article class="case-card">
+                  <header><span class="case-card-icon">${dashboardIcon("users")}</span><div><h4>Penyidik</h4><small>Pengirim SPDP</small></div></header>
+                  <div class="case-person">
+                    <div class="case-person-avatar">${escapeHtml(initials(item.investigatorName || "?"))}</div>
+                    <div><strong>${escapeHtml(item.investigatorName || "-")}</strong><span>${escapeHtml(item.investigatorPosition || "Jabatan belum diisi")}</span></div>
+                  </div>
+                  <dl class="case-dl">
+                    ${dl("Pangkat / Gol", item.investigatorRank)}
+                    ${dl("NIP / NRP", item.investigatorNipNrp)}
+                    ${dl("Jabatan", item.investigatorPosition)}
+                    ${dl("Instansi / unit", item.investigatorInstitution)}
+                    ${dl("Nomor kontak", item.investigatorPhone ? `<a href="tel:${escapeAttr(item.investigatorPhone)}">${escapeHtml(item.investigatorPhone)}</a>${waLink(item.investigatorPhone)}` : "", true)}
+                    ${dl("Akun pengirim", item.submittedByName)}
+                    ${dl("Dikirim pada", formatDateTime(item.createdAt))}
+                  </dl>
+                </article>
+
+                <article class="case-card">
+                  <header><span class="case-card-icon">${dashboardIcon("file")}</span><div><h4>SPDP &amp; Sprindik</h4><small>Dasar penyidikan</small></div></header>
+                  <dl class="case-dl">
+                    ${dl("Nomor SPDP", item.spdpNumber)}
+                    ${dl("Tanggal SPDP", formatDate(item.spdpDate))}
+                    ${dl("Diterima Kejaksaan", formatDate(item.receivedDate))}
+                    ${dl("Nomor Sprindik", item.sprindikNumber)}
+                    ${dl("Tanggal Sprindik", formatDate(item.sprindikDate))}
+                    ${dl("Selisih Sprindik → SPDP", `<span class="case-inline-badge ${lateFlag ? "red" : "green"}">${escapeHtml(String(item.spdpDelayDays ?? "-"))} hari · ${lateFlag ? "> 7 hari" : "≤ 7 hari"}</span>`, true)}
+                    ${dl("Pasal disangkakan", item.allegedArticle)}
+                  </dl>
+                  <div class="case-links">
+                    ${item.spdpFileUrl ? `<a class="case-link" href="${escapeAttr(item.spdpFileUrl)}" target="_blank" rel="noopener noreferrer">${dashboardIcon("file")} ${escapeHtml(item.spdpFileName || "Dokumen SPDP")}</a>` : `<span class="case-link disabled">Dokumen SPDP belum ada</span>`}
+                    ${item.caseFolderUrl ? `<a class="case-link" href="${escapeAttr(item.caseFolderUrl)}" target="_blank" rel="noopener noreferrer">${dashboardIcon("clipboard")} Folder perkara di Drive</a>` : ""}
+                  </div>
+                </article>
+              </div>
+            </section>
+
+            <section class="case-panel" data-case-panel="tersangka" ${activeTab === "tersangka" ? "" : "hidden"}>
+              <article class="case-card">
+                <header><span class="case-card-icon">${dashboardIcon("users")}</span><div><h4>Identitas tersangka</h4><small>Sesuai dokumen penyidikan</small></div></header>
+                <dl class="case-dl two-col">
+                  ${dl("Nama lengkap", item.suspectName)}
+                  ${dl("Nomor identitas", item.suspectIdentityNumber)}
+                  ${dl("Tempat lahir", item.birthPlace)}
+                  ${dl("Tanggal lahir", formatDate(item.birthDate))}
+                  ${dl("Umur", item.age ? `${item.age} tahun` : "")}
+                  ${dl("Jenis kelamin", item.gender)}
+                  ${dl("Kewarganegaraan", item.nationality)}
+                  ${dl("Agama", item.religion)}
+                  ${dl("Pekerjaan", item.occupation)}
+                  ${dl("Pendidikan", item.education)}
+                  ${dl("Alamat", item.address)}
+                </dl>
+              </article>
+            </section>
+
+            <section class="case-panel" data-case-panel="alur" ${activeTab === "alur" ? "" : "hidden"}>
+              ${renderCaseFlowTimeline(item)}
+              ${renderCaseStageEditor(item)}
+              <h3 class="case-section-title">Administrasi perkara</h3>
+              ${renderAdministrationPanel(item)}
+            </section>
+
+            <section class="case-panel" data-case-panel="ai" ${activeTab === "ai" ? "" : "hidden"}>
+              <div class="case-ai-head">
+                <div><h4>Analisa AI</h4><p>Draf pendukung prapenuntutan — keputusan tetap pada Jaksa Peneliti.</p></div>
+                <button id="ai-analyze-btn" class="case-primary-button" type="button">✦ Jalankan analisa</button>
+              </div>
+              <div id="ai-analysis-result" class="case-ai-result"><p class="case-muted">Memuat riwayat analisa…</p></div>
+            </section>
           </div>
-          <div class="modal-body">
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-              <span class="status-badge ${status.tone}">${escapeHtml(status.label)}</span>
-              ${lateFlag ? `<span class="status-badge red">SPDP > 7 hari (${escapeHtml(String(item.spdpDelayDays || "?"))} hari)</span>` : `<span class="status-badge green">Verifikasi waktu SPDP aman</span>`}
-            </div>
 
-            ${renderCaseStageEditor(item)}
-
-            <div class="detail-grid">
-              ${detail("Nama tersangka", item.suspectName)}
-              ${detail("Nomor identitas", item.suspectIdentityNumber)}
-              ${detail("Tempat/Tanggal lahir", `${item.birthPlace || "-"}, ${formatDate(item.birthDate)}`)}
-              ${detail("Jenis kelamin", item.gender)}
-              ${detail("Kewarganegaraan", item.nationality)}
-              ${detail("Pekerjaan", item.occupation)}
-              ${detail("Alamat", item.address, true)}
-              ${detail("Pasal", item.allegedArticle, true)}
-              ${detail("Uraian perkara", item.caseSummary, true)}
-              ${detail("Barang bukti", item.evidence, true)}
-            </div>
-
-            <div class="ai-analysis-section" style="margin-top:20px">
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-                  <h3 class="modal-section-title" style="margin:0">Analisa AI </h3>
-                  <button id="ai-analyze-btn" class="secondary-button" type="button" data-case-id="${escapeAttr(item.caseId)}">
-                    Jalankan analisa AI
-                  </button>
-                </div>
-                <div id="ai-analysis-result" style="margin-top:12px"></div>
-            </div>
-            
-            <h3 class="modal-section-title">Data penyidik dan SPDP</h3>
-            <div class="detail-grid">
-              ${detail("Penyidik", item.investigatorName)}
-              ${detail("Pangkat / NRP", `${item.investigatorRank || "-"} / ${item.investigatorNipNrp || "-"}`)}
-              ${detail("Jabatan", item.investigatorPosition)}
-              ${detail("Instansi", item.investigatorInstitution)}
-              ${detail("Sprindik", `${item.sprindikNumber || "-"} · ${formatDate(item.sprindikDate)}`)}
-              ${detail("SPDP diterima", `${formatDate(item.receivedDate)} · selisih ${item.spdpDelayDays ?? "-"} hari`)}
-              ${item.spdpFileUrl ? `<div class="detail-item full-span"><span>Dokumen SPDP</span><a class="document-link" href="${escapeAttr(item.spdpFileUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.spdpFileName || "Buka dokumen")}</a></div>` : ""}
-            </div>
-
-            <h3 class="modal-section-title">Informasi administrasi</h3>
-            ${renderAdministrationPanel(item)}
-          </div>
-          <div class="modal-footer">
-            <button class="primary-button" data-close-modal type="button">Tutup</button>
-          </div>
+          <footer class="case-modal-foot">
+            <button class="case-ghost-button" type="button" id="case-open-ai-sidebar">✦ Chat AI</button>
+            <button class="case-ghost-button" type="button" id="case-create-admin">＋ Buat administrasi</button>
+            <button class="case-primary-button" data-close-modal type="button">Tutup</button>
+          </footer>
         </div>
       </div>`;
 
-    bindModalClose();
-    els.modalRoot.querySelectorAll("[data-create-administration]").forEach((button) => {
+    openModal(html);
+    bindCaseModal(item);
+  }
+
+  function fact(label, value, options = {}) {
+    const display = value === undefined || value === null || String(value).trim() === "" ? "-" : String(value);
+    return `<div class="case-fact ${options.muted ? "muted" : ""}"><span>${escapeHtml(label)}</span><strong class="${options.mono ? "mono" : ""}">${escapeHtml(display)}</strong>${options.sub ? `<small>${escapeHtml(options.sub)}</small>` : ""}</div>`;
+  }
+
+  function dl(label, value, raw = false) {
+    const empty = value === undefined || value === null || String(value).trim() === "" || value === "-";
+    return `<div><dt>${escapeHtml(label)}</dt><dd class="${empty ? "empty" : ""}">${empty ? "—" : raw ? value : escapeHtml(value)}</dd></div>`;
+  }
+
+  function waLink(phone) {
+    let number = String(phone || "").replace(/[^0-9]/g, "");
+    if (!number) return "";
+    if (number.startsWith("0")) number = `62${number.slice(1)}`;
+    return ` <a class="case-wa" href="https://wa.me/${escapeAttr(number)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>`;
+  }
+
+  function renderCaseFlowTimeline(item) {
+    const current = dashboardStageIndex(item.status);
+    const flowStage = B310_FLOW.find((entry) => entry.id === DASHBOARD_STAGES[current].key) || B310_FLOW[0];
+    const doneCodes = new Set((item.administrations || []).map((record) => String(record.type || "").toUpperCase().replace("SOP FORM ", "SOP FORM-")));
+    return `
+      <div class="case-flow">
+        <div class="case-flow-head">
+          <div><span class="case-eyebrow">Posisi saat ini · ${escapeHtml(flowStage.range)}</span><h4>${escapeHtml(flowStage.title)}</h4><p>${escapeHtml(flowStage.summary)}</p></div>
+          <span class="case-flow-deadline">${dashboardIcon("clock")} ${escapeHtml(flowStage.deadline)}</span>
+        </div>
+        <ul class="case-flow-steps">
+          ${flowStage.steps.map((step) => {
+            const codes = step.code.split(/\s*·\s*/).map((code) => code.toUpperCase());
+            const done = codes.some((code) => doneCodes.has(code));
+            return `<li class="${step.tone} ${done ? "done" : ""}"><b>${escapeHtml(step.code)}</b><span>${escapeHtml(step.title)}${step.tone === "branch" ? ' <em>cabang</em>' : step.tone === "optional" ? ' <em>opsional</em>' : ""}</span>${done ? '<i aria-label="Sudah dibuat">✓</i>' : ""}</li>`;
+          }).join("")}
+        </ul>
+      </div>`;
+  }
+
+  function bindCaseModal(item) {
+    const caseId = item.caseId;
+    const root = els.modalRoot;
+
+    root.querySelectorAll("[data-case-tab]").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const id = tab.dataset.caseTab;
+        state.caseModalTab = id;
+        root.querySelectorAll("[data-case-tab]").forEach((button) => {
+          const active = button.dataset.caseTab === id;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-selected", String(active));
+        });
+        root.querySelectorAll("[data-case-panel]").forEach((panel) => { panel.hidden = panel.dataset.casePanel !== id; });
+        root.querySelector(".case-modal-body")?.scrollTo({ top: 0, behavior: "smooth" });
+        if (id === "ai") loadExistingAiAnalyses(caseId);
+      });
+    });
+
+    root.querySelectorAll("[data-create-administration]").forEach((button) => {
       button.addEventListener("click", () => openAdministrationModal(caseId, button.dataset.createAdministration));
     });
     bindCaseStageEditor(caseId);
-    
-    // Event listener untuk tombol Edit Register
-    document.getElementById("edit-reg-btn")?.addEventListener("click", async () => {
-      const newReg = prompt("Masukkan Nomor Register CMS yang baru:", item.courtCaseNumber || item.caseId);
-      
-      // Validasi agar input tidak kosong dan berbeda dari default caseId
-      if (newReg !== null && newReg.trim() !== "" && newReg.trim() !== item.caseId) {
-        const btn = document.getElementById("edit-reg-btn");
-        const originalText = btn.textContent;
-        btn.textContent = "Menyimpan...";
-        btn.disabled = true;
-        
-        try {
-          // Menyimpan pembaruan ke backend
-          await gasRequest("updateCase", { caseId: caseId, updates: { courtCaseNumber: newReg.trim() } });
-          toast("success", "Berhasil", "Nomor register telah diperbarui sesuai CMS.");
-          
-          // Memperbarui UI tanpa perlu reload halaman penuh
-          item.courtCaseNumber = newReg.trim(); 
-          renderActivePage(); 
-          openCaseModal(caseId); // Buka ulang modal agar peringatan (warning) otomatis hilang
-          
-        } catch (err) {
-          toast("error", "Gagal menyimpan", err.message);
-          btn.textContent = originalText;
-          btn.disabled = false;
-        }
-      } else if (newReg !== null && newReg.trim() === item.caseId) {
-        toast("warning", "Nomor tidak valid", "Harap masukkan nomor yang berbeda dari nomor sementara.");
+
+    const regView = document.getElementById("case-reg-view");
+    const regForm = document.getElementById("case-reg-form");
+    const regInput = document.getElementById("case-reg-input");
+    document.getElementById("edit-reg-btn")?.addEventListener("click", () => {
+      regView.hidden = true;
+      regForm.hidden = false;
+      regInput.focus();
+      regInput.select();
+    });
+    document.getElementById("case-reg-cancel")?.addEventListener("click", () => {
+      regForm.hidden = true;
+      regView.hidden = false;
+    });
+    regForm?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const value = regInput.value.trim();
+      if (!value) return;
+      if (value === item.caseId) {
+        toast("warning", "Nomor tidak valid", "Masukkan nomor yang berbeda dari nomor sementara sistem.");
+        return;
+      }
+      const button = regForm.querySelector("button[type=submit]");
+      setButtonLoading(button, true);
+      try {
+        const result = await gasRequest("updateCase", { caseId, updates: { courtCaseNumber: value } });
+        replaceCase(result.case || { ...item, courtCaseNumber: value });
+        toast("success", "Nomor register diperbarui", "Nomor telah disesuaikan dengan CMS.");
+        refreshCurrentPage();
+        openCaseModal(caseId, { keepScroll: true });
+      } catch (error) {
+        toast("error", "Gagal menyimpan", error.message);
+        setButtonLoading(button, false);
       }
     });
 
-    document.getElementById("ai-analyze-btn")?.addEventListener("click", () => {
-      runAiAnalysis(item.caseId);
+    document.getElementById("ai-analyze-btn")?.addEventListener("click", () => runAiAnalysis(caseId));
+    document.getElementById("case-open-ai-sidebar")?.addEventListener("click", () => window.openAiSidebar(caseId));
+    document.getElementById("case-create-admin")?.addEventListener("click", () => {
+      closeModal();
+      state.administrationBuilder = { caseId, type: "" };
+      navigate("administration-builder");
     });
-    loadExistingAiAnalyses(item.caseId);
+    if (state.caseModalTab === "ai") loadExistingAiAnalyses(caseId);
+  }
+
+  function replaceCase(updated) {
+    if (!updated || !updated.caseId) return;
+    const index = state.cases.findIndex((entry) => entry.caseId === updated.caseId);
+    if (index >= 0) state.cases[index] = { ...state.cases[index], ...updated };
+    else state.cases.unshift(updated);
+  }
+
+  function refreshCurrentPage() {
+    renderSidebar();
+    if (["dashboard", "cases", "deadlines", "workflow"].includes(state.activePage)) renderActivePage();
   }
 
   function renderCaseStageEditor(item) {
     const groupedStatuses = new Set(DASHBOARD_STAGES.flatMap((stage) => stage.statuses));
     const otherStatuses = Object.keys(STATUS).filter((key) => !groupedStatuses.has(key));
-
     const groupOptions = DASHBOARD_STAGES.map((stage) => {
       const opts = stage.statuses.map((statusKey) => `<option value="${escapeAttr(statusKey)}" ${item.status === statusKey ? "selected" : ""}>${escapeHtml(STATUS[statusKey]?.label || statusKey)}</option>`).join("");
-      return `<optgroup label="${escapeAttr(stage.label)}">${opts}</optgroup>`;
+      return `<optgroup label="${escapeAttr((stage.phase === "pra" ? "Prapenuntutan · " : "Penuntutan · ") + stage.label)}">${opts}</optgroup>`;
     }).join("");
-
     const otherOptions = otherStatuses.length
       ? `<optgroup label="Status lainnya">${otherStatuses.map((key) => `<option value="${escapeAttr(key)}" ${item.status === key ? "selected" : ""}>${escapeHtml(STATUS[key].label)}</option>`).join("")}</optgroup>`
       : "";
 
     return `
-      <section class="stage-editor-panel" style="margin-bottom:20px;padding:16px;border:1px solid #e5e7eb;border-radius:12px;">
-        <h3 class="modal-section-title" style="margin-top:0">Tahapan alur perkara</h3>
-        <div class="pidum-case-stage" style="margin-bottom:14px">
-          ${renderDashboardStagePips(item.status)}
+      <section class="case-stage-editor">
+        <label for="modal-status-select">Ubah tahapan secara manual</label>
+        <div class="case-stage-editor-row">
+          <select id="modal-status-select" name="modal-status-select">${groupOptions}${otherOptions}</select>
+          <button type="button" id="save-case-status" class="case-primary-button"><span class="button-label">Simpan</span><span class="button-spinner" hidden></span></button>
         </div>
-        <div class="form-field" style="max-width:460px">
-          <label for="modal-status-select">Ubah tahapan secara manual</label>
-          <select id="modal-status-select" name="modal-status-select">
-            ${groupOptions}
-            ${otherOptions}
-          </select>
-          <small class="form-hint">Perubahan di sini langsung memperbarui status perkara, terlepas dari administrasi yang sudah/belum dibuat.</small>
-        </div>
-        <div style="margin-top:12px">
-          <button type="button" id="save-case-status" class="primary-button" data-case-id="${escapeAttr(item.caseId)}">Simpan tahapan</button>
-        </div>
+        <small>Tenggat dihitung ulang otomatis bila tahapan berubah.</small>
       </section>`;
   }
 
@@ -1222,18 +1771,18 @@
     button.addEventListener("click", async () => {
       const select = document.getElementById("modal-status-select");
       const newStatus = select?.value;
-      if (!newStatus) return;
-
+      const current = state.cases.find((entry) => entry.caseId === caseId);
+      if (!newStatus || current?.status === newStatus) {
+        toast("info", "Tidak ada perubahan", "Pilih tahapan yang berbeda untuk menyimpan.");
+        return;
+      }
       setButtonLoading(button, true);
       try {
         const result = await gasRequest("updateCase", { caseId, updates: { status: newStatus } });
-        const index = state.cases.findIndex((entry) => entry.caseId === caseId);
-        if (index >= 0) state.cases[index] = result.case || { ...state.cases[index], status: newStatus };
-
-        toast("success", "Tahapan diperbarui", `Status perkara diubah menjadi ${getStatus(newStatus).label}.`);
-        renderSidebar();
-        renderActivePage();
-        openCaseModal(caseId);
+        replaceCase(result.case || { ...current, status: newStatus });
+        toast("success", "Tahapan diperbarui", `Status perkara menjadi ${getStatus(newStatus).label}.`);
+        refreshCurrentPage();
+        openCaseModal(caseId, { tab: "alur" });
       } catch (error) {
         toast("error", "Gagal memperbarui tahapan", error.message);
         setButtonLoading(button, false);
@@ -1243,61 +1792,40 @@
 
   function renderAdministrationPanel(item) {
     const administrations = Array.isArray(item.administrations) ? item.administrations : [];
-    const completedMap = new Map(administrations.map((record) => [String(record.type || "").toUpperCase(), record]));
-    const resolvedCount = completedMap.size;
+    const latestByType = new Map();
+    administrations.forEach((record) => {
+      const key = String(record.type || "").toUpperCase();
+      const previous = latestByType.get(key);
+      if (!previous || dateValue(record.createdAt) >= dateValue(previous.createdAt)) latestByType.set(key, record);
+    });
+    const resolvedCount = ADMINISTRATION_STAGES.filter((stage) => latestByType.has(stage.code)).length;
     const percentage = Math.round((resolvedCount / ADMINISTRATION_STAGES.length) * 100);
 
     return `
-      <section class="administration-panel">
+      <section class="administration-panel v4">
         <div class="administration-summary">
           <div>
-            <strong>${resolvedCount} dari ${ADMINISTRATION_STAGES.length} tahapan administrasi telah diselesaikan</strong>
+            <strong>${resolvedCount} dari ${ADMINISTRATION_STAGES.length} jenis administrasi dibuat</strong>
             <small>Status perkara diperbarui otomatis setelah administrasi disimpan.</small>
           </div>
           <span>${percentage}%</span>
         </div>
-        <div class="administration-progress" aria-label="Progres administrasi ${percentage}%">
-          <span style="width:${percentage}%"></span>
-        </div>
-        <div class="administration-list">
+        <div class="administration-progress" aria-label="Progres administrasi ${percentage}%"><span style="width:${percentage}%"></span></div>
+        <div class="admin-rows">
           ${ADMINISTRATION_STAGES.map((stage) => {
-            const record = completedMap.get(stage.code);
-
+            const record = latestByType.get(stage.code);
             return `
-              <article class="administration-card ${record ? "completed" : "pending"}">
-                <div class="administration-code">${escapeHtml(stage.code)}</div>
-                <div class="administration-content">
-                  <div class="administration-title-row">
-                    <div>
-                      <strong>${escapeHtml(stage.title)}</strong>
-                      <p>${escapeHtml(stage.detail)}</p>
-                    </div>
-                    <span class="status-badge ${record ? "green" : "amber"}">
-                      ${record ? "Telah dibuat" : "Belum dibuat"}
-                    </span>
-                  </div>
-                  ${record ? `
-                    <div class="administration-meta">
-                      <span><b>Nomor:</b> ${escapeHtml(record.documentNumber || "-")}</span>
-                      <span><b>Tanggal:</b> ${formatDate(record.documentDate)}</span>
-                      <span><b>Penanggung jawab:</b> ${escapeHtml(record.responsibleOfficer || "-")}</span>
-                    </div>
-                    ${record.notes ? `<p class="administration-notes">${escapeHtml(record.notes)}</p>` : ""}
-                    
-                    <div class="administration-action-row" style="display:flex; gap:10px; margin-top:10px;">
-                      ${record.fileUrl ? `<a class="primary-button administration-create-button" style="text-decoration:none; background-color: #107c41; color: white;" href="${escapeAttr(record.fileUrl)}" target="_blank" rel="noopener noreferrer">Lihat File</a>` : "<small>Tidak ada lampiran file.</small>"}
-                      <button type="button" class="secondary-button" data-create-administration="${escapeAttr(stage.code)}">Buat Ulang</button>
-                    </div>
-                  ` : `
-                    <div class="administration-action-row">
-                      <small>Administrasi siap dibuat.</small>
-                      <button
-                        class="primary-button administration-create-button"
-                        data-create-administration="${escapeAttr(stage.code)}"
-                        type="button"
-                      >Buat</button>
-                    </div>
-                  `}
+              <article class="admin-row ${record ? "done" : ""}">
+                <span class="admin-row-code">${escapeHtml(stage.code)}</span>
+                <div class="admin-row-copy">
+                  <strong>${escapeHtml(stage.title)}</strong>
+                  ${record
+                    ? `<small>${record.documentNumber ? `No. ${escapeHtml(record.documentNumber)} · ` : ""}${formatDate(record.documentDate)} · ${escapeHtml(record.responsibleOfficer || "-")}</small>`
+                    : `<small>${escapeHtml(stage.detail)}</small>`}
+                </div>
+                <div class="admin-row-actions">
+                  ${record?.fileUrl ? `<a class="case-ghost-button small" href="${escapeAttr(record.fileUrl)}" target="_blank" rel="noopener noreferrer">Buka</a>` : ""}
+                  <button type="button" class="${record ? "case-ghost-button" : "case-primary-button"} small" data-create-administration="${escapeAttr(stage.code)}">${record ? "Buat ulang" : "Buat"}</button>
                 </div>
               </article>`;
           }).join("")}
@@ -1344,7 +1872,7 @@
                 <option value="__NEW_ADMIN__" ${isManual ? "selected" : ""} style="font-weight: 600; color: var(--blue-700);">＋ Buat administrasi baru (Tanpa Perkara)</option>
                 ${[...state.cases].sort((a, b) => String(a.suspectName || "").localeCompare(String(b.suspectName || ""), "id")).map((item) => `
                   <option value="${escapeAttr(item.caseId)}" ${selectedCase?.caseId === item.caseId && !isManual ? "selected" : ""}>
-                    ${escapeHtml(item.suspectName || "Nama belum tersedia")} — ${escapeHtml(item.caseId)}
+                    ${escapeHtml(item.suspectName || "Nama belum tersedia")} — ${escapeHtml(item.courtCaseNumber || item.caseId)}
                   </option>`).join("")}
               </select>
               <small class="form-hint">Nomor register ditampilkan untuk membedakan tersangka dengan nama yang sama.</small>
@@ -1385,12 +1913,8 @@
 
     bindDynamicAdministrationForm(selectedCase, selectedStage);
 
-    if (selectedCase && selectedCase.caseId !== "__NEW_ADMIN__") {
-      setTimeout(() => {
-        if (typeof autoFillHistoricalData === "function") {
-          autoFillHistoricalData(selectedCase);
-        }
-      }, 100);
+    if (selectedCase && selectedStage && selectedCase.caseId !== "__NEW_ADMIN__") {
+      autoFillHistoricalData(selectedCase, selectedStage.code);
     }
   }
 
@@ -1541,14 +2065,16 @@ function detectTeamRoleFromLabel(label) {
     return null;
   }
 
-  function autofillTeamMemberFields(selectEl) {
+  function autofillTeamMemberFields(selectEl, { onlyEmpty = false } = {}) {
     const role = selectEl?.dataset?.teamRole;
     if (!role) return;
 
     const option = selectEl.selectedOptions && selectEl.selectedOptions[0];
+    if (onlyEmpty && (!option || !option.dataset.pangkat && !option.dataset.nip)) return;
     const pangkat = option ? (option.dataset.pangkat || "") : "";
     const nip = option ? (option.dataset.nip || "") : "";
-    const jabatan = option ? (option.dataset.jabatan || pangkat) : "";
+    const jabatan = option ? (option.dataset.jabatan || "") : "";
+    autofillTeamMemberFields.onlyEmpty = onlyEmpty;
 
     const section = selectEl.closest(".admin-form-section") || document.getElementById("administration-create-form");
     if (!section) return;
@@ -1581,6 +2107,8 @@ function detectTeamRoleFromLabel(label) {
         const targetId = label.getAttribute("for");
         const target = targetId ? document.getElementById(targetId) : null;
         if (target && !target.matches("select")) {
+          if (autofillTeamMemberFields.onlyEmpty && String(target.value || "").trim()) return true;
+          if (!value && String(target.value || "").trim()) return true; // jangan hapus isian manual
           target.value = value || "";
           target.dispatchEvent(new Event("input", { bubbles: true }));
         }
@@ -1609,8 +2137,8 @@ function detectTeamRoleFromLabel(label) {
     ) {
       const dropdownClass = teamRole ? "prosecutor-dropdown team-member-dropdown" : "prosecutor-dropdown";
       const teamRoleAttr = teamRole ? ` data-team-role="${escapeAttr(teamRole)}"` : "";
-      control = `<select id="admin-field-${escapeAttr(definition.key)}" name="${escapeAttr(definition.key)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(source)}" data-sort-order="${sortOrder}" class="${dropdownClass}"${teamRoleAttr} ${isRequired}>
-        <option value="${escapeAttr(value)}">${value ? escapeHtml(value) : "-- Memuat daftar Jaksa --"}</option>
+      control = `<select id="admin-field-${escapeAttr(definition.key)}" name="${escapeAttr(definition.key)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(source)}" data-sort-order="${sortOrder}" data-initial-value="${escapeAttr(value)}" class="${dropdownClass}"${teamRoleAttr} ${isRequired}>
+        <option value="${escapeAttr(value)}">${value ? escapeHtml(value) : "Memuat daftar Jaksa…"}</option>
       </select>`;
     } 
     else if (definition.type === "textarea") {
@@ -1629,9 +2157,12 @@ function detectTeamRoleFromLabel(label) {
       control = `<input id="admin-field-${escapeAttr(definition.key)}" type="${escapeAttr(definition.type || "text")}" name="${escapeAttr(definition.key)}" data-admin-field data-field-key="${escapeAttr(definition.key)}" data-field-label="${escapeAttr(definition.label)}" data-field-source="${escapeAttr(source)}" data-sort-order="${sortOrder}" value="${escapeAttr(definition.type === 'date' ? toDateInputValue(value) : value)}" placeholder="${escapeAttr(placeholder)}" ${isRequired} ${isReadOnly} />`;
     }
 
+    const autoBadge = source && source !== "manual" && String(value || "").trim() !== ""
+      ? '<span class="field-source-badge auto" title="Terisi otomatis dari data perkara/administrasi sebelumnya">AUTO</span>'
+      : definition.source ? '<span class="field-source-badge empty" title="Sumber otomatis belum memiliki data — lengkapi manual">KOSONG</span>' : "";
     return `
       <div class="form-field ${fullClass}">
-        <label for="admin-field-${escapeAttr(definition.key)}">${escapeHtml(definition.label)}${reqStar}</label>
+        <label for="admin-field-${escapeAttr(definition.key)}">${escapeHtml(definition.label)}${reqStar} ${autoBadge}</label>
         ${control}
         ${definition.sourceLabel ? `<small class="form-hint">Sumber: ${escapeHtml(definition.sourceLabel)}</small>` : ""}
       </div>
@@ -1702,65 +2233,81 @@ function detectTeamRoleFromLabel(label) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
   }
 
+  async function getProsecutorList() {
+    const fresh = Date.now() - state.prosecutorsLoadedAt < 5 * 60 * 1000;
+    if (state.prosecutors.length && fresh) return state.prosecutors;
+    const res = await gasRequest("listProsecutors", {}, { silent: true });
+    const list = Array.isArray(res) ? res : (res && Array.isArray(res.prosecutors) ? res.prosecutors : []);
+    state.prosecutors = list;
+    state.prosecutorsLoadedAt = Date.now();
+    return list;
+  }
+
+  function populateProsecutorSelect(select, jaksaList) {
+    const isTeamField = select.classList.contains("team-member-dropdown");
+    const initial = String(select.dataset.initialValue || select.value || "").trim();
+    const normalizedInitial = initial.toLowerCase();
+    select.innerHTML = `<option value="">— ${isTeamField ? "Pilih nama Jaksa" : "Pilih Jaksa"} —</option>`;
+    let matched = false;
+    jaksaList.forEach((jaksa) => {
+      const option = document.createElement("option");
+      if (typeof jaksa === "string") {
+        option.value = jaksa;
+        option.textContent = jaksa;
+      } else if (jaksa && typeof jaksa === "object") {
+        // Nilai = NAMA (bukan ID) agar data tersimpan & dokumen konsisten.
+        option.value = jaksa.name || "";
+        option.textContent = [jaksa.name || "Tanpa nama", jaksa.pangkat].filter(Boolean).join(" — ");
+        option.dataset.id = jaksa.id || "";
+        option.dataset.nip = jaksa.nip || "";
+        option.dataset.pangkat = jaksa.pangkat || jaksa.kolomF || "";
+        option.dataset.jabatan = jaksa.jabatan || "";
+      }
+      const isMatch = normalizedInitial && (
+        option.value.toLowerCase() === normalizedInitial ||
+        String(option.dataset.id || "").toLowerCase() === normalizedInitial
+      );
+      if (isMatch && !matched) { option.selected = true; matched = true; }
+      select.appendChild(option);
+    });
+    // Nilai lama yang tidak ada di List Jaksa tetap dipertahankan (sebelumnya hilang → validasi gagal)
+    if (initial && !matched) {
+      const keep = document.createElement("option");
+      keep.value = initial;
+      keep.textContent = `${initial} (data tersimpan)`;
+      keep.selected = true;
+      select.insertBefore(keep, select.options[1] || null);
+    }
+  }
+
   function bindDynamicAdministrationForm(item, stage) {
     if (!item || !stage || !document.getElementById("administration-create-form")) return;
 
-    (async () => {
-      const selects = document.querySelectorAll('.prosecutor-dropdown');
-      if (selects.length > 0) {
-        try {
-          const res = await gasRequest("listProsecutors", {}, { silent: true });
-          const jaksaList = Array.isArray(res) ? res : (res && res.prosecutors ? res.prosecutors : []);
-          
-          if (jaksaList && jaksaList.length > 0) {
-            selects.forEach(select => {
-              const isTeamField = select.classList.contains('team-member-dropdown');
-              const currentValue = select.value;
-              select.innerHTML = `<option value="">-- ${isTeamField ? "Pilih Nama Jaksa" : "Pilih Jaksa Penandatangan"} --</option>`;
-              jaksaList.forEach(jaksa => {
-                const option = document.createElement('option');
-                if (typeof jaksa === 'string') {
-                  option.value = jaksa;
-                  option.textContent = jaksa;
-                  if (jaksa === currentValue) option.selected = true;
-                } else if (jaksa && typeof jaksa === 'object') {
-                  const role = select.dataset.teamRole || "";
-                  const isTeamMember = role.includes("ketua") || role.includes("anggota");
-                  const isSignatoryField = select.dataset.fieldKey === "signatoryName" || select.dataset.fieldLabel === "Nama Penuntut Umum penandatangan";
-                  
-                  option.value = isTeamMember ? (jaksa.kolomG || jaksa.name || "") : (jaksa.name || "");
-                  
-                  let labelText = jaksa.name || "Tanpa Nama";
-                  if (jaksa.kolomF) labelText += ` - ${jaksa.kolomF}`;
-                  if (jaksa.kolomG && !isSignatoryField) labelText += ` (${jaksa.kolomG})`;
-                  
-                  option.textContent = labelText;
-                  option.dataset.name = jaksa.name || "";
-                  option.dataset.nip = jaksa.nip || "";
-                  option.dataset.pangkat = jaksa.pangkat || jaksa.kolomF || "";
-                  option.dataset.jabatan = jaksa.jabatan || jaksa.pangkat || jaksa.kolomF || "";
-                  if (jaksa.name === currentValue || option.value === currentValue) {
-                    option.selected = true;
-                  }
-                }
-                select.appendChild(option);
-              });
-
-              if (isTeamField) {
-                select.addEventListener('change', () => autofillTeamMemberFields(select));
-                autofillTeamMemberFields(select);
-              }
-            });
+    const selects = [...document.querySelectorAll(".prosecutor-dropdown")];
+    if (selects.length) {
+      getProsecutorList().then((jaksaList) => {
+        selects.forEach((select) => {
+          if (!document.body.contains(select)) return;
+          if (!jaksaList.length) {
+            const value = select.dataset.initialValue || "";
+            select.innerHTML = `<option value="${escapeAttr(value)}">${escapeHtml(value || "Daftar Jaksa kosong — isi sheet List Jaksa")}</option>`;
+            return;
           }
-        } catch (err) {
-          console.error("Gagal memuat jaksa:", err);
-          selects.forEach(select => {
-            const cv = select.value;
-            select.innerHTML = `<option value="${escapeAttr(cv)}">${escapeHtml(cv || "Gagal memuat daftar")}</option>`;
-          });
-        }
-      }
-    })();
+          populateProsecutorSelect(select, jaksaList);
+          if (select.classList.contains("team-member-dropdown")) {
+            select.addEventListener("change", () => autofillTeamMemberFields(select));
+            if (select.value) autofillTeamMemberFields(select, { onlyEmpty: true });
+          }
+        });
+      }).catch((error) => {
+        console.error("Gagal memuat jaksa:", error);
+        selects.forEach((select) => {
+          const value = select.dataset.initialValue || "";
+          select.innerHTML = `<option value="${escapeAttr(value)}">${escapeHtml(value || "Gagal memuat daftar Jaksa")}</option>`;
+        });
+        toast("warning", "Daftar Jaksa gagal dimuat", "Periksa sheet List Jaksa, lalu muat ulang form.");
+      });
+    }
 
     document.getElementById("choose-administration-file")?.addEventListener("click", () => document.getElementById("administration-file")?.click());
     document.getElementById("administration-file")?.addEventListener("change", (event) => setAdministrationFile(event.target.files?.[0] || null));
@@ -1769,10 +2316,65 @@ function detectTeamRoleFromLabel(label) {
       renderAdministrationBuilderPage();
       toast("info", "Data dimuat ulang", "Isian otomatis dikembalikan ke data perkara terbaru.");
     });
-    document.getElementById("administration-create-form")?.addEventListener("submit", (event) => {
+    const form = document.getElementById("administration-create-form");
+    form?.addEventListener("submit", (event) => {
       event.preventDefault();
       createAdministrationFromBuilder(item.caseId, stage.code);
     });
+    // Tandai field yang diubah manual
+    form?.addEventListener("input", (event) => {
+      event.target.closest?.(".form-field")?.classList.add("touched");
+    });
+  }
+
+  /*
+   * Isi field kosong dari administrasi sebelumnya.
+   * Versi lama menggabungkan SEMUA form lama ke semua input bernama sama, sehingga
+   * mis. "investigatorInstitution" pada T-4 (berisi nomor surat) tertukar dengan nama instansi.
+   * Kini: (1) dari administrasi jenis yang sama (buat ulang) untuk semua field kosong;
+   *       (2) dari jenis lain hanya untuk field tim/penandatangan yang aman dibagikan.
+   */
+  const SHARED_HISTORY_KEYS = new Set([
+    "teamLeaderName", "teamLeaderRank", "teamLeaderNip", "teamLeaderPosition",
+    "member1Name", "member1RankNip", "member1Position", "member2Name", "member2RankNip", "member2Position",
+    "prosecutor1Name", "prosecutor1Rank", "prosecutor1Nip", "prosecutor2Name", "prosecutor2RankNip",
+    "prosecutorRank", "prosecutorNip", "signatoryName", "signatoryRank", "signatoryTitle",
+    "evidenceHandoverPlace", "suspectHandoverPlace", "destination", "copies"
+  ]);
+
+  function autoFillHistoricalData(currentCase, type) {
+    const form = document.getElementById("administration-create-form");
+    if (!form || !currentCase || !Array.isArray(currentCase.administrations)) return;
+    const sorted = [...currentCase.administrations].sort((a, b) => dateValue(a.createdAt) - dateValue(b.createdAt));
+    const sameType = {};
+    const shared = {};
+    sorted.forEach((admin) => {
+      let data = admin.formData;
+      if (typeof data === "string") { try { data = JSON.parse(data); } catch { data = {}; } }
+      if (!data || typeof data !== "object") return;
+      const isSame = String(admin.type || "").toUpperCase() === String(type || "").toUpperCase();
+      Object.keys(data).forEach((key) => {
+        const value = data[key];
+        if (value === undefined || value === null || String(value).trim() === "") return;
+        if (isSame) sameType[key] = value;
+        else if (SHARED_HISTORY_KEYS.has(key)) shared[key] = value;
+      });
+    });
+    const merged = { ...shared, ...sameType };
+    let filled = 0;
+    form.querySelectorAll("[data-admin-field]").forEach((element) => {
+      const key = element.dataset.fieldKey;
+      if (!(key in merged)) return;
+      if (element.matches("select.prosecutor-dropdown")) {
+        if (!element.dataset.initialValue) element.dataset.initialValue = merged[key];
+        return;
+      }
+      if (String(element.value || "").trim() !== "") return;
+      element.value = element.type === "date" ? toDateInputValue(merged[key]) : merged[key];
+      element.closest(".form-field")?.classList.add("history-filled");
+      filled += 1;
+    });
+    if (filled) toast("info", "Isian riwayat dipakai", `${filled} kolom diisi dari administrasi sebelumnya. Periksa kembali sebelum menyimpan.`);
   }
 
   function setAdministrationFile(file) {
@@ -1805,39 +2407,43 @@ function detectTeamRoleFromLabel(label) {
   async function createAdministrationFromBuilder(caseId, type) {
     const form = document.getElementById("administration-create-form");
     const button = document.getElementById("save-administration");
-    if (!form?.reportValidity()) {
+    if (!form || button?.disabled) return;
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      const firstInvalid = form.querySelector(":invalid");
+      firstInvalid?.scrollIntoView({ behavior: "smooth", block: "center" });
       toast("warning", "Form belum lengkap", "Lengkapi seluruh kolom bertanda wajib sebelum menyimpan.");
       return;
     }
 
+    const schema = ADMIN_FORM_SCHEMAS[type] || {};
     const fields = [...form.querySelectorAll("[data-admin-field]")].map((element) => ({
       key: element.dataset.fieldKey,
       label: element.dataset.fieldLabel,
       value: String(element.value || "").trim(),
-      source: element.dataset.fieldSource || "manual",
+      source: element.closest(".form-field")?.classList.contains("touched") ? "manual" : (element.dataset.fieldSource || "manual"),
       sortOrder: Number(element.dataset.sortOrder || 0)
     }));
-    
     const formData = Object.fromEntries(fields.map((fieldItem) => [fieldItem.key, fieldItem.value]));
-    
-    const penandatanganField = fields.find(f => 
-      f.key === "responsibleOfficer" || 
-      f.key === "prosecutorName" || 
-      (f.label && f.label.toLowerCase().includes("penandatangan"))
-    );
-    const selectedPenandatangan = penandatanganField ? penandatanganField.value : null;
+
+    // Nomor & tanggal dokumen sesuai skema (SOP FORM memakai sop1Date, P-17 memakai p17Date, dst.)
+    const numberKey = schema.documentNumberKey || "documentNumber";
+    const dateKey = schema.documentDateKey || "documentDate";
+    const firstDateField = fields.find((fieldItem) => /date$/i.test(fieldItem.key) && /^\d{4}-\d{2}-\d{2}$/.test(fieldItem.value));
+    const signatory = formData.responsibleOfficer || formData.prosecutorName || formData.signatoryName || formData.teamLeaderName;
 
     const payload = {
       caseId,
       type,
-      documentNumber: formData.documentNumber || "",
-      documentDate: formData.documentDate || todayISO(),
-      responsibleOfficer: selectedPenandatangan || formData.responsibleOfficer || state.session.user.fullName || state.session.user.username,
+      documentNumber: formData[numberKey] || formData.documentNumber || "",
+      documentDate: formData[dateKey] || formData.documentDate || firstDateField?.value || todayISO(),
+      responsibleOfficer: signatory || state.session.user.fullName || state.session.user.username,
       notes: String(form.elements.systemNotes?.value || "").trim(),
       formFields: fields
     };
 
     setButtonLoading(button, true);
+    const progress = showBuilderProgress("Menyimpan data & membuat dokumen…");
     try {
       if (state.selectedAdministrationFile) {
         const fileData = await readFileBase64(state.selectedAdministrationFile);
@@ -1848,63 +2454,63 @@ function detectTeamRoleFromLabel(label) {
         };
       }
 
-      const result = await gasRequest("createAdministration", payload);
-      const index = state.cases.findIndex((caseItem) => caseItem.caseId === caseId);
-      if (index >= 0) state.cases[index] = result.case;
-
-      toast("success", `${type} berhasil dibuat`, `Data form tersimpan dan status perkara menjadi ${getStatus(result.case.status).label}.`);
+      const result = await gasRequest("createAdministration", payload, { timeout: 180000 });
+      if (result.case) replaceCase(result.case);
       renderSidebar();
-      
-      if (result.fileUrl) {
-          setTimeout(() => { window.open(result.fileUrl, '_blank'); }, 1000);
-      }
 
-      if (button && button.parentNode) {
-          button.style.display = 'none';
-
-          const btnContainer = document.createElement('div');
-          btnContainer.style.display = 'flex';
-          btnContainer.style.gap = '10px';
-          btnContainer.style.marginTop = '15px';
-          btnContainer.style.flexWrap = 'wrap';
-
-          if (result.fileUrl) {
-              const btnLihat = document.createElement('button');
-              btnLihat.type = 'button';
-              btnLihat.className = 'primary-button';
-              btnLihat.style.backgroundColor = '#107c41'; 
-              btnLihat.innerHTML = 'Lihat File (Docs)';
-              btnLihat.onclick = () => window.open(result.fileUrl, '_blank');
-              btnContainer.appendChild(btnLihat);
-          }
-
-          const folderUrl = result.case && result.case.caseFolderUrl ? result.case.caseFolderUrl : 'https://drive.google.com';
-          const btnDrive = document.createElement('button');
-          btnDrive.type = 'button';
-          btnDrive.className = 'primary-button';
-          btnDrive.style.backgroundColor = '#4285F4'; 
-          btnDrive.innerHTML = 'Buka Folder Drive';
-          btnDrive.onclick = () => window.open(folderUrl, '_blank');
-          btnContainer.appendChild(btnDrive);
-
-          const btnUlang = document.createElement('button');
-          btnUlang.type = 'button';
-          btnUlang.className = 'secondary-button';
-          btnUlang.innerHTML = 'Buat Ulang / Form Baru';
-          btnUlang.onclick = () => {
-              state.administrationBuilder.type = "";
-              renderAdministrationBuilderPage();
-          };
-          btnContainer.appendChild(btnUlang);
-
-          button.parentNode.insertBefore(btnContainer, button.nextSibling);
-      }
-
+      const statusNote = result.case
+        ? (result.statusApplied === false
+          ? `Status perkara tetap ${getStatus(result.case.status).label} (tidak dimundurkan).`
+          : `Status perkara menjadi ${getStatus(result.case.status).label}.`)
+        : "Administrasi manual tersimpan.";
+      toast("success", `${type} berhasil dibuat`, statusNote);
+      progress.done();
+      renderBuilderSuccess({ type, result, statusNote });
     } catch (error) {
+      progress.fail();
       toast("error", "Administrasi gagal dibuat", error.message || "Data administrasi belum berhasil disimpan.");
     } finally {
       setButtonLoading(button, false);
     }
+  }
+
+  function showBuilderProgress(label) {
+    const host = document.querySelector(".builder-form-actions");
+    if (!host) return { done() {}, fail() {} };
+    host.querySelector(".builder-progress")?.remove();
+    host.insertAdjacentHTML("afterbegin", `<div class="builder-progress"><span></span><small>${escapeHtml(label)}</small></div>`);
+    const node = host.querySelector(".builder-progress");
+    return {
+      done() { node?.classList.add("done"); setTimeout(() => node?.remove(), 600); },
+      fail() { node?.remove(); }
+    };
+  }
+
+  function renderBuilderSuccess({ type, result, statusNote }) {
+    const panel = document.querySelector(".builder-form-panel");
+    if (!panel) return;
+    const folderUrl = result.folderUrl || result.case?.caseFolderUrl || "";
+    panel.insertAdjacentHTML("beforebegin", `
+      <section class="builder-success" role="status">
+        <div class="builder-success-icon">✓</div>
+        <div class="builder-success-copy">
+          <strong>${escapeHtml(type)} tersimpan</strong>
+          <p>${escapeHtml(statusNote)}${result.administration?.documentNumber ? ` Nomor: ${escapeHtml(result.administration.documentNumber)}.` : ""}</p>
+        </div>
+        <div class="builder-success-actions">
+          ${result.fileUrl ? `<a class="case-primary-button" href="${escapeAttr(result.fileUrl)}" target="_blank" rel="noopener noreferrer">Buka dokumen</a>` : ""}
+          ${folderUrl ? `<a class="case-ghost-button" href="${escapeAttr(folderUrl)}" target="_blank" rel="noopener noreferrer">Folder Drive</a>` : ""}
+          ${result.case ? `<button type="button" class="case-ghost-button" id="builder-open-case">Lihat perkara</button>` : ""}
+          <button type="button" class="case-ghost-button" id="builder-new-form">Buat administrasi lain</button>
+        </div>
+      </section>`);
+    panel.classList.add("is-saved");
+    document.querySelector(".builder-success")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    document.getElementById("builder-new-form")?.addEventListener("click", () => {
+      state.administrationBuilder.type = "";
+      renderAdministrationBuilderPage();
+    });
+    document.getElementById("builder-open-case")?.addEventListener("click", () => openCaseModal(result.case.caseId, { tab: "alur" }));
   }
 
   async function renderTikReminderPage() {
@@ -2947,21 +3553,53 @@ function detectTeamRoleFromLabel(label) {
     if (!cases.length) return emptyState("◷", "Belum ada tenggat", "Tentukan tanggal tenggat pada detail perkara.");
     return `<div class="deadline-list">${cases.map((item) => {
       const deadline = getDeadlineState(item);
-      return `<button type="button" class="deadline-item ${deadline.state}" data-case-id="${escapeAttr(item.caseId)}" style="width:100%;background:white;text-align:left">
+      return `<button type="button" class="deadline-item ${deadline.state}" data-open-case="${escapeAttr(item.caseId)}" style="width:100%;background:white;text-align:left">
         <span class="deadline-dot"></span>
         <span><strong>${escapeHtml(item.suspectName || item.caseId)}</strong><small>${escapeHtml(getStatus(item.status).label)} · ${formatDate(item.deadlineDate)} · ${escapeHtml(deadline.label)}</small></span>
       </button>`;
     }).join("")}</div>`;
   }
 
-  function bindModalClose() {
-    els.modalRoot.querySelectorAll("[data-close-modal]").forEach((button) => button.addEventListener("click", closeModal));
-    els.modalRoot.querySelector(".modal-backdrop")?.addEventListener("click", (event) => {
-      if (event.target.classList.contains("modal-backdrop")) closeModal();
-    });
+  /* ---------- Modal manager (animasi halus, ESC, kunci scroll) ---------- */
+  let modalCloseTimer = null;
+
+  function openModal(html) {
+    clearTimeout(modalCloseTimer);
+    const previousBody = els.modalRoot.querySelector(".case-modal-body");
+    const hadModal = Boolean(els.modalRoot.querySelector(".modal-backdrop.is-visible"));
+    const previousScroll = previousBody ? previousBody.scrollTop : 0;
+    els.modalRoot.innerHTML = html;
+    bindModalClose({ instant: hadModal });
+    if (hadModal && previousScroll) {
+      const body = els.modalRoot.querySelector(".case-modal-body");
+      if (body) body.scrollTop = previousScroll;
+    }
   }
 
-  function closeModal() { state.selectedAdministrationFile = null; els.modalRoot.innerHTML = ""; }
+  function bindModalClose({ instant = false } = {}) {
+    clearTimeout(modalCloseTimer);
+    document.body.classList.add("modal-open");
+    const backdrop = els.modalRoot.querySelector(".modal-backdrop");
+    if (backdrop) {
+      if (instant) backdrop.classList.add("is-visible", "no-anim");
+      else requestAnimationFrame(() => backdrop.classList.add("is-visible"));
+      backdrop.addEventListener("click", (event) => {
+        if (event.target === backdrop) closeModal();
+      });
+    }
+    els.modalRoot.querySelectorAll("[data-close-modal]").forEach((button) => button.addEventListener("click", closeModal));
+  }
+
+  function closeModal() {
+    state.selectedAdministrationFile = null;
+    document.body.classList.remove("modal-open");
+    const backdrop = els.modalRoot.querySelector(".modal-backdrop");
+    if (!backdrop) { els.modalRoot.innerHTML = ""; return; }
+    backdrop.classList.remove("is-visible", "no-anim");
+    backdrop.classList.add("is-closing");
+    clearTimeout(modalCloseTimer);
+    modalCloseTimer = setTimeout(() => { els.modalRoot.innerHTML = ""; }, 190);
+  }
 
   function navigate(page) {
     state.activePage = page;
@@ -2985,7 +3623,22 @@ function detectTeamRoleFromLabel(label) {
     els.connectionIndicator.querySelector("small").textContent = online ? "Backend terhubung" : "Backend tidak terhubung";
   }
 
+  const READ_ONLY_ACTIONS = new Set(["health", "me", "listCases", "getCase", "listAdministrations", "listProsecutors", "listReminders", "listTikReminders", "listCaseAnalyses"]);
+
   async function gasRequest(action, payload = {}, options = {}) {
+    const retries = READ_ONLY_ACTIONS.has(action) ? Number(options.retries ?? 1) : 0;
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await gasRequestOnce(action, payload, options);
+      } catch (error) {
+        const transient = error && (error.transient || error.name === "TypeError");
+        if (attempt >= retries || !transient) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+      }
+    }
+  }
+
+  async function gasRequestOnce(action, payload = {}, options = {}) {
     if (CONFIG.DEMO_MODE) return demoRequest(action, payload);
     if (!CONFIG.APPS_SCRIPT_URL || !CONFIG.APPS_SCRIPT_URL.startsWith("https://script.google.com/")) {
       throw new Error("URL Google Apps Script belum dikonfigurasi.");
@@ -3010,11 +3663,33 @@ function detectTeamRoleFromLabel(label) {
       const text = await response.text();
       let data;
       try { data = JSON.parse(text); }
-      catch { throw new Error("Respons backend tidak valid. Pastikan deployment Apps Script menggunakan versi kode terbaru."); }
-      if (!response.ok || !data.success) throw new Error(data.message || `Permintaan gagal (${response.status}).`);
+      catch {
+        const invalid = new Error("Respons backend tidak valid. Pastikan deployment Apps Script menggunakan versi kode terbaru.");
+        invalid.transient = response.status >= 500;
+        throw invalid;
+      }
+      if (!response.ok || !data.success) {
+        const backendError = new Error(data.message || `Permintaan gagal (${response.status}).`);
+        backendError.backend = true;
+        throw backendError;
+      }
       return data.data || {};
     } catch (error) {
+      if (error.backend) {
+        setConnection(true); // server menjawab — hanya permintaannya yang ditolak
+        if (/sesi|token|login ulang|kedaluwarsa/i.test(error.message) && action !== "login" && state.session && !options.silent) {
+          handleSessionExpired();
+        }
+        throw error;
+      }
       if (error.name === "AbortError") throw new Error("Permintaan terlalu lama. Periksa koneksi atau ukuran dokumen.");
+      if (error.name === "TypeError") {
+        const network = new Error("Koneksi ke server terputus. Periksa jaringan internet Anda.");
+        network.transient = true;
+        network.name = "TypeError";
+        if (!options.silent) setConnection(false);
+        throw network;
+      }
       if (!options.silent) setConnection(false);
       throw error;
     } finally {
@@ -3183,6 +3858,24 @@ function detectTeamRoleFromLabel(label) {
       localStorage.setItem("siap_pidum_demo_cases", JSON.stringify(demoCases));
       return Promise.resolve({ case: demoCases[index], administration: record });
     }
+    if (action === "listProsecutors") return Promise.resolve({ prosecutors: [
+      { id: "JAKSA-001", name: "Indra Thimoty, S.H., M.H.", nip: "198701012010011001", pangkat: "Jaksa Muda", jabatan: "Kasi Pidum" },
+      { id: "JAKSA-002", name: "Daniel Marbun, S.H.", nip: "199002022015031002", pangkat: "Ajun Jaksa", jabatan: "Jaksa Fungsional" }
+    ] });
+    if (action === "listCaseAnalyses") return Promise.resolve({ analyses: [] });
+    if (action === "analyzeCase") return new Promise((resolve) => setTimeout(() => resolve({
+      analysis: { model: "demo", createdAt: new Date().toISOString() },
+      parsed: {
+        kesimpulan: "Contoh hasil analisa mode demo. Unsur pokok tampak terpenuhi namun nilai kerugian perlu didalami.",
+        jenisKasus: { kategori: "pidana", referensiUU: "UU 1/2023", penjelasan: "Perbuatan mengambil barang milik orang lain dengan kekerasan." },
+        identifikasiKorban: { status: "dewasa", penjelasan: "Korban berusia dewasa menurut uraian." },
+        unsurFormil: [{ unsur: "SPDP & Sprindik", status: "terpenuhi", keterangan: "Dokumen lengkap." }],
+        unsurMateril: [{ unsur: "Mengambil barang", status: "terpenuhi", keterangan: "Didukung keterangan saksi." }, { unsur: "Dengan kekerasan", status: "perlu pendalaman", keterangan: "Visum belum dilampirkan." }],
+        asasDilanggar: [{ asas: "Asas legalitas", penjelasan: "Perbuatan diatur dalam KUHP Nasional." }],
+        pasalDisarankan: [{ pasal: "Pasal 479", undangUndang: "UU 1/2023", alasan: "Pencurian dengan kekerasan." }]
+      }
+    }), 600));
+    if (action === "chatAi") return new Promise((resolve) => setTimeout(() => resolve({ reply: "**Mode demo** — jawaban contoh untuk: " + payload.message }), 500));
     if (action === "updateCase") {
       const index = demoCases.findIndex((item) => item.caseId === payload.caseId);
       if (index < 0) return Promise.reject(new Error("Perkara tidak ditemukan."));
@@ -3302,6 +3995,11 @@ function detectTeamRoleFromLabel(label) {
     if (Number.isNaN(date.getTime())) return String(value);
     return new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric" }).format(date);
   }
+  function formatTime(value) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit" }).format(date);
+  }
   function formatDateTime(value) {
     if (!value) return "-";
     const date = new Date(value);
@@ -3350,286 +4048,254 @@ function detectTeamRoleFromLabel(label) {
     return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
   }
 
-  // ---- Analisa AI (Gemini) Sidebar Kanan ----
-  window.openAiSidebar = function(caseId) {
-  let sidebar = document.getElementById("ai-right-sidebar");
-  let appView = document.getElementById("app-view"); 
-  
-  if (appView) {
-    appView.style.transition = "padding-right 0.3s ease";
-  }
+  // ---- Analisa AI (Gemini) — panel kanan (drawer) V4 ----
+  // Tidak lagi mendorong layout (padding-right) sehingga animasi ringan & tidak patah-patah.
+  let aiRequestToken = 0;
 
-  if (!sidebar) {
-    // Penambahan box-sizing: border-box dan perbaikan struktur flex
-    document.body.insertAdjacentHTML('beforeend', `
-      <div id="ai-right-sidebar" class="ai-sidebar" style="position: fixed; top: 0; right: -500px; width: 500px; max-width: 100%; height: 100vh; background: #fff; box-shadow: -4px 0 15px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 9999; display: flex; flex-direction: column; box-sizing: border-box;">
-        
-        <!-- HEADER -->
-        <div class="ai-sidebar-header" style="padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; flex-shrink: 0;">
-          <h3 style="margin:0;">Analisa AI </h3>
-          <button onclick="document.getElementById('ai-right-sidebar').style.right = '-500px'; if(document.getElementById('app-view')) document.getElementById('app-view').style.paddingRight = '0';" style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
-        </div>
-        
-        <!-- KONTEN UTAMA (Area Scroll) -->
-        <div id="ai-scroll-container" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; scroll-behavior: smooth;">
-          
-          <!-- Tempat Analisa Awal -->
+  function ensureAiSidebar() {
+    let sidebar = document.getElementById("ai-right-sidebar");
+    if (sidebar) return sidebar;
+    document.body.insertAdjacentHTML("beforeend", `
+      <div id="ai-scrim" class="ai-scrim" hidden></div>
+      <aside id="ai-right-sidebar" class="ai-drawer" aria-hidden="true" aria-label="Panel analisa AI">
+        <header class="ai-drawer-head">
+          <div>
+            <span class="case-eyebrow">Analisa AI · Gemini</span>
+            <strong id="ai-drawer-title">Perkara</strong>
+            <small id="ai-drawer-sub"></small>
+          </div>
+          <div class="ai-drawer-head-actions">
+            <button type="button" id="ai-rerun" class="case-ghost-button small" title="Jalankan ulang analisa">↻ Ulang</button>
+            <button type="button" id="ai-close" class="case-modal-close" aria-label="Tutup panel AI">×</button>
+          </div>
+        </header>
+        <div id="ai-scroll-container" class="ai-drawer-body">
           <div id="ai-sidebar-result"></div>
-          
-          <!-- Garis Pembatas (Akan muncul setelah analisa selesai) -->
-          <hr id="ai-chat-divider" style="border: 0; border-top: 1px dashed #cbd5e1; margin: 20px 0; display: none;" />
-          
-          <!-- Tempat History Chat (Terpisah dari Analisa Awal) -->
-          <div id="ai-chat-history" style="display: flex; flex-direction: column; gap: 10px;"></div>
-
+          <hr id="ai-chat-divider" class="ai-divider" hidden />
+          <div id="ai-chat-history" class="ai-chat-history"></div>
         </div>
-        
-        <!-- AREA CHATBOX (Terkunci di bawah) -->
-        <div style="padding: 15px 20px; border-top: 1px solid #e5e7eb; background: #fff; display: flex; gap: 8px; flex-shrink: 0; box-sizing: border-box; padding-bottom: max(15px, env(safe-area-inset-bottom));">
-          <input type="text" id="ai-chat-input" placeholder="Tanyakan lebih lanjut soal berkas ini..." style="flex:1; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none;" />
-          <button id="ai-chat-btn" class="primary-button" style="padding: 10px 15px; border-radius: 6px; background: #800000; color: white; border: none; cursor: pointer;">Kirim</button>
-        </div>
-      </div>
-    `);
+        <form id="ai-chat-form" class="ai-chat-form">
+          <input type="text" id="ai-chat-input" autocomplete="off" placeholder="Tanyakan lebih lanjut soal berkas ini…" />
+          <button id="ai-chat-btn" class="case-primary-button" type="submit">Kirim</button>
+        </form>
+      </aside>`);
     sidebar = document.getElementById("ai-right-sidebar");
-  }
-  
-  // Menggunakan properti objek agar event listener tidak saling tumpuk saat dibuka-tutup
-  const chatBtn = document.getElementById("ai-chat-btn");
-  const chatInput = document.getElementById("ai-chat-input");
-  
-  chatBtn.onclick = () => window.sendAiChat(caseId);
-  chatInput.onkeypress = (e) => { if(e.key === 'Enter') window.sendAiChat(caseId); };
-  
-  sidebar.style.right = "0";
-  if (appView && window.innerWidth > 920) {
-    appView.style.paddingRight = "500px"; 
+    document.getElementById("ai-close").addEventListener("click", closeAiSidebar);
+    document.getElementById("ai-scrim").addEventListener("click", closeAiSidebar);
+    document.getElementById("ai-rerun").addEventListener("click", () => {
+      const caseId = sidebar.dataset.caseId;
+      if (caseId) runSidebarAnalysis(caseId, { force: true });
+    });
+    document.getElementById("ai-chat-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const caseId = sidebar.dataset.caseId;
+      if (caseId) window.sendAiChat(caseId);
+    });
+    return sidebar;
   }
 
-  // Reset tampilan tiap kali sidebar dibuka
-  const resultBox = document.getElementById("ai-sidebar-result");
-  document.getElementById("ai-chat-history").innerHTML = ""; 
-  document.getElementById("ai-chat-divider").style.display = "none";
-  chatInput.value = "";
+  function closeAiSidebar() {
+    const sidebar = document.getElementById("ai-right-sidebar");
+    const scrim = document.getElementById("ai-scrim");
+    if (!sidebar) return;
+    sidebar.classList.remove("open");
+    sidebar.setAttribute("aria-hidden", "true");
+    if (scrim) {
+      scrim.classList.remove("open");
+      setTimeout(() => { if (!sidebar.classList.contains("open")) scrim.hidden = true; }, 220);
+    }
+    document.body.classList.remove("ai-open");
+  }
 
-  resultBox.innerHTML = `
-    <div class="skeleton" style="height:150px; margin-bottom:10px; background:#f3f4f6; border-radius:8px;"></div>
-    <p class="case-secondary" style="font-size:13px; color:#64748b;">Menganalisa perkara ${caseId}, mohon tunggu...</p>
-  `;
-  
-  gasRequest("analyzeCase", { caseId })
-    .then(data => {
-      renderAiAnalysisResult(data.parsed, data.analysis, "ai-sidebar-result");
-      // Tampilkan pembatas setelah analisa sukses dirender
-      document.getElementById("ai-chat-divider").style.display = "block";
-    })
-    .catch(err => resultBox.innerHTML = `<p style="padding: 10px; background: #fef2f2; color: #dc2626; border-radius: 6px; font-size: 13px;">Gagal: ${err.message}</p>`);
-};
+  function isAiSidebarOpen() {
+    return Boolean(document.getElementById("ai-right-sidebar")?.classList.contains("open"));
+  }
+
+  window.openAiSidebar = function (caseId) {
+    const item = state.cases.find((entry) => entry.caseId === caseId);
+    const sidebar = ensureAiSidebar();
+    const scrim = document.getElementById("ai-scrim");
+    const sameCase = sidebar.dataset.caseId === caseId;
+    sidebar.dataset.caseId = caseId;
+
+    document.getElementById("ai-drawer-title").textContent = item?.suspectName || caseId;
+    document.getElementById("ai-drawer-sub").textContent = `${item?.courtCaseNumber || caseId}${item?.allegedArticle ? " · " + item.allegedArticle.slice(0, 80) : ""}`;
+
+    scrim.hidden = false;
+    requestAnimationFrame(() => {
+      scrim.classList.add("open");
+      sidebar.classList.add("open");
+    });
+    sidebar.setAttribute("aria-hidden", "false");
+    document.body.classList.add("ai-open");
+
+    if (sameCase && document.getElementById("ai-sidebar-result").childElementCount) return; // percakapan tetap
+    document.getElementById("ai-chat-history").innerHTML = "";
+    document.getElementById("ai-chat-divider").hidden = true;
+    document.getElementById("ai-chat-input").value = "";
+    runSidebarAnalysis(caseId, { force: false });
+  };
+
+  async function runSidebarAnalysis(caseId, { force }) {
+    const token = ++aiRequestToken;
+    const resultBox = document.getElementById("ai-sidebar-result");
+    const rerun = document.getElementById("ai-rerun");
+    resultBox.innerHTML = `
+      <div class="ai-loading">
+        <div class="skeleton" style="height:18px;width:60%"></div>
+        <div class="skeleton" style="height:12px;width:92%"></div>
+        <div class="skeleton" style="height:12px;width:80%"></div>
+        <div class="skeleton" style="height:120px"></div>
+        <p>${force ? "Menjalankan analisa baru" : "Memuat analisa"} untuk ${escapeHtml(caseId)}…</p>
+      </div>`;
+    if (rerun) rerun.disabled = true;
+    try {
+      let parsed = null;
+      let meta = null;
+      if (!force) {
+        const history = await gasRequest("listCaseAnalyses", { caseId }, { silent: true, timeout: 30000 }).catch(() => ({ analyses: [] }));
+        const latest = (history.analyses || [])[0];
+        if (latest) { parsed = latest; meta = latest; }
+      }
+      if (!parsed) {
+        const data = await gasRequest("analyzeCase", { caseId }, { timeout: 120000 });
+        parsed = data.parsed;
+        meta = data.analysis;
+      }
+      if (token !== aiRequestToken) return; // pengguna sudah membuka perkara lain
+      renderAiAnalysisResult(parsed, meta, "ai-sidebar-result");
+      document.getElementById("ai-chat-divider").hidden = false;
+    } catch (error) {
+      if (token !== aiRequestToken) return;
+      resultBox.innerHTML = `<div class="ai-error"><strong>Analisa gagal</strong><p>${escapeHtml(error.message || String(error))}</p></div>`;
+    } finally {
+      if (rerun && token === aiRequestToken) rerun.disabled = false;
+    }
+  }
 
   async function runAiAnalysis(caseId) {
     const resultBox = document.getElementById("ai-analysis-result");
     const button = document.getElementById("ai-analyze-btn");
     if (!resultBox) return;
- 
-    if (button) { button.disabled = true; button.textContent = "Menganalisa..."; }
-    resultBox.innerHTML = `<p class="case-secondary">Sedang menghubungi AI, mohon tunggu...</p>`;
- 
+    if (button) { button.disabled = true; button.textContent = "Menganalisa…"; }
+    resultBox.innerHTML = `<div class="ai-loading"><div class="skeleton" style="height:14px;width:70%"></div><div class="skeleton" style="height:90px"></div><p>Menghubungi AI, mohon tunggu…</p></div>`;
     try {
-      const data = await gasRequest("analyzeCase", { caseId }, { timeout: 60000 });
+      const data = await gasRequest("analyzeCase", { caseId }, { timeout: 120000 });
       renderAiAnalysisResult(data.parsed, data.analysis);
     } catch (error) {
-      resultBox.innerHTML = `<p class="status-badge red" style="display:inline-block">Gagal menjalankan analisa: ${escapeHtml(error.message || String(error))}</p>`;
+      resultBox.innerHTML = `<div class="ai-error"><strong>Analisa gagal</strong><p>${escapeHtml(error.message || String(error))}</p></div>`;
     } finally {
-      if (button) { button.disabled = false; button.textContent = "Jalankan analisa AI"; }
+      if (button) { button.disabled = false; button.textContent = "✦ Jalankan analisa"; }
     }
   }
- 
+
   async function loadExistingAiAnalyses(caseId) {
     const resultBox = document.getElementById("ai-analysis-result");
-    if (!resultBox) return;
+    if (!resultBox || resultBox.dataset.loadedFor === caseId) return;
+    resultBox.dataset.loadedFor = caseId;
     try {
       const data = await gasRequest("listCaseAnalyses", { caseId }, { silent: true, timeout: 30000 });
       const latest = (data.analyses || [])[0];
+      if (!document.body.contains(resultBox)) return;
       if (latest) {
-        resultBox.innerHTML = `<p class="case-secondary">Menampilkan hasil analisa terakhir (${formatDate(latest.createdAt)}). Klik tombol di atas untuk menjalankan ulang.</p>`;
         renderAiAnalysisResult(latest, latest);
+        resultBox.insertAdjacentHTML("afterbegin", `<p class="case-muted">Hasil analisa terakhir · ${formatDateTime(latest.createdAt)}</p>`);
+      } else {
+        resultBox.innerHTML = `<p class="case-muted">Belum ada analisa untuk perkara ini. Tekan “Jalankan analisa”.</p>`;
       }
     } catch (error) {
-      // diam-diam saja: riwayat opsional, jangan ganggu tampilan awal modal
+      if (document.body.contains(resultBox)) resultBox.innerHTML = `<p class="case-muted">Riwayat analisa tidak dapat dimuat.</p>`;
     }
   }
- 
+
   function renderAiAnalysisResult(parsed, meta, targetId = "ai-analysis-result") {
     const resultBox = document.getElementById(targetId);
     if (!resultBox || !parsed) return;
- 
+
     const statusTone = (status) => {
-      const s = String(status || "").toLowerCase();
-      if (s.indexOf("belum") !== -1) return "red";
-      if (s.indexOf("pendalaman") !== -1) return "amber";
+      const value = String(status || "").toLowerCase();
+      if (value.includes("belum")) return "red";
+      if (value.includes("pendalaman")) return "amber";
       return "green";
     };
- 
-    const renderUnsurList = (items) => (items || []).map((u) => `
-      <div class="detail-item full-span" style="border-left:3px solid var(--border-color, #ddd);padding-left:10px;margin-bottom:8px">
-        <span><strong>${escapeHtml(u.unsur || "-")}</strong> — <span class="status-badge ${statusTone(u.status)}">${escapeHtml(u.status || "-")}</span></span>
-        <div>${escapeHtml(u.keterangan || "")}</div>
-      </div>
-    `).join("");
- 
-    const renderAsasList = (items) => (items || []).map((a) => `
-      <li><strong>${escapeHtml(a.asas || "-")}</strong>: ${escapeHtml(a.penjelasan || "")}</li>
-    `).join("");
- 
-    const renderPasalList = (items) => (items || []).map((p) => `
-      <li><strong>${escapeHtml(p.pasal || "-")}</strong> (${escapeHtml(p.undangUndang || "-")}) — ${escapeHtml(p.alasan || "")}</li>
-    `).join("");
- 
+    const unsurList = (items) => (items || []).map((u) => `
+      <li class="ai-unsur ${statusTone(u.status)}">
+        <div><strong>${escapeHtml(u.unsur || "-")}</strong><span class="case-inline-badge ${statusTone(u.status)}">${escapeHtml(u.status || "-")}</span></div>
+        ${u.keterangan ? `<p>${escapeHtml(u.keterangan)}</p>` : ""}
+      </li>`).join("");
+    const asasList = (items) => (items || []).map((a) => `<li><strong>${escapeHtml(a.asas || "-")}</strong> — ${escapeHtml(a.penjelasan || "")}</li>`).join("");
+    const pasalList = (items) => (items || []).map((p) => `<li><strong>${escapeHtml(p.pasal || "-")}</strong> <span class="case-muted">(${escapeHtml(p.undangUndang || "-")})</span><br>${escapeHtml(p.alasan || "")}</li>`).join("");
+    const jenis = parsed.jenisKasus && typeof parsed.jenisKasus === "object" ? parsed.jenisKasus : null;
+    const korban = parsed.identifikasiKorban && typeof parsed.identifikasiKorban === "object" ? parsed.identifikasiKorban : null;
+
     resultBox.innerHTML = `
-      <div class="ai-result-card" style="border:1px solid var(--border-color,#ddd);border-radius:10px;padding:14px">
-        <p><strong>Kesimpulan singkat:</strong> ${escapeHtml(parsed.kesimpulan || "-")}</p>
- 
-        <h4>Asas yang relevan/berpotensi dilanggar</h4>
-        <ul>${renderAsasList(parsed.asasDilanggar) || "<li>-</li>"}</ul>
- 
-        <h4>Unsur formil</h4>
-        ${renderUnsurList(parsed.unsurFormil) || "<p>-</p>"}
- 
-        <h4>Unsur materil</h4>
-        ${renderUnsurList(parsed.unsurMateril) || "<p>-</p>"}
- 
-        <h4>Pasal yang disarankan untuk didalami</h4>
-        <ul>${renderPasalList(parsed.pasalDisarankan) || "<li>-</li>"}</ul>
- 
-        <p class="case-secondary" style="margin-top:10px">⚠ ${escapeHtml(parsed.catatanKehatihatian || "Hasil ini adalah draf pendukung prapenuntutan, bukan pengganti keputusan hukum Jaksa Peneliti.")}</p>
-        ${meta && meta.model ? `<p class="case-secondary" style="font-size:12px">Model: ${escapeHtml(meta.model)} · Rujukan: ${escapeHtml(meta.lawsReferenced || "-")}</p>` : ""}
-      </div>
-    `;
+      <article class="ai-result">
+        <div class="ai-summary">
+          <span class="case-eyebrow">Kesimpulan</span>
+          <p>${escapeHtml(parsed.kesimpulan || "-")}</p>
+          <div class="ai-tags">
+            ${jenis?.kategori ? `<span class="case-chip">Jenis: ${escapeHtml(jenis.kategori)}</span>` : ""}
+            ${korban?.status ? `<span class="case-chip">Korban: ${escapeHtml(korban.status)}</span>` : ""}
+          </div>
+        </div>
+        ${jenis?.penjelasan ? `<details class="ai-block" open><summary>Kualifikasi perkara</summary><p>${escapeHtml(jenis.penjelasan)}${jenis.referensiUU ? `<br><span class="case-muted">Rujukan: ${escapeHtml(jenis.referensiUU)}</span>` : ""}</p></details>` : ""}
+        <details class="ai-block" open><summary>Unsur formil</summary><ul class="ai-unsur-list">${unsurList(parsed.unsurFormil) || "<li>-</li>"}</ul></details>
+        <details class="ai-block" open><summary>Unsur materil</summary><ul class="ai-unsur-list">${unsurList(parsed.unsurMateril) || "<li>-</li>"}</ul></details>
+        <details class="ai-block"><summary>Asas hukum relevan</summary><ul>${asasList(parsed.asasDilanggar) || "<li>-</li>"}</ul></details>
+        <details class="ai-block"><summary>Pasal yang disarankan didalami</summary><ul>${pasalList(parsed.pasalDisarankan) || "<li>-</li>"}</ul></details>
+        ${korban?.penjelasan ? `<details class="ai-block"><summary>Identifikasi korban</summary><p>${escapeHtml(korban.penjelasan)}</p></details>` : ""}
+        <p class="ai-disclaimer">⚠ ${escapeHtml(parsed.catatanKehatihatian || "Hasil ini adalah draf pendukung prapenuntutan, bukan pengganti keputusan hukum Jaksa Peneliti.")}</p>
+        ${meta && meta.model ? `<p class="case-muted small">Model ${escapeHtml(meta.model)}${meta.createdAt ? ` · ${formatDateTime(meta.createdAt)}` : ""}</p>` : ""}
+      </article>`;
   }
 
   // --- CHAT BOX AI ---
-  // --- CHAT BOX AI ---
-  window.sendAiChat = async function(caseId) {
+  window.sendAiChat = async function (caseId) {
     const inputField = document.getElementById("ai-chat-input");
     const sendBtn = document.getElementById("ai-chat-btn");
     const chatHistory = document.getElementById("ai-chat-history");
     const scrollContainer = document.getElementById("ai-scroll-container");
-    
     const message = inputField.value.trim();
-    if (!message) return;
+    if (!message || sendBtn.disabled) return;
 
-    // Bersihkan input dan kunci tombol
     inputField.value = "";
     sendBtn.disabled = true;
-    sendBtn.textContent = "...";
+    sendBtn.textContent = "…";
 
-    // Helper untuk merubah teks biasa menjadi aman dan merender Markdown (Bold/Italic/Heading)
-    const sanitizeAndParseMarkdown = (str) => {
-      const temp = document.createElement('div');
-      temp.textContent = str;
-      let html = temp.innerHTML;
-      
-      html = html.replace(/### (.*?)(?=\n|$)/g, '<strong style="font-size: 14px; color: #1e3a8a;">$1</strong>');
-      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-      
-      return html;
+    const formatMarkdown = (str) => {
+      let html = escapeHtml(str);
+      html = html.replace(/^###\s?(.*)$/gm, "<strong class=\"ai-h\">$1</strong>");
+      html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      html = html.replace(/(^|[^*])\*(?!\s)(.+?)\*/g, "$1<em>$2</em>");
+      html = html.replace(/^\s*[-•]\s+/gm, "• ");
+      return html.replace(/\n/g, "<br>");
     };
+    const scrollDown = () => scrollContainer.scrollTo({ top: scrollContainer.scrollHeight, behavior: "smooth" });
 
-    // 1. Tambahkan bubble chat dari Anda ke dalam ai-chat-history (Hanya 1 deklarasi)
-    const userChatHtml = `
-      <div style="padding: 12px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px 8px 0px 8px; margin-left: 30px; align-self: flex-end; margin-bottom: 5px;">
-        <strong style="color: #1e3a8a; font-size: 13px;">Anda</strong><br/>
-        <span style="font-size: 13px;">${sanitizeAndParseMarkdown(message).replace(/\n/g, '<br/>')}</span>
-      </div>`;
-    chatHistory.insertAdjacentHTML('beforeend', userChatHtml);
-    scrollContainer.scrollTop = scrollContainer.scrollHeight;
-
-    // 2. Tambahkan indikator loading
-    const loadingId = "ai-loading-" + Date.now();
-    const loadingHtml = `
-      <div id="${loadingId}" style="padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px 8px 8px 0px; margin-right: 30px; align-self: flex-start; margin-bottom: 5px;">
-        <span style="color: #64748b; font-size: 13px; font-style: italic;">AI sedang menganalisa...</span>
-      </div>`;
-    chatHistory.insertAdjacentHTML('beforeend', loadingHtml);
-    scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    chatHistory.insertAdjacentHTML("beforeend", `<div class="ai-bubble user"><b>Anda</b><span>${formatMarkdown(message)}</span></div>`);
+    const loadingId = `ai-loading-${Date.now()}`;
+    chatHistory.insertAdjacentHTML("beforeend", `<div id="${loadingId}" class="ai-bubble bot typing"><span class="typing-dots"><i></i><i></i><i></i></span></div>`);
+    scrollDown();
 
     try {
-      // 3. Panggil endpoint chat backend menggunakan fungsi lokal gasRequest
-      const response = await gasRequest("chatAi", { caseId: caseId, message: message });
-      
-      // Hapus animasi loading
+      const response = await gasRequest("chatAi", { caseId, message }, { timeout: 90000 });
       document.getElementById(loadingId)?.remove();
-
-      // Gunakan fungsi Markdown parser
-      const formattedReply = sanitizeAndParseMarkdown(response.reply).replace(/\n/g, '<br/>');
-      
-      // 4. Tambahkan bubble chat dari AI
-      const aiChat = `
-        <div style="padding: 12px 14px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px 8px 8px 0px; margin-right: 10px; align-self: flex-start; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 5px;">
-          <strong style="color: #0f172a; font-size: 13px;"> AI</strong><br/>
-          <span style="font-size: 13px; color: #334155; line-height: 1.5;">${formattedReply}</span>
-        </div>`;
-      chatHistory.insertAdjacentHTML('beforeend', aiChat);
-
+      if (document.getElementById("ai-right-sidebar")?.dataset.caseId !== caseId) return;
+      chatHistory.insertAdjacentHTML("beforeend", `<div class="ai-bubble bot"><b>AI</b><span>${formatMarkdown(response.reply || "-")}</span></div>`);
     } catch (error) {
       document.getElementById(loadingId)?.remove();
-      const tempDiv = document.createElement('div');
-      tempDiv.textContent = error.message;
-      chatHistory.insertAdjacentHTML('beforeend', `
-        <div style="padding: 10px; background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; border-radius: 8px; font-size:13px; margin-bottom: 5px;">
-          <strong>Sistem Gagal:</strong> ${tempDiv.innerHTML}
-        </div>`);
+      chatHistory.insertAdjacentHTML("beforeend", `<div class="ai-error"><strong>Sistem gagal</strong><p>${escapeHtml(error.message)}</p></div>`);
     } finally {
       sendBtn.disabled = false;
       sendBtn.textContent = "Kirim";
-      inputField.focus();
-      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      inputField.focus({ preventScroll: true });
+      scrollDown();
     }
   };
 
 })(); // === PENUTUP BLOK UTAMA APLIKASI (IIFE) HARUS BERADA DI SINI ===
 
-// --- Fungsi di luar blok (biarkan apa adanya) ---
-function autoFillHistoricalData(currentCase) {
-  if (!currentCase || !currentCase.administrations) return;
-
-  const historicalData = {};
-  
-  currentCase.administrations.forEach(function(admin) {
-    if (admin.formData) {
-      Object.keys(admin.formData).forEach(function(key) {
-        if (admin.formData[key]) {
-          historicalData[key] = admin.formData[key];
-        }
-      });
-    }
-  });
-
-  Object.keys(historicalData).forEach(function(key) {
-    const historicalValue = historicalData[key];
-    
-    let inputElement = document.querySelector(`input[name="${key}"]`);
-    
-    if (!inputElement) {
-      const camelCaseId = key.replace(/(?:^\w|[A-Z]|\b\w)/g, function(word, index) {
-        return index === 0 ? word.toLowerCase() : word.toUpperCase();
-      }).replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, ''); 
-      
-      inputElement = document.getElementById(camelCaseId) || document.querySelector(`input[name="${camelCaseId}"]`);
-    }
-
-    if (inputElement && !inputElement.value) {
-      inputElement.value = historicalValue;
-      
-      inputElement.style.backgroundColor = '#e8f0fe';
-      
-      inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-      inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-  });
-}
-
+// --- Kalkulasi otomatis tanggal akhir perpanjangan penahanan (T-4) ---
 document.addEventListener('input', function(e) {
     const targetKey = e.target?.dataset?.fieldKey || e.target?.name || e.target?.id;
 
