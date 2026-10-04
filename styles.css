@@ -2504,3 +2504,15 @@ body.ai-docked .notif-panel { right: calc(var(--ai-w) + 18px); }
   .koor-row-actions > * { flex: 1; }
   .koor-case-grid { grid-template-columns: 1fr; }
 }
+
+/* V5.1 — koordinasi sebelum SPDP */
+.koor-start { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 18px 20px; border: 1px solid #ecdcb8; border-radius: 16px; background: radial-gradient(circle at 100% 0, rgba(184,138,69,.14), transparent 45%), linear-gradient(120deg, #fffaf0, #fff); }
+.koor-start.compact { margin: 0 0 18px; padding: 14px 16px; }
+.koor-start-icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 14px; background: linear-gradient(135deg, #8e3650, #5a172b); color: var(--pidum-gold-soft, #ead6a5); font-size: 18px; font-weight: 800; }
+.koor-start-copy strong { color: var(--v4-text); font-size: 15px; }
+.koor-start-copy p { margin: 3px 0 0; color: var(--v4-muted); font-size: 12px; line-height: 1.55; }
+.koor-case.pre { border-style: dashed; }
+@media (max-width: 760px) {
+  .koor-start { grid-template-columns: auto minmax(0, 1fr); }
+  .koor-start > .case-primary-button { grid-column: 1 / -1; }
+}
