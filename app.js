@@ -1228,7 +1228,11 @@
               ${field("NIP/NRP", "investigatorNipNrp", "text", true)}
               ${field("Jabatan", "investigatorPosition", "text", true)}
               ${field("Instansi/Unit Penyidik", "investigatorInstitution", "text", true, "", "Contoh: Polres Muna / Satreskrim")}
-              ${field("Nomor kontak", "investigatorPhone", "tel", false)}
+              <div class="form-field">
+                <label for="investigatorPhone">Nomor HP / WhatsApp Penyidik <span class="required">*</span></label>
+                <input id="investigatorPhone" name="investigatorPhone" type="tel" inputmode="tel" autocomplete="tel" required pattern="^(\\+62|62|0)8[\\d\\s]{7,15}$" placeholder="Contoh: 081234567890" />
+                <small class="form-hint">Nomor aktif WhatsApp. Dikirimkan kepada Jaksa Peneliti agar dapat segera menghubungi Anda untuk koordinasi.</small>
+              </div>
             </div>`)}
 
           ${formSection("02", "Data SPDP dan Perkara", "Data dasar untuk verifikasi penerimaan.", `
@@ -2644,6 +2648,12 @@ function detectTeamRoleFromLabel(label) {
       toast("success", `${type} berhasil dibuat`, statusNote);
       progress.done();
       renderBuilderSuccess({ type, result, statusNote });
+      const waList = Array.isArray(result.waNotifications) ? result.waNotifications : [];
+      if (waList.length) {
+        const sent = waList.filter((entry) => entry.status === "sent").length;
+        toast(sent === waList.length ? "success" : "warning", "Notifikasi WhatsApp Jaksa Peneliti",
+          `${sent} dari ${waList.length} Jaksa menerima pemberitahuan penunjukan.${sent < waList.length ? " Periksa nomor di sheet List Jaksa / token Fonnte." : ""}`);
+      }
       const unfilled = Array.isArray(result.unfilledPlaceholders) ? result.unfilledPlaceholders : [];
       if (unfilled.length) {
         toast("warning", `${unfilled.length} bagian dokumen berisi "......"`, `Placeholder tanpa data: ${unfilled.slice(0, 6).map((name) => `{{${name}}}`).join(", ")}${unfilled.length > 6 ? ", …" : ""}`);
@@ -2678,6 +2688,10 @@ function detectTeamRoleFromLabel(label) {
         <div class="builder-success-copy">
           <strong>${escapeHtml(type)} tersimpan</strong>
           <p>${escapeHtml(statusNote)}${result.administration?.documentNumber ? ` Nomor: ${escapeHtml(result.administration.documentNumber)}.` : ""}</p>
+          ${(result.waNotifications || []).length ? `
+            <ul class="wa-result">
+              ${result.waNotifications.map((entry) => `<li class="${escapeAttr(entry.status)}"><b>${entry.status === "sent" ? "✓ WA terkirim" : entry.status === "failed" ? "✕ Gagal" : "– Dilewati"}</b> ${escapeHtml(entry.name)}${entry.phone ? ` · ${escapeHtml(entry.phone)}` : ""}${entry.message ? `<small>${escapeHtml(entry.message)}</small>` : ""}</li>`).join("")}
+            </ul>` : ""}
           ${(result.unfilledPlaceholders || []).length ? `<p class="builder-unfilled">Bagian berikut di template belum memiliki data sehingga tertulis "......": ${(result.unfilledPlaceholders || []).map((name) => `<code>{{${escapeHtml(name)}}}</code>`).join(" ")}. Lengkapi isian form atau sesuaikan nama placeholder di template Google Docs.</p>` : ""}
         </div>
         <div class="builder-success-actions">
@@ -4267,7 +4281,7 @@ function detectTeamRoleFromLabel(label) {
     put("nrp_penyidik", item.investigatorNipNrp);
     put("jabatan_penyidik", item.investigatorPosition);
     put("nama_satuan", item.investigatorInstitution);
-    put("nomor_hp", item.investigatorPhone);
+    put("nomor_hp", String(item.investigatorPhone || "").replace(/[^\d+]/g, ""));
     put("nomor_spdp", item.spdpNumber);
     put("tanggal_spdp", toDateInputValue(item.spdpDate));
     put("nama_tersangka", item.suspectName);
