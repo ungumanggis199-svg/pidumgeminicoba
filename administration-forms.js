@@ -151,7 +151,11 @@
             { key: "member2RankNip", label: "Pangkat/NIP anggota 2", type: "text" },
             { key: "member2Position", label: "Jabatan anggota 2", type: "text" },
             { key: "member2Role", label: "Kedudukan anggota 2", type: "text", defaultValue: "Penuntut Umum / Jaksa Peneliti" },
-            { key: "additionalTeamMembers", label: "Anggota tim tambahan", type: "textarea", placeholder: "Tuliskan satu anggota per baris: nama | pangkat/NIP | jabatan | kedudukan", full: true }
+            { key: "additionalTeamMembers", label: "Anggota tim tambahan", type: "textarea", placeholder: "Tuliskan satu anggota per baris: nama | pangkat/NIP | jabatan | kedudukan", full: true },
+            { key: "notifyWhatsapp", label: "Kirim notifikasi WhatsApp ke tim Jaksa Peneliti", type: "select", required: true, defaultValue: "Ya", options: [
+              { value: "Ya", label: "Ya — kirim pemberitahuan penunjukan melalui WhatsApp (Fonnte)" },
+              { value: "Tidak", label: "Tidak — jangan kirim" }
+            ] }
           ]
         }
       ]
