@@ -2526,3 +2526,5 @@ body.ai-docked .notif-panel { right: calc(var(--ai-w) + 18px); }
 .wa-result li.failed b { color: var(--v4-red); }
 .wa-result li.skipped b { color: var(--v4-amber); }
 .wa-result small { display: block; margin-top: 2px; color: var(--v4-muted); font-size: 11px; }
+.wa-diag-row { display: flex; gap: 8px; margin: 10px 0; }
+.wa-diag-row input { flex: 1; min-width: 0; min-height: 36px; padding: 0 10px; border: 1px solid var(--v4-line); border-radius: 9px; }
