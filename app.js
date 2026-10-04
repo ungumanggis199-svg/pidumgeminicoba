@@ -1197,6 +1197,15 @@
           <p>Folder induk arsip SPDP. Backend membuat subfolder berdasarkan ID perkara.</p>
           <a class="integration-link" href="${escapeAttr(CONFIG.DRIVE_FOLDER_URL)}" target="_blank" rel="noopener noreferrer">Buka folder Google Drive</a>
         </section>
+        <section class="settings-card wa-diag-card">
+          <h3>Diagnosa WhatsApp (Fonnte)</h3>
+          <p>Periksa token Fonnte, kolom nomor di sheet List Jaksa, dan nomor tiap Jaksa. Isi nomor uji untuk mengirim pesan percobaan.</p>
+          <div class="wa-diag-row">
+            <input id="wa-test-number" type="tel" placeholder="Nomor uji (opsional), mis. 0812…" />
+            <button id="wa-diag-run" class="case-primary-button" type="button"><span class="button-label">Periksa</span><span class="button-spinner" hidden></span></button>
+          </div>
+          <div id="wa-diag-result"></div>
+        </section>
         <section class="settings-card">
           <h3>Keamanan akun</h3>
           <p>Akun dibaca dari sheet <code>akses</code>. Batasi akses Spreadsheet karena kata sandi tersimpan di sheet tersebut; ubah akun melalui <code>addUser()</code> atau <code>resetPassword()</code> di Apps Script.</p>
@@ -1204,6 +1213,26 @@
         </section>
       </div>`;
     document.getElementById("settings-logout")?.addEventListener("click", logout);
+    document.getElementById("wa-diag-run")?.addEventListener("click", async (event) => {
+      const button = event.currentTarget;
+      const out = document.getElementById("wa-diag-result");
+      setButtonLoading(button, true);
+      try {
+        const r = await gasRequest("diagnoseWhatsapp", { testNumber: document.getElementById("wa-test-number").value.trim() }, { timeout: 60000 });
+        out.innerHTML = `
+          <ul class="wa-result">
+            <li class="${r.tokenSet ? "sent" : "failed"}"><b>${r.tokenSet ? "✓" : "✕"} Token Fonnte</b> ${r.tokenSet ? "tersimpan" : "belum diatur"}</li>
+            <li class="${r.phoneColumn ? "sent" : "failed"}"><b>${r.phoneColumn ? "✓" : "✕"} Kolom nomor WA</b> ${escapeHtml(r.phoneColumn || "tidak ditemukan")}</li>
+            ${(r.jaksa || []).map((j) => `<li class="${j.valid ? "sent" : "skipped"}"><b>${j.valid ? "✓" : "–"} ${escapeHtml(j.name)}</b> ${escapeHtml(j.phone || "tanpa nomor")}</li>`).join("")}
+            ${r.test ? `<li class="${r.test.ok ? "sent" : "failed"}"><b>${r.test.ok ? "✓ Uji kirim berhasil" : "✕ Uji kirim gagal"}</b><small>${escapeHtml(r.test.detail || "")}</small></li>` : ""}
+          </ul>
+          ${(r.problems || []).length ? `<p class="builder-unfilled">${r.problems.map(escapeHtml).join("<br>")}</p>` : `<p class="case-muted">Semua siap. Backend ${escapeHtml(r.version || "")}.</p>`}`;
+      } catch (error) {
+        out.innerHTML = `<p class="builder-unfilled">${escapeHtml(/Aksi tidak dikenal/i.test(error.message) ? "Backend Apps Script belum versi terbaru (V6.1). Tempel Code.gs terbaru lalu Deploy → Manage deployments → Edit → Version: New version." : error.message)}</p>`;
+      } finally {
+        setButtonLoading(button, false);
+      }
+    });
   }
 
   function renderInvestigatorForm() {
@@ -1755,6 +1784,7 @@
           <div class="adm-card-actions">
             ${fileLink(latest, latest.fileUrl ? "Buka dokumen" : "")}
             <button type="button" class="case-ghost-button small" data-create-administration="${escapeAttr(stage.code)}">Buat ulang</button>
+            ${stage.code === "P-16" ? `<button type="button" class="case-ghost-button small" data-resend-wa title="Kirim ulang pemberitahuan WhatsApp ke tim Jaksa">✆ Kirim ulang WA</button>` : ""}
           </div>
           ${older.length ? `
             <details class="adm-history">
@@ -1876,6 +1906,21 @@
       } catch (error) {
         toast("error", "Gagal menyimpan", error.message);
         setButtonLoading(button, false);
+      }
+    });
+
+    root.querySelector("[data-resend-wa]")?.addEventListener("click", async (event) => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      button.textContent = "Mengirim…";
+      try {
+        const result = await gasRequest("resendP16Notification", { caseId }, { timeout: 90000 });
+        showWaSummary(result.waNotifications);
+      } catch (error) {
+        toast("error", "Notifikasi WA gagal", /Aksi tidak dikenal/i.test(error.message) ? "Backend belum versi V6.1 — deploy New version Code.gs." : error.message);
+      } finally {
+        button.disabled = false;
+        button.textContent = "✆ Kirim ulang WA";
       }
     });
 
@@ -2649,11 +2694,10 @@ function detectTeamRoleFromLabel(label) {
       progress.done();
       renderBuilderSuccess({ type, result, statusNote });
       const waList = Array.isArray(result.waNotifications) ? result.waNotifications : [];
-      if (waList.length) {
-        const sent = waList.filter((entry) => entry.status === "sent").length;
-        toast(sent === waList.length ? "success" : "warning", "Notifikasi WhatsApp Jaksa Peneliti",
-          `${sent} dari ${waList.length} Jaksa menerima pemberitahuan penunjukan.${sent < waList.length ? " Periksa nomor di sheet List Jaksa / token Fonnte." : ""}`);
+      if (type === "P-16" && result.case && !Array.isArray(result.waNotifications)) {
+        toast("warning", "Notifikasi WA tidak dijalankan", "Backend Apps Script belum versi V6. Tempel Code.gs terbaru lalu Deploy → Manage deployments → Edit → New version.");
       }
+      if (waList.length) showWaSummary(waList);
       const unfilled = Array.isArray(result.unfilledPlaceholders) ? result.unfilledPlaceholders : [];
       if (unfilled.length) {
         toast("warning", `${unfilled.length} bagian dokumen berisi "......"`, `Placeholder tanpa data: ${unfilled.slice(0, 6).map((name) => `{{${name}}}`).join(", ")}${unfilled.length > 6 ? ", …" : ""}`);
@@ -2664,6 +2708,15 @@ function detectTeamRoleFromLabel(label) {
     } finally {
       setButtonLoading(button, false);
     }
+  }
+
+  function showWaSummary(list) {
+    const entries = Array.isArray(list) ? list : [];
+    if (!entries.length) { toast("warning", "Notifikasi WA", "Tidak ada hasil pengiriman."); return; }
+    const sent = entries.filter((entry) => entry.status === "sent").length;
+    const problems = entries.filter((entry) => entry.status !== "sent").map((entry) => `${entry.name}: ${entry.message || entry.status}`);
+    toast(sent === entries.length ? "success" : "warning", `WhatsApp: ${sent}/${entries.length} Jaksa terkirim`,
+      problems.length ? problems.slice(0, 2).join(" · ") : "Pemberitahuan penunjukan Jaksa Peneliti telah dikirim.");
   }
 
   function showBuilderProgress(label) {
