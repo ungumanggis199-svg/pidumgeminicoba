@@ -43,8 +43,8 @@
   const DASHBOARD_STAGES = Object.freeze([
     { key: "spdp", label: "SPDP & verifikasi", short: "SPDP", phase: "pra", statuses: ["SPDP_DITERIMA", "VERIFIKASI_SPDP"] },
     { key: "p16", label: "Penunjukan PU (P-16)", short: "P-16", phase: "pra", statuses: ["P16_DITERBITKAN"] },
-    { key: "koordinasi", label: "Koordinasi & pemantauan", short: "Koordinasi", phase: "pra", statuses: ["KOORDINASI", "MENUNGGU_BERKAS_TAHAP_I"] },
-    { key: "tahap1", label: "Tahap I · penelitian berkas", short: "Tahap I", phase: "pra", statuses: ["BERKAS_TAHAP_I_DITERIMA", "PENELITIAN_BERKAS"] },
+    { key: "koordinasi", label: "Koordinasi (SOP FORM-6)", short: "Koordinasi", phase: "pra", statuses: ["KOORDINASI"] },
+    { key: "tahap1", label: "Tahap I · berkas & penelitian", short: "Tahap I", phase: "pra", statuses: ["MENUNGGU_BERKAS_TAHAP_I", "BERKAS_TAHAP_I_DITERIMA", "PENELITIAN_BERKAS"] },
     { key: "p19", label: "P-19 · penyidikan tambahan", short: "P-19", phase: "pra", statuses: ["P19_PENGEMBALIAN_BERKAS", "PENYIDIKAN_TAMBAHAN"] },
     { key: "p21", label: "P-21 · berkas lengkap", short: "P-21", phase: "pra", statuses: ["P21_LENGKAP", "MENUNGGU_TAHAP_II"] },
     { key: "tahap2", label: "Tahap II", short: "Tahap II", phase: "tut", statuses: ["TAHAP_II"] },
@@ -57,7 +57,7 @@
     SPDP_DITERIMA: { code: "P-16", text: "Verifikasi SPDP (≤7 hari & kesetaraan) lalu terbitkan P-16" },
     VERIFIKASI_SPDP: { code: "P-16", text: "Terbitkan P-16 atau SOP FORM-1A/1 bila SPDP cacat formil" },
     P16_DITERBITKAN: { code: "SOP FORM-6", text: "Koordinasi dengan penyidik ≤3 hari sejak SPDP" },
-    KOORDINASI: { code: "P-1B", text: "Pantau berkas Tahap I (30 hari) · isi check list SOP FORM-5" },
+    KOORDINASI: { code: "SOP FORM-6", text: "Laksanakan koordinasi sesuai jadwal SIKORDA lalu buat BA Koordinasi (SOP FORM-6)" },
     MENUNGGU_BERKAS_TAHAP_I: { code: "P-17", text: "Bila 30 hari berkas belum masuk: SOP FORM-1B → P-17 → SOP FORM-2" },
     BERKAS_TAHAP_I_DITERIMA: { code: "P-24", text: "Teliti berkas (SOP FORM-5), ekspose (SOP FORM-5A), buat P-24" },
     PENELITIAN_BERKAS: { code: "P-19/P-21", text: "Tetapkan sikap: P-19 (belum lengkap) atau P-21 (lengkap)" },
@@ -320,6 +320,8 @@
     tikMeta: { intelijenCount: 0, validPhoneCount: 0, fonnteConfigured: false },
     tikLoaded: false,
     tikSelectedFiles: [],
+    myCases: [],
+    myCasesLoaded: false,
     caseModalTab: "ringkasan",
     lastLoadedAt: null,
     prosecutorsLoadedAt: 0
@@ -404,6 +406,10 @@
     els.loginForm.addEventListener("submit", handleLogin);
     els.logoutButton.addEventListener("click", logout);
     els.mobileMenuButton.addEventListener("click", () => els.sidebar.classList.toggle("open"));
+    document.querySelector(".topbar-icon-button[aria-label='Notifikasi']")?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleNotificationPanel();
+    });
 
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape") return;
@@ -485,6 +491,12 @@
     } else {
       state.activePage = "submit-spdp";
       renderActivePage();
+      // muat status koordinasi di latar belakang untuk badge & notifikasi
+      gasRequest("listMyCases", {}, { silent: true }).then((result) => {
+        state.myCases = Array.isArray(result.cases) ? result.cases : [];
+        state.myCasesLoaded = true;
+        renderSidebar();
+      }).catch(() => {});
     }
   }
 
@@ -508,6 +520,9 @@
     state.tikMeta = { intelijenCount: 0, validPhoneCount: 0, fonnteConfigured: false };
     state.tikLoaded = false;
     state.tikSelectedFiles = [];
+    state.myCases = [];
+    state.myCasesLoaded = false;
+    document.getElementById("notif-panel")?.remove();
     els.modalRoot.innerHTML = "";
     document.body.classList.remove("modal-open");
     closeAiSidebar();
@@ -540,6 +555,7 @@
 
   function renderSidebar() {
     const isJaksa = state.session.user.role === "jaksa";
+    setTimeout(updateNotificationBell, 0);
     const urgentCount = isJaksa ? state.cases.filter((item) => ["warning", "overdue"].includes(getDeadlineState(item).state)).length : 0;
     const reminderUrgentCount = isJaksa ? state.reminders.filter((item) => {
       const deadline = getReminderDeadlineState(item);
@@ -552,6 +568,7 @@
           { id: "dashboard", icon: "▦", label: "Dashboard" },
           { id: "cases", icon: "▤", label: "Daftar Perkara" },
           { id: "deadlines", icon: "◷", label: "Tenggat Waktu", badge: urgentCount || "" },
+          { id: "koordinasi", icon: "⇄", label: "Koordinasi", badge: koordinasiAttentionCount() || "" },
           { section: "ADMINISTRASI" },
           { id: "reminders", icon: "♢", label: "Reminder WhatsApp", badge: reminderUrgentCount || "" },
           { id: "tik-reminders", icon: "▥", label: "Kartu TIK" },
@@ -563,7 +580,8 @@
         ]
       : [
           { section: "PENGIRIMAN" },
-          { id: "submit-spdp", icon: "＋", label: "Form SPDP" }
+          { id: "submit-spdp", icon: "＋", label: "Form SPDP" },
+          { id: "penyidik-koordinasi", icon: "⇄", label: "Koordinasi", badge: penyidikKoordinasiBadge() || "" }
         ];
 
     els.sidebarMenu.innerHTML = items.map((item) => {
@@ -629,7 +647,9 @@
       "tik-reminders": ["Kartu TIK", "REMINDER INTELIJEN", renderTikReminderPage],
       "administration-builder": ["Buat Administrasi", "FORM OTOMATIS", renderAdministrationBuilderPage],
       settings: ["Pengaturan", "KONFIGURASI", renderSettingsPage],
-      "submit-spdp": ["Pengiriman SPDP", "FORM PENYIDIK", renderInvestigatorForm]
+      "submit-spdp": ["Pengiriman SPDP", "FORM PENYIDIK", renderInvestigatorForm],
+      koordinasi: ["Koordinasi Penyidik", "SIKORDA · SOP FORM-6", renderKoordinasiPage],
+      "penyidik-koordinasi": ["Koordinasi dengan Jaksa", "SIKORDA", renderPenyidikKoordinasiPage]
     };
 
     const current = pages[page] || pages.dashboard;
@@ -692,6 +712,7 @@
 
     els.pageContent.innerHTML = `
       <section class="pidum-dashboard-reference page-enter">
+        ${showKpi ? renderKoordinasiBanner() : ""}
         ${showKpi ? `
           <div class="pidum-kpi-grid">
             ${renderPidumKpiCard("clipboard", "Perkara aktif", activeCases.length, "berjalan saat ini")}
@@ -890,6 +911,7 @@
               <div class="pidum-case-stage" data-label="Tahapan">
                 ${renderDashboardStagePips(item.status)}
                 <span class="pidum-next-step" title="Langkah berikutnya menurut B-310">→ <b>${escapeHtml(next.code)}</b> ${escapeHtml(next.text)}</span>
+                ${renderKoordinasiChip(item)}
               </div>
               <div class="pidum-case-officers" data-label="Jaksa & penyidik">
                 <strong class="${item.prosecutorName ? "" : "muted"}">${escapeHtml(prosecutor)}</strong>
@@ -1361,7 +1383,8 @@
       form.reset();
       state.selectedFile = null;
       setTimeout(() => { document.getElementById("file-progress").style.width = "0"; }, 700);
-      showSubmissionReceipt(result);
+      state.myCasesLoaded = false;
+      showSubmissionReceipt(result, payload);
     } catch (error) {
       document.getElementById("file-progress").style.width = "0";
       toast("error", "Pengiriman gagal", error.message || "Data belum berhasil disimpan.");
@@ -1370,7 +1393,26 @@
     }
   }
 
-  function showSubmissionReceipt(result) {
+  function showSubmissionReceipt(result, submitted = {}) {
+    const koordinasiUrl = buildSikordaFormUrl({
+      caseId: result.caseId,
+      investigatorName: submitted.investigatorName,
+      investigatorRank: submitted.investigatorRank,
+      investigatorNipNrp: submitted.investigatorNipNrp,
+      investigatorPosition: submitted.investigatorPosition,
+      investigatorInstitution: submitted.investigatorInstitution,
+      investigatorPhone: submitted.investigatorPhone,
+      spdpNumber: submitted.spdpNumber,
+      spdpDate: submitted.spdpDate,
+      suspectName: submitted.suspectName,
+      birthPlace: submitted.birthPlace,
+      birthDate: submitted.birthDate,
+      gender: submitted.gender,
+      religion: submitted.religion,
+      occupation: submitted.occupation,
+      address: submitted.address,
+      allegedArticle: submitted.allegedArticle
+    });
     openModal(`
       <div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Bukti pengiriman">
         <div class="modal-card" style="max-width:560px">
@@ -1382,10 +1424,19 @@
               <p>Simpan nomor register perkara ini sebagai referensi administrasi.</p>
             </div>
             ${result.fileUrl ? `<a class="integration-link" href="${escapeAttr(result.fileUrl)}" target="_blank" rel="noopener noreferrer">Buka dokumen SPDP di Google Drive</a>` : ""}
+            ${koordinasiUrl ? `
+              <div class="koor-cta">
+                <div><strong>Langkah berikutnya: koordinasi dengan Jaksa</strong><p>Ajukan permohonan koordinasi di SIKORDA. Data perkara ini akan terisi otomatis.</p></div>
+                <a class="case-primary-button" href="${escapeAttr(koordinasiUrl)}" target="_blank" rel="noopener noreferrer">⇄ Ajukan Koordinasi</a>
+              </div>` : ""}
           </div>
-          <div class="modal-footer"><button class="primary-button" data-close-modal type="button">Tutup</button></div>
+          <div class="modal-footer"><button class="case-ghost-button" type="button" data-receipt-koor>Lihat menu Koordinasi</button><button class="primary-button" data-close-modal type="button">Tutup</button></div>
         </div>
       </div>`);
+    els.modalRoot.querySelector("[data-receipt-koor]")?.addEventListener("click", () => {
+      closeModal();
+      navigate("penyidik-koordinasi");
+    });
   }
 
   function renderCaseTable(cases) {
@@ -1430,6 +1481,7 @@
         if (actionButton.dataset.action === "ai") window.openAiSidebar(caseId);
         return;
       }
+      if (event.target.closest("[data-goto-koordinasi]")) { navigate("koordinasi"); return; }
       const opener = event.target.closest("[data-open-case]");
       if (opener && els.pageContent.contains(opener)) openCaseModal(opener.dataset.openCase);
     });
@@ -1522,6 +1574,7 @@
                 ${item.deadlineDate ? `<small>${escapeHtml(info.type)} — ${formatDate(item.deadlineDate)} (${escapeHtml(info.text.toLowerCase())})</small>` : ""}
               </div>
 
+              ${renderKoordinasiCard(item)}
               ${renderAdministrationOverview(item)}
 
               <h3 class="case-section-title">Data pokok perkara</h3>
@@ -1737,6 +1790,7 @@
     const current = dashboardStageIndex(item.status);
     const flowStage = B310_FLOW.find((entry) => entry.id === DASHBOARD_STAGES[current].key) || B310_FLOW[0];
     const doneCodes = new Set((item.administrations || []).map((record) => String(record.type || "").toUpperCase().replace("SOP FORM ", "SOP FORM-")));
+    if (item.koordinasi?.sf6Url) doneCodes.add("SOP FORM-6");
     return `
       <div class="case-flow">
         <div class="case-flow-head">
@@ -3986,6 +4040,8 @@ function detectTeamRoleFromLabel(label) {
       { id: "JAKSA-002", name: "Daniel Marbun, S.H.", nip: "199002022015031002", pangkat: "Ajun Jaksa", jabatan: "Jaksa Fungsional" }
     ] });
     if (action === "listCaseAnalyses") return Promise.resolve({ analyses: [] });
+    if (action === "syncKoordinasi") return Promise.resolve({ total: demoCases.length, changed: 0 });
+    if (action === "listMyCases") return Promise.resolve({ cases: demoCases });
     if (action === "getCase") {
       const found = demoCases.find((item) => item.caseId === payload.caseId);
       return found ? Promise.resolve({ case: { ...found, administrations: (found.administrations || []).filter((record) => !record.fileMissing) } }) : Promise.reject(new Error("Perkara tidak ditemukan."));
@@ -4173,6 +4229,335 @@ function detectTeamRoleFromLabel(label) {
   function debounce(fn, wait) {
     let timer;
     return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
+  }
+
+  /* =====================================================================
+   * V5 — KOORDINASI (integrasi SIKORDA)
+   * ===================================================================== */
+  const KOOR_STATE_META = Object.freeze({
+    none: { label: "Belum ada permohonan", tone: "muted", icon: "○" },
+    requested: { label: "Menunggu jadwal Jaksa", tone: "amber", icon: "◔" },
+    scheduled: { label: "Dijadwalkan", tone: "blue", icon: "◷" },
+    awaiting_sf6: { label: "Lewat jadwal · SOP FORM-6 belum dibuat", tone: "red", icon: "!" },
+    done: { label: "Koordinasi telah dilalui", tone: "green", icon: "✓" }
+  });
+
+  function sikordaBaseUrl() {
+    return String(CONFIG.SIKORDA_APP_URL || "").replace(/\/+$/, "");
+  }
+
+  function buildSikordaFormUrl(item) {
+    const base = sikordaBaseUrl();
+    if (!base || !item) return "";
+    const params = new URLSearchParams();
+    const put = (key, value) => { const text = String(value ?? "").trim(); if (text) params.set(key, text); };
+    put("src", "siap-pidum");
+    put("id_perkara_pidum", item.caseId);
+    put("nama_penyidik", item.investigatorName);
+    put("pangkat_penyidik", item.investigatorRank);
+    put("nrp_penyidik", item.investigatorNipNrp);
+    put("jabatan_penyidik", item.investigatorPosition);
+    put("nama_satuan", item.investigatorInstitution);
+    put("nomor_hp", item.investigatorPhone);
+    put("nomor_spdp", item.spdpNumber);
+    put("tanggal_spdp", toDateInputValue(item.spdpDate));
+    put("nama_tersangka", item.suspectName);
+    put("tempat_lahir_tersangka", item.birthPlace);
+    put("tgl_lahir_tersangka", toDateInputValue(item.birthDate));
+    put("kelamin_tersangka", item.gender);
+    put("agama_tersangka", item.religion);
+    put("pekerjaan_tersangka", item.occupation);
+    put("alamat_tersangka", item.address);
+    put("pasal", item.allegedArticle);
+    put("jaksa_peneliti", item.prosecutorName);
+    put("return_url", window.location.origin + window.location.pathname);
+    return `${base}/Form/permohonan.html?${params.toString()}`;
+  }
+
+  function describeKoordinasi(item) {
+    const k = item?.koordinasi || { state: "none" };
+    const meta = KOOR_STATE_META[k.state] || KOOR_STATE_META.none;
+    const date = k.jadwal ? new Date(k.jadwal) : null;
+    const valid = date && !Number.isNaN(date.getTime());
+    const dayDiff = valid ? Math.round((startOfDay(date) - startOfDay(new Date())) / 86400000) : null;
+    const when = valid
+      ? new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(date)
+      : "";
+    let relative = "";
+    if (valid) {
+      if (dayDiff === 0) relative = "hari ini";
+      else if (dayDiff === 1) relative = "besok";
+      else if (dayDiff > 1) relative = `${dayDiff} hari lagi`;
+      else relative = `${Math.abs(dayDiff)} hari lalu`;
+    }
+    const urgent = k.state === "awaiting_sf6" || (k.state === "scheduled" && dayDiff !== null && dayDiff <= 3);
+    return { k, meta, date: valid ? date : null, dayDiff, when, relative, urgent };
+  }
+
+  function koordinasiAttentionCount() {
+    return state.cases.filter((item) => describeKoordinasi(item).urgent || item.koordinasi?.state === "requested").length;
+  }
+
+  function penyidikKoordinasiBadge() {
+    return state.myCases.filter((item) => item.koordinasi?.state === "scheduled" && describeKoordinasi(item).dayDiff <= 3).length;
+  }
+
+  function renderKoordinasiChip(item) {
+    const info = describeKoordinasi(item);
+    if (info.k.state === "none") return "";
+    const text = info.k.state === "scheduled"
+      ? `Koordinasi ${info.relative}`
+      : info.meta.label;
+    return `<span class="koor-chip tone-${info.meta.tone}" title="${escapeAttr(info.when || info.meta.label)}">⇄ ${escapeHtml(text)}</span>`;
+  }
+
+  function renderKoordinasiCard(item, { forPenyidik = false } = {}) {
+    const info = describeKoordinasi(item);
+    const k = info.k;
+    const latest = k.latest || {};
+    const formUrl = forPenyidik ? buildSikordaFormUrl(item) : "";
+    const monitoringUrl = sikordaBaseUrl() ? `${sikordaBaseUrl()}/monitoring.html` : "";
+    const headline = {
+      none: forPenyidik ? "Belum mengajukan koordinasi" : "Penyidik belum mengajukan koordinasi",
+      requested: "Permohonan koordinasi masuk — jadwal belum ditentukan",
+      scheduled: `Koordinasi ${info.relative}`,
+      awaiting_sf6: "Jadwal koordinasi telah lewat",
+      done: "Tahapan koordinasi telah dilalui"
+    }[k.state] || info.meta.label;
+    const sub = {
+      none: "Koordinasi PU–Penyidik paling lama 3 hari sejak SPDP diterima (B-310 butir 8).",
+      requested: forPenyidik ? "Jaksa akan menentukan jadwal koordinasi melalui SIKORDA." : "Tentukan jadwal koordinasi di Monitoring SIKORDA.",
+      scheduled: info.when,
+      awaiting_sf6: `${info.when} · ${forPenyidik ? "menunggu Berita Acara Koordinasi (SOP FORM-6) dari Jaksa." : "buat Berita Acara Koordinasi (SOP FORM-6) di SIKORDA agar tahapan dinyatakan selesai."}`,
+      done: `${info.when ? `${info.when} · ` : ""}SOP FORM-6 dibuat${k.sf6At ? ` ${k.sf6At}` : ""}.`
+    }[k.state] || "";
+
+    return `
+      <section class="koor-card tone-${info.meta.tone}">
+        <div class="koor-card-icon">${info.meta.icon}</div>
+        <div class="koor-card-copy">
+          <span class="case-eyebrow">Koordinasi penyidik · SIKORDA</span>
+          <strong>${escapeHtml(headline)}</strong>
+          <small>${escapeHtml(sub)}</small>
+          ${latest.id_permohonan ? `<div class="koor-meta">
+              <span>ID ${escapeHtml(latest.id_permohonan)}</span>
+              ${latest.jenis_koordinasi ? `<span>${escapeHtml(latest.jenis_koordinasi)}</span>` : ""}
+              ${latest.cara_koordinasi ? `<span>${escapeHtml(latest.cara_koordinasi)}</span>` : ""}
+              ${latest.status ? `<span>Status: ${escapeHtml(latest.status)}</span>` : ""}
+              ${k.requestCount > 1 ? `<span>${k.requestCount} permohonan</span>` : ""}
+            </div>` : ""}
+          ${latest.catatan_jaksa ? `<p class="koor-note">Catatan Jaksa: ${escapeHtml(latest.catatan_jaksa)}</p>` : ""}
+        </div>
+        <div class="koor-card-actions">
+          ${k.sf6Url ? `<a class="case-ghost-button small" href="${escapeAttr(k.sf6Url)}" target="_blank" rel="noopener noreferrer">SOP FORM-6</a>` : ""}
+          ${forPenyidik && formUrl ? `<a class="case-primary-button small" href="${escapeAttr(formUrl)}" target="_blank" rel="noopener noreferrer">⇄ ${k.state === "none" ? "Ajukan Koordinasi" : "Ajukan lagi"}</a>` : ""}
+          ${!forPenyidik && monitoringUrl ? `<a class="case-ghost-button small" href="${escapeAttr(monitoringUrl)}" target="_blank" rel="noopener noreferrer">${k.state === "requested" ? "Atur jadwal" : "Buka SIKORDA"}</a>` : ""}
+        </div>
+      </section>`;
+  }
+
+  function renderKoordinasiBanner() {
+    const items = state.cases
+      .map((item) => ({ item, info: describeKoordinasi(item) }))
+      .filter(({ info }) => info.urgent)
+      .sort((a, b) => (a.info.date?.getTime() || 0) - (b.info.date?.getTime() || 0));
+    if (!items.length) return "";
+    const first = items[0];
+    const text = first.info.k.state === "scheduled"
+      ? `Koordinasi ${first.item.suspectName || first.item.caseId} ${first.info.relative} · ${first.info.when}`
+      : `Koordinasi ${first.item.suspectName || first.item.caseId} lewat jadwal — SOP FORM-6 belum dibuat`;
+    return `
+      <button type="button" class="koor-banner tone-${first.info.meta.tone}" data-goto-koordinasi>
+        <span class="koor-banner-icon">⇄</span>
+        <span class="koor-banner-copy"><b>${escapeHtml(text)}</b>${items.length > 1 ? `<small>+${items.length - 1} koordinasi lain perlu perhatian</small>` : ""}</span>
+        <span class="koor-banner-go">Lihat →</span>
+      </button>`;
+  }
+
+  /* ---------- Halaman Koordinasi (Jaksa) ---------- */
+  function renderKoordinasiPage() {
+    const rows = state.cases.map((item) => ({ item, info: describeKoordinasi(item) }));
+    const by = (st) => rows.filter((r) => r.info.k.state === st);
+    const scheduled = by("scheduled").sort((a, b) => a.info.date - b.info.date);
+    const soon = scheduled.filter((r) => r.info.dayDiff <= 3);
+    const awaiting = by("awaiting_sf6");
+    const requested = by("requested");
+    const done = by("done");
+    const none = by("none").filter((r) => !["SELESAI", "DIHENTIKAN", "SPDP_DIKEMBALIKAN"].includes(r.item.status) && dashboardStageIndex(r.item.status) <= 2);
+    const monitoringUrl = sikordaBaseUrl() ? `${sikordaBaseUrl()}/monitoring.html` : "";
+
+    const card = ({ item, info }) => `
+      <article class="koor-row tone-${info.meta.tone}">
+        <div class="koor-row-date">
+          ${info.date ? `<b>${info.date.getDate()}</b><span>${new Intl.DateTimeFormat("id-ID", { month: "short" }).format(info.date)}</span><small>${String(info.date.getHours()).padStart(2, "0")}.${String(info.date.getMinutes()).padStart(2, "0")}</small>` : `<b>—</b><span>jadwal</span>`}
+        </div>
+        <div class="koor-row-copy">
+          <strong>${escapeHtml(item.suspectName || "-")}</strong>
+          <span>${escapeHtml(item.courtCaseNumber || item.caseId)} · ${escapeHtml(item.investigatorInstitution || item.investigatorName || "-")}</span>
+          <small><span class="koor-chip tone-${info.meta.tone}">${escapeHtml(info.k.state === "scheduled" ? `${info.relative}` : info.meta.label)}</span> ${escapeHtml(info.k.latest?.jenis_koordinasi || "")}</small>
+        </div>
+        <div class="koor-row-actions">
+          ${info.k.sf6Url ? `<a class="case-ghost-button small" href="${escapeAttr(info.k.sf6Url)}" target="_blank" rel="noopener noreferrer">SOP FORM-6</a>` : ""}
+          <button type="button" class="case-ghost-button small" data-open-case="${escapeAttr(item.caseId)}">Detail</button>
+        </div>
+      </article>`;
+    const group = (title, hint, list, empty) => `
+      <section class="koor-group">
+        <header><h3>${escapeHtml(title)} <i>${list.length}</i></h3><p>${escapeHtml(hint)}</p></header>
+        ${list.length ? `<div class="koor-list">${list.map(card).join("")}</div>` : `<p class="case-muted koor-empty">${escapeHtml(empty)}</p>`}
+      </section>`;
+
+    els.pageContent.innerHTML = `
+      <section class="koor-page">
+        <header class="flow-hero">
+          <div>
+            <p class="case-eyebrow">Koordinasi Penyidik &amp; Penuntut Umum</p>
+            <h2>Jadwal koordinasi &amp; SOP FORM-6</h2>
+            <p>Data diambil dari SIKORDA. Jika jadwal koordinasi telah lewat dan Berita Acara Koordinasi (SOP FORM-6) sudah dibuat, tahapan koordinasi otomatis dinyatakan selesai dan perkara berlanjut ke pemantauan berkas Tahap I.</p>
+          </div>
+          <div class="koor-hero-actions">
+            <button type="button" id="koor-sync" class="case-primary-button"><span class="button-label">↻ Sinkronkan SIKORDA</span><span class="button-spinner" hidden></span></button>
+            ${monitoringUrl ? `<a class="case-ghost-button" href="${escapeAttr(monitoringUrl)}" target="_blank" rel="noopener noreferrer">Buka Monitoring SIKORDA</a>` : ""}
+          </div>
+        </header>
+
+        <div class="koor-kpis">
+          <div class="tone-blue"><b>${soon.length}</b><span>≤ 3 hari lagi</span></div>
+          <div class="tone-blue"><b>${scheduled.length}</b><span>Dijadwalkan</span></div>
+          <div class="tone-amber"><b>${requested.length}</b><span>Menunggu jadwal</span></div>
+          <div class="tone-red"><b>${awaiting.length}</b><span>Lewat · SOP FORM-6 belum</span></div>
+          <div class="tone-green"><b>${done.length}</b><span>Koordinasi selesai</span></div>
+        </div>
+
+        ${group("Perlu tindakan", "Jadwal lewat tanpa SOP FORM-6, atau permohonan yang belum dijadwalkan.", [...awaiting, ...requested], "Tidak ada koordinasi yang tertunda.")}
+        ${group("Akan datang", "Jadwal koordinasi yang ditetapkan Jaksa di SIKORDA.", scheduled, "Belum ada jadwal koordinasi mendatang.")}
+        ${group("Selesai", "Jadwal telah lewat dan SOP FORM-6 telah dibuat.", done, "Belum ada koordinasi yang selesai.")}
+        ${group("Belum ada permohonan", "Perkara tahap awal yang belum diajukan koordinasinya oleh penyidik.", none, "Semua perkara tahap awal sudah memiliki permohonan koordinasi.")}
+      </section>`;
+
+    document.getElementById("koor-sync")?.addEventListener("click", async (event) => {
+      const button = event.currentTarget;
+      setButtonLoading(button, true);
+      try {
+        const result = await gasRequest("syncKoordinasi", {}, { timeout: 60000 });
+        await loadCases({ quiet: true });
+        toast("success", "SIKORDA tersinkron", `${result.total || 0} permohonan dibaca · ${result.changed || 0} status perkara diperbarui.`);
+      } catch (error) {
+        toast("error", "Sinkronisasi gagal", error.message);
+      } finally {
+        if (document.body.contains(button)) setButtonLoading(button, false);
+      }
+    });
+  }
+
+  /* ---------- Halaman Koordinasi (Penyidik) ---------- */
+  async function renderPenyidikKoordinasiPage() {
+    if (!state.myCasesLoaded) {
+      renderLoadingPage("Memuat perkara Anda");
+      els.pageTitle.textContent = "Koordinasi dengan Jaksa";
+      try {
+        const result = await gasRequest("listMyCases", {}, { retries: 1 });
+        state.myCases = Array.isArray(result.cases) ? result.cases : [];
+        state.myCasesLoaded = true;
+        renderSidebar();
+      } catch (error) {
+        els.pageContent.innerHTML = `<div class="panel">${emptyState("!", "Data perkara tidak dapat dimuat", error.message)}</div>`;
+        return;
+      }
+      if (state.activePage !== "penyidik-koordinasi") return;
+    }
+
+    const cards = state.myCases.map((item) => `
+      <article class="koor-case">
+        <header>
+          <div>
+            <strong>${escapeHtml(item.suspectName || "-")}</strong>
+            <span>${escapeHtml(item.courtCaseNumber || item.caseId)} · SPDP ${escapeHtml(item.spdpNumber || "-")}</span>
+          </div>
+          <span class="case-chip">${escapeHtml(getStatus(item.status).label)}</span>
+        </header>
+        <p class="koor-case-meta">Pasal: ${escapeHtml(item.allegedArticle || "-")}<br>Jaksa: ${escapeHtml(item.prosecutorName || "Belum ditunjuk")}</p>
+        ${renderKoordinasiCard(item, { forPenyidik: true })}
+      </article>`).join("");
+
+    els.pageContent.innerHTML = `
+      <section class="koor-page">
+        <header class="flow-hero">
+          <div>
+            <p class="case-eyebrow">SIKORDA · Sistem Koordinasi &amp; Konsultasi</p>
+            <h2>Koordinasi dengan Jaksa Peneliti</h2>
+            <p>Pilih perkara yang SPDP-nya telah Anda kirim, lalu tekan <b>Ajukan Koordinasi</b>. Formulir SIKORDA akan terbuka dengan data perkara terisi otomatis. Jadwal koordinasi dari Jaksa akan tampil di halaman ini.</p>
+          </div>
+          <div class="koor-hero-actions">
+            <button type="button" id="koor-refresh" class="case-ghost-button">↻ Muat ulang</button>
+            <button type="button" id="koor-new-spdp" class="case-primary-button">＋ Kirim SPDP baru</button>
+          </div>
+        </header>
+        ${state.myCases.length ? `<div class="koor-case-grid">${cards}</div>` : `<div class="panel">${emptyState("⇄", "Belum ada perkara", "Kirim SPDP terlebih dahulu. Setelah terkirim, tombol Ajukan Koordinasi akan muncul di sini.")}</div>`}
+        ${sikordaBaseUrl() ? "" : `<p class="case-muted">Alamat SIKORDA belum diatur pada config.js (SIKORDA_APP_URL).</p>`}
+      </section>`;
+
+    document.getElementById("koor-refresh")?.addEventListener("click", () => {
+      state.myCasesLoaded = false;
+      renderPenyidikKoordinasiPage();
+    });
+    document.getElementById("koor-new-spdp")?.addEventListener("click", () => navigate("submit-spdp"));
+  }
+
+  /* ---------- Lonceng notifikasi (topbar) ---------- */
+  function buildNotifications() {
+    const list = [];
+    const source = state.session?.user?.role === "jaksa" ? state.cases : state.myCases;
+    source.forEach((item) => {
+      const info = describeKoordinasi(item);
+      if (info.k.state === "scheduled" && info.dayDiff <= 7) {
+        list.push({ tone: info.dayDiff <= 1 ? "red" : "blue", caseId: item.caseId, title: `Koordinasi ${info.relative}`, text: `${item.suspectName || item.caseId} · ${info.when}`, order: info.date.getTime() });
+      } else if (info.k.state === "awaiting_sf6") {
+        list.push({ tone: "red", caseId: item.caseId, title: "SOP FORM-6 belum dibuat", text: `${item.suspectName || item.caseId} · koordinasi ${info.relative}`, order: 0 });
+      } else if (info.k.state === "requested" && state.session?.user?.role === "jaksa") {
+        list.push({ tone: "amber", caseId: item.caseId, title: "Permohonan koordinasi baru", text: `${item.suspectName || item.caseId} · tentukan jadwal di SIKORDA`, order: 1 });
+      }
+    });
+    if (state.session?.user?.role === "jaksa") {
+      state.cases.filter((item) => getDeadlineState(item).state === "overdue").forEach((item) => {
+        list.push({ tone: "red", caseId: item.caseId, title: "Lewat tenggat", text: `${item.suspectName || item.caseId} · ${item.deadlineType || "Tenggat"}`, order: 2 });
+      });
+    }
+    return list.sort((a, b) => a.order - b.order).slice(0, 12);
+  }
+
+  function updateNotificationBell() {
+    const bell = document.querySelector(".topbar-icon-button[aria-label='Notifikasi']");
+    if (!bell) return;
+    const count = buildNotifications().length;
+    bell.dataset.count = count ? String(count) : "";
+    bell.classList.toggle("has-notif", Boolean(count));
+  }
+
+  function toggleNotificationPanel() {
+    const existing = document.getElementById("notif-panel");
+    if (existing) { existing.remove(); return; }
+    const items = buildNotifications();
+    document.body.insertAdjacentHTML("beforeend", `
+      <div id="notif-panel" class="notif-panel" role="dialog" aria-label="Notifikasi">
+        <header><strong>Notifikasi</strong><small>${items.length} perlu perhatian</small></header>
+        ${items.length ? items.map((n) => `
+          <button type="button" class="notif-item tone-${n.tone}" data-notif-case="${escapeAttr(n.caseId)}">
+            <i></i><span><b>${escapeHtml(n.title)}</b><small>${escapeHtml(n.text)}</small></span>
+          </button>`).join("") : `<p class="case-muted" style="padding:14px">Tidak ada notifikasi.</p>`}
+      </div>`);
+    const panel = document.getElementById("notif-panel");
+    panel.querySelectorAll("[data-notif-case]").forEach((button) => button.addEventListener("click", () => {
+      panel.remove();
+      if (state.session?.user?.role === "jaksa") openCaseModal(button.dataset.notifCase);
+      else navigate("penyidik-koordinasi");
+    }));
+    setTimeout(() => document.addEventListener("click", function closer(event) {
+      if (!panel.contains(event.target) && !event.target.closest(".topbar-icon-button")) {
+        panel.remove();
+        document.removeEventListener("click", closer);
+      }
+    }), 0);
   }
 
   // ---- Analisa AI (Gemini) — panel kanan persisten V4.2 ----
