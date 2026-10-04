@@ -1,196 +1,1426 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#6f1d32" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Monitoring Permohonan - SIKORDA</title>
+  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/ungumanggis199-svg/MBG-Muna/main/Logo-Kejaksaan%20(1)(1).png">
+  <link rel="shortcut icon" type="image/png" href="https://raw.githubusercontent.com/ungumanggis199-svg/MBG-Muna/main/Logo-Kejaksaan%20(1)(1).png">
 
-  <meta name="description" content="Sistem Informasi Alur Administrasi Pidana Umum Kejaksaan Negeri Muna" />
-  <meta name="color-scheme" content="light" />
+  <link rel="stylesheet" href="Form/form-style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 
-  <!-- Logo pada tab browser & layar utama HP -->
-  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/refs/heads/main/LOGO/Pidum.png?v=1" />
-  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/refs/heads/main/LOGO/Pidum.png?v=1" />
+  <style>
+    .monitoring-box {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 34px;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid rgba(201, 162, 75, 0.25);
+      border-radius: 20px;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.13);
+      backdrop-filter: blur(7px);
+    }
 
-  <title>SIAP PIDUM Kejari Muna</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=6.1" />
+    .monitoring-info {
+      padding: 16px 18px;
+      margin-bottom: 24px;
+      background: rgba(201, 162, 75, 0.13);
+      border-left: 5px solid #c9a24b;
+      border-radius: 13px;
+      color: #444;
+      line-height: 1.65;
+    }
+
+    .monitoring-info strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #7b1113;
+    }
+
+    .access-warning {
+      display: none;
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: rgba(123, 17, 19, 0.09);
+      color: #7b1113;
+      border-left: 5px solid #7b1113;
+      font-weight: 600;
+    }
+
+    .access-warning.show {
+      display: block;
+    }
+
+    .login-status {
+      display: none;
+      margin-bottom: 18px;
+      padding: 13px 16px;
+      border-radius: 12px;
+      background: rgba(31, 143, 77, 0.12);
+      color: #126335;
+      border-left: 5px solid #1f8f4d;
+      font-weight: 700;
+    }
+
+    .login-status.show {
+      display: block;
+    }
+
+    .monitoring-tools {
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .monitoring-tools input,
+    .monitoring-tools select {
+      width: 100%;
+      min-height: 52px;
+      padding: 13px 16px;
+      background: #fff;
+      border: 1.5px solid #c9a24b;
+      border-radius: 10px;
+      color: #333;
+      font-size: 1rem;
+      outline: none;
+      font-family: "Poppins", sans-serif;
+    }
+
+    .monitoring-tools input:focus,
+    .monitoring-tools select:focus {
+      border-color: #7b1113;
+      box-shadow: 0 0 0 3px rgba(123, 17, 19, 0.12);
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border-radius: 14px;
+      border: 1px solid rgba(201, 162, 75, 0.45);
+      background: #fff;
+    }
+
+    .monitor-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1180px;
+    }
+
+    .monitor-table th {
+      background: #7b1113;
+      color: #fff;
+      text-align: left;
+      padding: 14px;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .monitor-table td {
+      padding: 14px;
+      border-bottom: 1px solid rgba(201, 162, 75, 0.25);
+      color: #333;
+      font-size: 0.92rem;
+      vertical-align: middle;
+    }
+
+    .monitor-table tbody tr:hover {
+      background: rgba(201, 162, 75, 0.08);
+    }
+
+    .monitor-note {
+      max-width: 250px;
+      white-space: normal;
+      line-height: 1.5;
+    }
+
+    .suspect-name {
+      display: inline-block;
+      font-weight: 700;
+      color: #5a0c0e;
+      transition: 0.25s ease;
+    }
+
+    .suspect-name.is-blurred {
+      filter: blur(5px);
+      user-select: none;
+      pointer-events: none;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 7px 11px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    .status-menunggu {
+      background: rgba(201, 162, 75, 0.18);
+      color: #7a5a00;
+    }
+
+    .status-diproses {
+      background: rgba(36, 116, 204, 0.16);
+      color: #174f92;
+    }
+
+    .status-selesai {
+      background: rgba(31, 143, 77, 0.16);
+      color: #126335;
+    }
+
+    .status-ditolak {
+      background: rgba(196, 45, 45, 0.15);
+      color: #9b1d1d;
+    }
+
+    .btn-detail {
+      border: none;
+      border-radius: 9px;
+      padding: 9px 13px;
+      background: linear-gradient(135deg, #7b1113, #5a0c0e);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      font-family: "Poppins", sans-serif;
+    }
+
+    .btn-detail:hover {
+      transform: translateY(-1px);
+    }
+
+    .empty-state,
+    .loading-state {
+      padding: 28px 18px;
+      text-align: center;
+      color: #666;
+      font-weight: 600;
+    }
+
+    .detail-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 6000;
+      background: rgba(0, 0, 0, 0.55);
+      padding: 22px;
+      overflow-y: auto;
+    }
+
+    .detail-modal.show {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+
+    .detail-card {
+      width: 100%;
+      max-width: 940px;
+      margin: 35px auto;
+      background: #fff;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.25);
+      position: relative;
+    }
+
+    .detail-close {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: transparent;
+      color: #7b1113;
+      font-size: 2rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .detail-card h3 {
+      color: #7b1113;
+      font-size: 1.6rem;
+      margin-bottom: 6px;
+      padding-right: 42px;
+    }
+
+    .detail-subtitle {
+      color: #666;
+      margin-bottom: 24px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 15px;
+    }
+
+    .detail-item {
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: #f7f7f9;
+      border: 1px solid rgba(201, 162, 75, 0.28);
+    }
+
+    .detail-item.full {
+      grid-column: 1 / -1;
+    }
+
+    .detail-item span {
+      display: block;
+      color: #7b1113;
+      font-size: 0.82rem;
+      font-weight: 800;
+      margin-bottom: 7px;
+    }
+
+    .detail-item p {
+      margin: 0;
+      color: #333;
+      font-size: 0.96rem;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    .file-link {
+      color: #7b1113;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .file-link:hover {
+      text-decoration: underline;
+    }
+
+    /* EDIT TINDAK LANJUT JAKSA */
+    .edit-box {
+      grid-column: 1 / -1;
+      margin-top: 22px;
+      padding: 24px;
+      border-radius: 18px;
+      background: rgba(201, 162, 75, 0.13);
+      border: 1.5px solid rgba(201, 162, 75, 0.55);
+    }
+
+    .edit-box-title {
+      margin: 0 0 18px;
+      color: #7b1113;
+      font-size: 1.18rem;
+      font-weight: 800;
+    }
+
+    .edit-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      align-items: start;
+    }
+
+    .edit-field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .edit-field.full {
+      grid-column: 1 / -1;
+    }
+
+    .edit-field label {
+      color: #541014;
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+
+    .edit-field select,
+    .edit-field input,
+    .edit-field textarea {
+      width: 100%;
+      min-height: 52px;
+      padding: 12px 14px;
+      border: 1.5px solid #c9a24b;
+      border-radius: 10px;
+      background: #ffffff;
+      color: #333;
+      font-family: "Poppins", sans-serif;
+      font-size: 0.95rem;
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    .edit-field textarea {
+      min-height: 130px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+
+    .edit-field select:focus,
+    .edit-field input:focus,
+    .edit-field textarea:focus {
+      border-color: #7b1113;
+      box-shadow: 0 0 0 3px rgba(123, 17, 19, 0.12);
+    }
+
+    .edit-actions {
+      margin-top: 18px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .btn-save-update {
+      border: none;
+      border-radius: 11px;
+      padding: 13px 22px;
+      background: linear-gradient(135deg, #7b1113, #5a0c0e);
+      color: #ffffff;
+      font-family: "Poppins", sans-serif;
+      font-size: 0.95rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(123, 17, 19, 0.26);
+    }
+
+    .btn-save-update:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-save-update:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    @media (max-width: 720px) {
+      .monitoring-box {
+        padding: 22px 16px;
+      }
+
+      .monitoring-tools {
+        grid-template-columns: 1fr;
+      }
+
+      .detail-card {
+        padding: 24px 18px;
+      }
+
+      .detail-grid,
+      .edit-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .edit-actions {
+        justify-content: stretch;
+      }
+
+      .btn-save-update {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
+
 <body>
-  <noscript>Aplikasi ini membutuhkan JavaScript.</noscript>
+  <div id="particles-js"></div>
 
-  <div id="toast-root" class="toast-root" aria-live="polite"></div>
-  <div id="modal-root"></div>
+  <header class="navbar">
+    <div class="nav-brand">
+      <a href="index.html" aria-label="Beranda SIKORDA">
+        <img 
+          src="https://raw.githubusercontent.com/ungumanggis199-svg/MBG-Muna/main/Logo-Kejaksaan%20(1)(1).png" 
+          alt="Logo Kejaksaan Negeri Muna" 
+          class="logo" 
+        />
+      </a>
 
-  <section id="login-view" class="login-page">
-    <div class="login-decoration login-decoration-a"></div>
-    <div class="login-decoration login-decoration-b"></div>
-
-    <div class="login-brand-panel">
-      <div class="brand-lockup">
-        <div class="brand-emblem" aria-hidden="true">
-          <img src="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/77b6ab999166a79deca09af8a19961f9df49a6aa/LOGO/Logo%20Kejaksaan.png" alt="" />
-        </div>
-        <div>
-          <p class="eyebrow">KEJAKSAAN REPUBLIK INDONESIA</p>
-          <h1>SIAP PIDUM</h1>
-          <p>Sistem Informasi Alur Administrasi Pidana Umum<br />Kejaksaan Negeri Muna</p>
-        </div>
-      </div>
-
-      <div class="login-feature-card">
-        <span class="feature-number">01</span>
-        <div>
-          <h2>Administrasi perkara lebih tertib</h2>
-          <p>Penerimaan SPDP, pemantauan tenggat, penelitian berkas, Tahap II, pelimpahan, dan persidangan dalam satu alur kerja.</p>
-        </div>
-      </div>
-
-      <div class="security-note">
-        <span class="security-icon">◆</span>
-        <p>Gunakan akun resmi. Seluruh aktivitas penting dicatat dalam log aplikasi.</p>
+      <div class="brand-text">
+        <h1>SIKORDA</h1>
+        <span>Sistem Koordinasi &amp; Konsultasi</span>
       </div>
     </div>
 
-    <div class="login-form-panel">
-      <form id="login-form" class="login-card" autocomplete="on">
-        <div class="login-card-header">
-          <p class="eyebrow green">PORTAL TERPADU</p>
-          <h2>Masuk ke aplikasi</h2>
-          <p>Pilih peran, lalu masukkan nama pengguna dan kata sandi.</p>
-        </div>
+    <nav class="nav-links" role="navigation" aria-label="Menu utama">
+      <a href="index.html">Beranda</a>
+      <a href="Form/permohonan.html">Permohonan Koordinasi</a>
+      <a href="monitoring.html" class="active" aria-current="page">Monitoring</a>
+      <button type="button" class="btn-login" onclick="openLogin()">Login Jaksa</button>
+    </nav>
 
-<div class="role-selector" role="radiogroup" aria-label="Pilih peran pengguna">
+    <button type="button" class="burger" aria-label="Toggle menu" aria-expanded="false" onclick="toggleMenu()">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </header>
 
-  <!-- KEJAKSAAN -->
-  <label class="role-option active" data-role-card="jaksa">
-    <input type="radio" name="role" value="jaksa" checked />
+  <main class="section">
+    <div class="page-title-box">
+      <h2>Monitoring Permohonan Koordinasi</h2>
+      <div class="divider"></div>
+    </div>
 
-    <span class="role-icon role-icon-image" aria-hidden="true">
-      <img
-        src="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/refs/heads/main/LOGO/LOGO-JAMPIDUM-FIX.png"
-        alt=""
+    <div class="monitoring-box">
+      <div class="monitoring-info">
+        <strong>Informasi Monitoring</strong>
+        Data permohonan dapat dicari berdasarkan ID permohonan, nama penyidik, nama satuan, nomor LP, status, dan nama tersangka. Nama tersangka tetap disamarkan pada tampilan umum. Detail permohonan dan tindak lanjut hanya dapat dibuka setelah login sebagai Jaksa.
+      </div>
+
+      <div id="loginStatus" class="login-status"></div>
+
+      <div id="accessWarning" class="access-warning">
+        Detail permohonan hanya dapat dibuka setelah login sebagai Jaksa.
+      </div>
+
+      <div class="monitoring-tools">
+        <input 
+          type="search" 
+          id="searchBox" 
+          placeholder="Cari ID, penyidik, satuan, nomor LP, status, atau nama tersangka..."
+        />
+
+        <select id="statusFilter">
+          <option value="">Semua Status</option>
+          <option value="Menunggu">Menunggu</option>
+          <option value="Diproses">Diproses</option>
+          <option value="Selesai">Selesai</option>
+          <option value="Ditolak">Ditolak</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table class="monitor-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>ID Permohonan</th>
+              <th>Tanggal</th>
+              <th>Nama Penyidik</th>
+              <th>Nama Satuan</th>
+              <th>Nama Tersangka</th>
+              <th>Jenis Koordinasi</th>
+              <th>Urgensi</th>
+              <th>Status</th>
+              <th>Catatan Jaksa</th>
+              <th>Jadwal Koordinasi</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+
+          <tbody id="monitorBody">
+            <tr>
+              <td colspan="12" class="loading-state">Memuat data permohonan...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <div id="detailModal" class="detail-modal">
+    <div class="detail-card">
+      <button type="button" class="detail-close" onclick="closeDetailModal()">&times;</button>
+
+      <h3>Detail Permohonan</h3>
+      <p class="detail-subtitle">Data lengkap permohonan koordinasi.</p>
+
+      <div id="detailContent" class="detail-grid"></div>
+    </div>
+  </div>
+
+  <div id="loginModal" class="modal">
+    <div class="modal-box">
+      <button type="button" class="modal-close" onclick="closeLogin()">&times;</button>
+
+      <img 
+        src="https://raw.githubusercontent.com/ungumanggis199-svg/MBG-Muna/main/Logo-Kejaksaan%20(1)(1).png" 
+        alt="Logo Kejaksaan" 
+        class="modal-logo"
       />
-    </span>
 
-    <span class="role-copy">
-      <strong>KEJAKSAAN</strong>
-      <small>Dashboard dan<br />pengelolaan perkara</small>
-    </span>
-  </label>
+      <h3>Login Jaksa</h3>
 
-  <!-- KEPOLISIAN -->
-  <label class="role-option" data-role-card="penyidik">
-    <input type="radio" name="role" value="penyidik" />
-
-    <span class="role-icon role-icon-image" aria-hidden="true">
-      <img
-        src="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/refs/heads/main/LOGO/reserse.png"
-        alt=""
-      />
-    </span>
-
-    <span class="role-copy">
-      <strong>KEPOLISIAN</strong>
-      <small>Form pengiriman<br />SPDP</small>
-    </span>
-  </label>
-
-</div>
-
-        <label class="field-label" for="login-username">Nama pengguna</label>
-        <div class="input-with-icon">
-          <span>◎</span>
-          <input id="login-username" name="username" type="text" autocomplete="username" placeholder="Masukkan nama pengguna" required />
+      <form id="loginForm">
+        <div class="input-group">
+          <label for="username">Username / NIP</label>
+          <input type="text" id="username" name="username" required />
         </div>
 
-        <label class="field-label" for="login-password">Kata sandi</label>
-        <div class="input-with-icon">
-          <span>●</span>
-          <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Masukkan kata sandi" required />
-          <button type="button" id="toggle-password" class="icon-button" aria-label="Tampilkan kata sandi">◉</button>
+        <div class="input-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required />
         </div>
 
-        <button id="login-submit" class="primary-button full" type="submit">
-          <span class="button-label">Masuk</span>
-          <span class="button-spinner" hidden></span>
-        </button>
-
+        <button type="submit" class="btn-submit">Masuk</button>
       </form>
     </div>
-  </section>
+  </div>
 
-  <section id="app-view" class="app-shell" hidden>
-    <aside id="sidebar" class="sidebar">
-      <div class="sidebar-brand">
-        <div class="sidebar-emblem" aria-hidden="true">
-          <img src="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/77b6ab999166a79deca09af8a19961f9df49a6aa/LOGO/Logo%20Kejaksaan.png" alt="" />
-        </div>
-        <div>
-          <strong>SIAP PIDUM</strong>
-          <small>Kejari Muna</small>
-        </div>
-      </div>
+  <script src="https://cdn.jsdelivr.net/npm/particles.js"></script>
 
-      <nav id="sidebar-menu" class="sidebar-menu" aria-label="Navigasi utama"></nav>
+  <script>
+    const MONITORING_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZhzBasdie7UqEmTrLucc4NrwkHexypNxwW4To4yUYGOOov51vkqenUSGlsiMUZgIK/exec";
 
-      <div class="sidebar-footer">
-        <div class="sidebar-user">
-          <div id="sidebar-avatar" class="avatar">U</div>
-          <div>
-            <strong id="sidebar-user-name">Pengguna</strong>
-            <small id="sidebar-user-role">Peran</small>
-          </div>
-        </div>
-        <button id="logout-button" class="logout-button" type="button">Keluar</button>
-      </div>
-    </aside>
+    let monitoringData = [];
+    let filteredMonitoringData = [];
 
-    <div class="app-main">
-      <header class="topbar">
-        <button id="mobile-menu-button" class="mobile-menu-button" type="button" aria-label="Buka menu">☰</button>
+    document.addEventListener("DOMContentLoaded", function () {
+      updateLoginButton();
+      updateLoginStatus();
+      initParticles();
 
-        <div class="topbar-brand-lockup" aria-label="e-Pidum Kejaksaan Negeri Muna">
-          <div class="topbar-brand-emblem" aria-hidden="true">
-            <img src="https://raw.githubusercontent.com/ungumanggis199-svg/sistempidumv5/refs/heads/main/LOGO/Pidum.png" alt="" />
-          </div>
-          <div>
-            <div class="topbar-brand-title">e-Pidum · Kejaksaan Negeri Muna</div>
-            <div class="topbar-brand-subtitle">Administrasi perkara tindak pidana umum</div>
-          </div>
-        </div>
+      const searchBox = document.getElementById("searchBox");
+      const statusFilter = document.getElementById("statusFilter");
+      const loginForm = document.getElementById("loginForm");
 
-        <div class="topbar-page-context">
-          <p id="page-eyebrow" class="eyebrow">RINGKASAN</p>
-          <h1 id="page-title">Dashboard</h1>
-        </div>
+      if (searchBox) {
+        // Tautan dari WhatsApp/SIAP PIDUM: monitoring.html?q=<nama tersangka / ID / SPDP>
+        const presetQuery = new URLSearchParams(window.location.search).get("q");
+        if (presetQuery) searchBox.value = presetQuery;
+        searchBox.addEventListener("input", renderMonitoringTable);
+      }
 
-        <div class="topbar-actions">
-          <div id="connection-indicator" class="connection-indicator">
-            <span></span>
-            <small>Memeriksa koneksi</small>
-          </div>
-          <div class="date-chip" id="current-date"></div>
-          <button class="topbar-icon-button" type="button" aria-label="Notifikasi" title="Notifikasi tenggat">♢</button>
-          <div class="topbar-profile">
-            <div id="topbar-avatar" class="topbar-profile-avatar">U</div>
-            <div class="topbar-profile-copy">
-              <strong id="topbar-user-name">Pengguna</strong>
-              <small id="topbar-user-role">Peran</small>
-            </div>
-          </div>
-        </div>
-      </header>
+      if (statusFilter) {
+        statusFilter.addEventListener("change", renderMonitoringTable);
+      }
 
-      <main id="page-content" class="page-content"></main>
-    </div>
-  </section>
+      if (loginForm) {
+        loginForm.addEventListener("submit", handleLoginSubmit);
+      }
 
-  <!-- Skrip dimuat SEKALI saja (versi lama memuat app.js dua kali → event ganda & crash) -->
-  <script src="config.js?v=6.1" defer></script>
-  <script src="administration-forms.js?v=6.1" defer></script>
-  <script src="app.js?v=6.1" defer></script>
+      window.addEventListener("click", function (e) {
+        const loginModal = document.getElementById("loginModal");
+        const detailModal = document.getElementById("detailModal");
+
+        if (e.target === loginModal) closeLogin();
+        if (e.target === detailModal) closeDetailModal();
+      });
+
+      window.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+          closeLogin();
+          closeDetailModal();
+        }
+      });
+
+      loadMonitoringData();
+
+      setInterval(function () {
+        applyNamePrivacy();
+      }, 500);
+    });
+
+    function toggleMenu() {
+      const nav = document.querySelector(".nav-links");
+      const burger = document.querySelector(".burger");
+
+      if (!nav) return;
+
+      nav.classList.toggle("open");
+
+      if (burger) {
+        const isOpen = nav.classList.contains("open");
+        burger.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      }
+    }
+
+    function openLogin() {
+      const modal = document.getElementById("loginModal");
+      if (modal) modal.classList.add("show");
+    }
+
+    function closeLogin() {
+      const modal = document.getElementById("loginModal");
+      if (modal) modal.classList.remove("show");
+    }
+
+    function updateLoginButton() {
+      const btn = document.querySelector(".btn-login");
+      const isLoggedIn = sessionStorage.getItem("isJaksaLoggedIn") === "true";
+
+      if (!btn) return;
+
+      if (isLoggedIn) {
+        btn.textContent = "Logout";
+        btn.onclick = logoutJaksa;
+      } else {
+        btn.textContent = "Login Jaksa";
+        btn.onclick = openLogin;
+      }
+    }
+
+    function logoutJaksa() {
+      sessionStorage.removeItem("isJaksaLoggedIn");
+      sessionStorage.removeItem("jaksaName");
+      sessionStorage.removeItem("jaksaUsername");
+      sessionStorage.removeItem("jaksaSessionToken");
+
+      updateLoginButton();
+      updateLoginStatus();
+      applyNamePrivacy();
+      renderMonitoringTable();
+
+      alert("Anda telah logout.");
+    }
+
+    function updateLoginStatus() {
+      const box = document.getElementById("loginStatus");
+      const isLoggedIn = sessionStorage.getItem("isJaksaLoggedIn") === "true";
+      const name = sessionStorage.getItem("jaksaName") || "Jaksa";
+
+      if (!box) return;
+
+      if (isLoggedIn) {
+        box.textContent = "Login aktif sebagai: " + name;
+        box.classList.add("show");
+      } else {
+        box.textContent = "";
+        box.classList.remove("show");
+      }
+    }
+
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+
+      const form = e.currentTarget;
+      const username = form.username.value.trim();
+      const password = form.password.value.trim();
+      const submitBtn = form.querySelector(".btn-submit");
+
+      if (!username || !password) {
+        alert("Username / NIP dan password wajib diisi.");
+        return;
+      }
+
+      try {
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = "Memeriksa...";
+        }
+
+        const clientToken =
+          "LOGIN-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+
+        await fetch(MONITORING_SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: JSON.stringify({
+            action: "validate_login",
+            username: username,
+            password: password,
+            client_token: clientToken
+          })
+        });
+
+        const result = await waitMonitoringResult("login_result", clientToken);
+
+        if (result.status === "success") {
+          sessionStorage.setItem("isJaksaLoggedIn", "true");
+          sessionStorage.setItem("jaksaName", result.nama_jaksa || username);
+          sessionStorage.setItem("jaksaUsername", username);
+          sessionStorage.setItem("jaksaSessionToken", result.session_token || "");
+
+          closeLogin();
+          updateLoginButton();
+          updateLoginStatus();
+          applyNamePrivacy();
+          renderMonitoringTable();
+
+          alert("Login berhasil. Selamat datang, " + (result.nama_jaksa || "Jaksa") + ".");
+          if (window.__sikordaPendingDeepLink) applyDeepLink();
+        } else {
+          alert(result.message || "Username / NIP atau password salah.");
+        }
+
+      } catch (error) {
+        console.error(error);
+        alert("Login gagal. Silakan coba lagi.");
+
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Masuk";
+        }
+      }
+    }
+
+    /* ============================================================
+       TAUTAN LANGSUNG KE PERKARA (dari WhatsApp / SIAP PIDUM)
+       monitoring.html?perkara=PIDUM-MUNA-2026-0005&q=KADARMAN
+       ============================================================ */
+    function sikordaNormalize(value) {
+      return String(value || "").toLowerCase().replace(/[.,]/g, "").replace(/\s+/g, " ").trim();
+    }
+
+    function showDeepLinkBanner(html, tone) {
+      let banner = document.getElementById("deepLinkBanner");
+      const tools = document.querySelector(".monitoring-tools");
+      if (!banner && tools) {
+        banner = document.createElement("div");
+        banner.id = "deepLinkBanner";
+        tools.parentNode.insertBefore(banner, tools);
+      }
+      if (!banner) return;
+      banner.style.cssText = "margin:0 0 14px;padding:12px 16px;border-radius:10px;font-size:14px;line-height:1.5;" +
+        (tone === "warn"
+          ? "background:#fff7e6;border:1px solid #f0d49b;color:#7a5520;"
+          : "background:#eef5fd;border:1px solid #cfe0f6;color:#1d4f91;");
+      banner.innerHTML = html;
+    }
+
+    function applyDeepLink() {
+      const params = new URLSearchParams(window.location.search);
+      const perkara = (params.get("perkara") || "").trim();
+      const q = (params.get("q") || "").trim();
+      if (!perkara && !q) return;
+
+      const target = sikordaNormalize(q);
+      const matches = monitoringData.filter(function (item) {
+        if (perkara && String(item.id_perkara_pidum || "").trim() === perkara) return true;
+        return target && sikordaNormalize(item.nama_tersangka) === target;
+      });
+      const label = q || perkara;
+
+      if (!matches.length) {
+        window.__sikordaPendingDeepLink = false;
+        showDeepLinkBanner("<strong>Perkara a.n. " + escapeHtml(label) + "</strong><br>" +
+          "Belum ada permohonan koordinasi dari penyidik untuk perkara ini. Daftar di bawah telah difilter; " +
+          "koordinasi dapat dilakukan langsung dengan menghubungi penyidik.", "warn");
+        return;
+      }
+
+      // Pastikan baris perkara terlihat di tabel
+      const searchBox = document.getElementById("searchBox");
+      const latest = matches[matches.length - 1] === matches[0] ? matches[0] : matches.reduce(function (a, b) {
+        return String(a.timestamp) > String(b.timestamp) ? a : b;
+      });
+      if (searchBox && latest.nama_tersangka) searchBox.value = latest.nama_tersangka;
+      renderMonitoringTable();
+
+      const isLoggedIn = sessionStorage.getItem("isJaksaLoggedIn") === "true";
+      if (!isLoggedIn) {
+        window.__sikordaPendingDeepLink = true;
+        showDeepLinkBanner("<strong>Perkara a.n. " + escapeHtml(latest.nama_tersangka || label) + "</strong> · ID " +
+          escapeHtml(latest.id_permohonan || "-") + "<br>Silakan login sebagai Jaksa untuk membuka detail permohonan koordinasi.");
+        openLogin();
+        return;
+      }
+
+      window.__sikordaPendingDeepLink = false;
+      showDeepLinkBanner("<strong>Perkara a.n. " + escapeHtml(latest.nama_tersangka || label) + "</strong> · ID " +
+        escapeHtml(latest.id_permohonan || "-") + (matches.length > 1 ? " · " + matches.length + " permohonan" : ""));
+      const index = filteredMonitoringData.indexOf(latest);
+      if (index >= 0) openDetailPermohonan(index);
+    }
+
+    async function loadMonitoringData() {
+      const body = document.getElementById("monitorBody");
+
+      try {
+        const url = MONITORING_SCRIPT_URL + "?action=list_permohonan";
+        const result = await monitoringJsonpRequest(url);
+
+        if (!result || result.status !== "success") {
+          throw new Error(result && result.message ? result.message : "Gagal memuat data.");
+        }
+
+        monitoringData = Array.isArray(result.data) ? result.data : [];
+        renderMonitoringTable();
+        applyDeepLink();
+
+      } catch (error) {
+        console.error(error);
+
+        if (body) {
+          body.innerHTML =
+            '<tr>' +
+              '<td colspan="12" class="empty-state">Data belum dapat dimuat. Pastikan Apps Script sudah dideploy ulang.</td>' +
+            '</tr>';
+        }
+      }
+    }
+
+    function renderMonitoringTable() {
+      const body = document.getElementById("monitorBody");
+      const searchBox = document.getElementById("searchBox");
+      const statusFilter = document.getElementById("statusFilter");
+
+      if (!body) return;
+
+      const keyword = searchBox ? searchBox.value.trim().toLowerCase() : "";
+      const selectedStatus = statusFilter ? statusFilter.value.trim().toLowerCase() : "";
+
+      filteredMonitoringData = monitoringData.filter(function (item) {
+        const rowText = [
+          item.id_permohonan,
+          item.timestamp,
+          item.nama_penyidik,
+          item.nama_satuan,
+          item.nomor_lp,
+          item.nomor_spdp,
+          item.nama_tersangka,
+          item.pasal,
+          item.jaksa_peneliti,
+          item.jenis_koordinasi,
+          item.urgensi,
+          item.status,
+          item.catatan_jaksa,
+          item.jadwal_koordinasi
+        ].join(" ").toLowerCase();
+
+        const statusText = String(item.status || "").toLowerCase();
+
+        const matchKeyword = keyword === "" || rowText.includes(keyword);
+        const matchStatus = selectedStatus === "" || statusText === selectedStatus;
+
+        return matchKeyword && matchStatus;
+      });
+
+      if (filteredMonitoringData.length === 0) {
+        body.innerHTML =
+          '<tr>' +
+            '<td colspan="12" class="empty-state">Data tidak ditemukan.</td>' +
+          '</tr>';
+        return;
+      }
+
+      body.innerHTML = filteredMonitoringData.map(function (item, index) {
+        const statusClass = getStatusClass(item.status);
+
+        return (
+          '<tr>' +
+            '<td>' + (index + 1) + '</td>' +
+            '<td><strong>' + escapeHtml(item.id_permohonan || "-") + '</strong></td>' +
+            '<td>' + escapeHtml(item.timestamp || "-") + '</td>' +
+            '<td>' + escapeHtml(item.nama_penyidik || "-") + '</td>' +
+            '<td>' + escapeHtml(item.nama_satuan || "-") + '</td>' +
+            '<td>' +
+              '<span class="suspect-name" data-real="' + escapeHtml(item.nama_tersangka || "-") + '">' +
+                escapeHtml(item.nama_tersangka || "-") +
+              '</span>' +
+            '</td>' +
+            '<td>' + escapeHtml(item.jenis_koordinasi || "-") + '</td>' +
+            '<td>' + escapeHtml(item.urgensi || "-") + '</td>' +
+            '<td><span class="status-badge ' + statusClass + '">' + escapeHtml(item.status || "Menunggu") + '</span></td>' +
+            '<td class="monitor-note">' + escapeHtml(item.catatan_jaksa || "-") + '</td>' +
+            '<td>' + escapeHtml(formatJadwalDisplay(item.jadwal_koordinasi) || "-") + '</td>' +
+            '<td><button type="button" class="btn-detail" onclick="openDetailPermohonan(' + index + ')">Lihat Detail</button></td>' +
+          '</tr>'
+        );
+      }).join("");
+
+      applyNamePrivacy();
+    }
+
+    function applyNamePrivacy() {
+      const isLoggedIn = sessionStorage.getItem("isJaksaLoggedIn") === "true";
+
+      document.querySelectorAll(".suspect-name").forEach(function (el) {
+        const realName = el.getAttribute("data-real") || "-";
+        el.textContent = realName;
+
+        if (isLoggedIn) {
+          el.classList.remove("is-blurred");
+        } else {
+          el.classList.add("is-blurred");
+        }
+      });
+    }
+
+    function openDetailPermohonan(index) {
+      const isLoggedIn = sessionStorage.getItem("isJaksaLoggedIn") === "true";
+      const warning = document.getElementById("accessWarning");
+
+      if (!isLoggedIn) {
+        if (warning) {
+          warning.classList.add("show");
+          warning.scrollIntoView({ behavior: "smooth", block: "center" });
+
+          setTimeout(function () {
+            warning.classList.remove("show");
+          }, 4500);
+        }
+
+        openLogin();
+        return;
+      }
+
+      const item = filteredMonitoringData[index];
+
+      if (!item) return;
+
+      const detailContent = document.getElementById("detailContent");
+      const detailModal = document.getElementById("detailModal");
+
+      if (!detailContent || !detailModal) return;
+
+      detailContent.innerHTML =
+        detailItem("ID Permohonan", item.id_permohonan) +
+        detailItem("Timestamp", item.timestamp) +
+        detailItem("Nama Penyidik", item.nama_penyidik) +
+        detailItem("Nama Satuan", item.nama_satuan) +
+        detailItem("Nomor LP", item.nomor_lp) +
+        detailItem("Nomor SPDP", item.nomor_spdp) +
+        detailItem("Nama Tersangka", item.nama_tersangka) +
+        detailItem("Pasal", item.pasal) +
+        detailItem("Jaksa Peneliti", item.jaksa_peneliti) +
+        detailItem("Jenis Koordinasi", item.jenis_koordinasi) +
+        detailItem("Urgensi", item.urgensi) +
+        detailItem("Cara Koordinasi", item.cara_koordinasi) +
+        detailItem("Nomor HP", item.nomor_hp) +
+        detailItem("Status", item.status) +
+        detailItem("Jadwal Koordinasi", formatJadwalDisplay(item.jadwal_koordinasi) || "-") +
+        detailItem("Permasalahan", item.permasalahan, true) +
+        detailItem("Kronologi", item.kronologi, true) +
+        detailItem("Sudah Dilakukan", item.sudah_dilakukan, true) +
+        detailItem("Dimohon", item.dimohon, true) +
+        detailItem("Dokumen", item.dokumen, true) +
+        detailFileItem(
+  "Resume Perkara",
+  item.resume_url,
+  "Buka Resume Perkara"
+) +
+detailFileItem(
+  "File Pendukung",
+  item.file_pendukung_url || item.file_url,
+  "Buka File Pendukung"
+) +
+        detailItem("Catatan Jaksa", item.catatan_jaksa || "-", true) +
+        detailItem("Tanggal Update", item.tanggal_update || "-") +
+        detailItem("Ditangani Oleh", item.ditangani_oleh || "-") +
+        detailItem("Hasil Koordinasi", item.hasil_koordinasi || "-", true) +
+        editJaksaBox(item);
+
+      detailModal.classList.add("show");
+    }
+
+    function closeDetailModal() {
+      const detailModal = document.getElementById("detailModal");
+
+      if (detailModal) {
+        detailModal.classList.remove("show");
+      }
+    }
+
+    function detailItem(label, value, full) {
+      return (
+        '<div class="detail-item ' + (full ? "full" : "") + '">' +
+          '<span>' + escapeHtml(label) + '</span>' +
+          '<p>' + escapeHtml(value || "-") + '</p>' +
+        '</div>'
+      );
+    }
+
+    function detailFileItem(label, value, linkText) {
+  const fileUrl = String(value || "").trim();
+
+  if (!fileUrl) {
+    return detailItem(label, "-", true);
+  }
+
+  return (
+    '<div class="detail-item full">' +
+      '<span>' + escapeHtml(label) + '</span>' +
+      '<p>' +
+        '<a class="file-link" ' +
+          'href="' + escapeHtml(fileUrl) + '" ' +
+          'target="_blank" ' +
+          'rel="noopener noreferrer">' +
+          escapeHtml(linkText || "Buka File") +
+        '</a>' +
+      '</p>' +
+    '</div>'
+  );
+}
+
+  function editJaksaBox(item) {
+      return (
+        '<div class="edit-box">' +
+          '<h4 class="edit-box-title">Edit Tindak Lanjut Jaksa</h4>' +
+
+          '<div class="edit-grid">' +
+            '<div class="edit-field">' +
+              '<label for="editStatus">Status Permohonan</label>' +
+              '<select id="editStatus">' +
+                statusOption("Menunggu", item.status) +
+                statusOption("Diproses", item.status) +
+                statusOption("Selesai", item.status) +
+                statusOption("Ditolak", item.status) +
+              '</select>' +
+            '</div>' +
+
+            '<div class="edit-field">' +
+              '<label for="editJadwal">Jadwal Koordinasi</label>' +
+              '<input type="datetime-local" id="editJadwal" value="' + escapeHtml(formatDatetimeLocal(item.jadwal_koordinasi)) + '">' +
+            '</div>' +
+
+            '<div class="edit-field full">' +
+              '<label for="editCatatan">Catatan Jaksa</label>' +
+              '<textarea id="editCatatan" placeholder="Tulis catatan jaksa...">' + escapeHtml(item.catatan_jaksa || "") + '</textarea>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="edit-actions">' +
+            '<button type="button" class="btn-save-update" onclick="saveJaksaUpdate(\'' + escapeJs(item.id_permohonan) + '\')">' +
+              'Simpan Perubahan' +
+            '</button>' +
+          '</div>' +
+
+          '<!-- FITUR GENERATE SOP FORM-6 -->' +
+          '<div style="margin-top: 20px; border-top: 1px solid rgba(201, 162, 75, 0.3); padding-top: 20px;">' +
+            '<button type="button" id="btn-toggle-sop" class="btn-save-update" style="background: linear-gradient(135deg, #c9a24b, #a58133); margin-bottom: 15px;" onclick="toggleSopBox()">' +
+              'Buat File SOP FORM-6' +
+            '</button>' +
+
+            '<div id="materi-koordinasi-container" style="display: none;">' +
+              '<div class="edit-field full">' +
+                '<label for="materi_koordinasi" style="color: #7b1113;">Materi Koordinasi <span style="color:red;">*</span></label>' +
+                '<textarea id="materi_koordinasi" placeholder="Masukkan materi koordinasi di sini untuk digenerate ke dalam dokumen..."></textarea>' +
+              '</div>' +
+              '<div style="display: flex; gap: 10px; margin-top: 10px;">' +
+                '<button type="button" id="btn-generate-sop" class="btn-save-update" onclick="generateSopForm6(\'' + escapeJs(item.id_permohonan) + '\')">' +
+                  'Generate Dokumen SOP' +
+                '</button>' +
+                '<a id="btn-lihat-file-sop" href="#" target="_blank" class="btn-save-update" style="display: none; background: linear-gradient(135deg, #1f8f4d, #126335); text-decoration: none; text-align: center;">' +
+                  'Lihat File' +
+                '</a>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<!-- AKHIR FITUR -->' +
+        '</div>'
+      );
+    }
+
+    function statusOption(value, current) {
+      const selected = String(value) === String(current || "") ? "selected" : "";
+
+      return (
+        '<option value="' + escapeHtml(value) + '" ' + selected + '>' +
+          escapeHtml(value) +
+        '</option>'
+      );
+    }
+
+    async function saveJaksaUpdate(idPermohonan) {
+      const sessionToken = sessionStorage.getItem("jaksaSessionToken");
+
+      if (!sessionToken) {
+        alert("Sesi login tidak ditemukan. Silakan login ulang.");
+        openLogin();
+        return;
+      }
+
+      const status = document.getElementById("editStatus")?.value || "Menunggu";
+      const catatan = document.getElementById("editCatatan")?.value || "";
+      const jadwal = document.getElementById("editJadwal")?.value || "";
+      const btn = document.querySelector(".btn-save-update");
+
+      try {
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = "Menyimpan...";
+        }
+
+        const clientToken =
+          "UPDATE-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+
+        await fetch(MONITORING_SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: JSON.stringify({
+            action: "update_permohonan",
+            client_token: clientToken,
+            session_token: sessionToken,
+            id_permohonan: idPermohonan,
+            status: status,
+            catatan_jaksa: catatan,
+            jadwal_koordinasi: jadwal
+          })
+        });
+
+        const result = await waitMonitoringResult("update_result", clientToken);
+
+        if (result.status === "success") {
+          alert("Perubahan berhasil disimpan.");
+          closeDetailModal();
+          await loadMonitoringData();
+        } else {
+          alert(result.message || "Gagal menyimpan perubahan.");
+        }
+
+      } catch (error) {
+        console.error(error);
+        alert("Terjadi kesalahan saat menyimpan perubahan.");
+
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Simpan Perubahan";
+        }
+      }
+    }
+// --- FUNGSI TAMBAHAN UNTUK SOP FORM-6 ---
+
+// 1. Fungsi untuk memunculkan/menyembunyikan textarea materi koordinasi
+function toggleSopBox() {
+  const container = document.getElementById("materi-koordinasi-container");
+  if (container) {
+    if (container.style.display === "none") {
+      container.style.display = "block";
+    } else {
+      container.style.display = "none";
+    }
+  }
+}
+
+// 2. Fungsi untuk mengirim request pembuatan dokumen ke backend
+async function generateSopForm6(idPermohonan) {
+  const sessionToken = sessionStorage.getItem("jaksaSessionToken");
+  
+  // Validasi login
+  if (!sessionToken) {
+    alert("Sesi login tidak ditemukan. Silakan login ulang.");
+    openLogin();
+    return;
+  }
+
+  // Validasi isi box
+  const materi = document.getElementById("materi_koordinasi")?.value.trim();
+  if (!materi) {
+    alert("Materi Koordinasi wajib diisi untuk membuat file SOP FORM-6!");
+    document.getElementById("materi_koordinasi").focus();
+    return;
+  }
+
+  const btn = document.getElementById("btn-generate-sop");
+  
+  try {
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Memproses Dokumen...";
+    }
+
+    // Generate client token unik
+    const clientToken = "GENERATE-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+
+    // Mengirim payload POST ke Google Apps Script (sama seperti saat update permohonan)
+    await fetch(MONITORING_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify({
+        action: "generate_sop_form6", // Ini action baru yang ditangkap backend
+        client_token: clientToken,
+        session_token: sessionToken,
+        id_permohonan: idPermohonan,
+        materi_koordinasi: materi
+      })
+    });
+
+    // Karena no-cors, kita gunakan teknik JSONP long-polling buatan Anda
+    const result = await waitMonitoringResult("generate_sop_result", clientToken);
+
+if (result.status === "success") {
+      alert("Dokumen berhasil dibuat!");
+      
+      // Menampilkan tombol "Lihat File" tanpa harus membuka tab otomatis
+      if (result.file_url) {
+        const btnLihat = document.getElementById("btn-lihat-file-sop");
+        if (btnLihat) {
+          btnLihat.href = result.file_url;
+          btnLihat.style.display = "inline-block";
+        }
+      }
+    } else {
+      alert(result.message || "Gagal membuat dokumen.");
+    }
+
+  } catch (error) {
+    console.error(error);
+    alert("Terjadi kesalahan saat menghubungi server untuk generate dokumen.");
+
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Generate Dokumen SOP";
+    }
+  }
+}
+// ----------------------------------------
+    async function waitMonitoringResult(action, clientToken) {
+      for (let i = 0; i < 8; i++) {
+        await monitoringDelay(i === 0 ? 500 : 1000);
+
+        const url =
+          MONITORING_SCRIPT_URL +
+          "?action=" +
+          encodeURIComponent(action) +
+          "&client_token=" +
+          encodeURIComponent(clientToken);
+
+        const result = await monitoringJsonpRequest(url);
+
+        if (result.status === "success" || result.status === "error") {
+          return result;
+        }
+      }
+
+      return {
+        status: "pending",
+        message: "Data masih diproses."
+      };
+    }
+
+    function monitoringJsonpRequest(url, timeout) {
+      return new Promise(function (resolve, reject) {
+        const callbackName =
+          "monitoringCallback_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+
+        const script = document.createElement("script");
+
+        const timer = setTimeout(function () {
+          cleanup();
+          reject(new Error("Timeout memuat data monitoring."));
+        }, timeout || 15000);
+
+        function cleanup() {
+          clearTimeout(timer);
+
+          if (script.parentNode) {
+            script.parentNode.removeChild(script);
+          }
+
+          delete window[callbackName];
+        }
+
+        window[callbackName] = function (data) {
+          cleanup();
+          resolve(data);
+        };
+
+        const separator = url.includes("?") ? "&" : "?";
+        script.src = url + separator + "callback=" + encodeURIComponent(callbackName);
+
+        script.onerror = function () {
+          cleanup();
+          reject(new Error("Gagal memuat data monitoring."));
+        };
+
+        document.body.appendChild(script);
+      });
+    }
+
+    function monitoringDelay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+// ----------------------------------------
+    function getStatusClass(status) {
+      const value = String(status || "").toLowerCase();
+
+      if (value.includes("selesai")) return "status-selesai";
+      if (value.includes("proses")) return "status-diproses";
+      if (value.includes("tolak")) return "status-ditolak";
+
+      return "status-menunggu";
+    }
+
+    function formatDatetimeLocal(value) {
+      if (!value) return "";
+
+      const text = String(value).trim();
+
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(text)) {
+        return text.slice(0, 16);
+      }
+
+      return "";
+    }
+
+    function formatJadwalDisplay(value) {
+      if (!value) return "";
+
+      const text = String(value).trim();
+
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(text)) {
+        const datePart = text.slice(0, 10);
+        const timePart = text.slice(11, 16);
+        const parts = datePart.split("-");
+
+        return parts[2] + "/" + parts[1] + "/" + parts[0] + " " + timePart;
+      }
+
+      return text;
+    }
+
+    function escapeJs(value) {
+      return String(value === undefined || value === null ? "" : value)
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, "\\n")
+        .replace(/\r/g, "");
+    }
+
+    function escapeHtml(value) {
+      return String(value === undefined || value === null ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function initParticles() {
+      if (typeof particlesJS === "undefined") return;
+
+      particlesJS("particles-js", {
+        particles: {
+          number: { value: 45, density: { enable: true, value_area: 900 } },
+          color: { value: ["#c9a24b", "#7b1113"] },
+          shape: { type: "circle" },
+          opacity: { value: 0.45, random: true },
+          size: { value: 3.3, random: true },
+          line_linked: {
+            enable: true,
+            distance: 150,
+            color: "#c9a24b",
+            opacity: 0.32,
+            width: 1
+          },
+          move: { enable: true, speed: 1.6, out_mode: "out" }
+        },
+        interactivity: {
+          detect_on: "canvas",
+          events: {
+            onhover: { enable: true, mode: "grab" },
+            onclick: { enable: true, mode: "push" },
+            resize: true
+          },
+          modes: {
+            grab: { distance: 160, line_linked: { opacity: 0.55 } },
+            push: { particles_nb: 3 }
+          }
+        },
+        retina_detect: true
+      });
+    }
+  </script>
 </body>
 </html>
