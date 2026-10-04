@@ -6,5 +6,7 @@ window.APP_CONFIG = Object.freeze({
   SHEET_URL: "https://docs.google.com/spreadsheets/d/1OCCl_rOodETdsdQRuBwxBMWZWO7LvqYv6Kbyw__UiCg/edit?usp=sharing",
   DRIVE_FOLDER_URL: "https://drive.google.com/drive/folders/1k4NiHI47evCnGZJSa4Z29zzU3dSDuKJm?usp=sharing",
   REQUEST_TIMEOUT_MS: 120000,
+  // Alamat aplikasi SIKORDA (frontend, mis. Vercel) — GANTI dengan URL SIKORDA Anda, tanpa "/" di akhir
+  SIKORDA_APP_URL: "https://sikordakejaksaan.vercel.app",
   DEMO_MODE: false
 });
