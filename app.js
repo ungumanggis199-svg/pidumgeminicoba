@@ -321,6 +321,7 @@
     tikLoaded: false,
     tikSelectedFiles: [],
     myCases: [],
+    myPreSpdp: [],
     myCasesLoaded: false,
     caseModalTab: "ringkasan",
     lastLoadedAt: null,
@@ -494,6 +495,7 @@
       // muat status koordinasi di latar belakang untuk badge & notifikasi
       gasRequest("listMyCases", {}, { silent: true }).then((result) => {
         state.myCases = Array.isArray(result.cases) ? result.cases : [];
+        state.myPreSpdp = Array.isArray(result.preSpdp) ? result.preSpdp : [];
         state.myCasesLoaded = true;
         renderSidebar();
       }).catch(() => {});
@@ -521,6 +523,7 @@
     state.tikLoaded = false;
     state.tikSelectedFiles = [];
     state.myCases = [];
+    state.myPreSpdp = [];
     state.myCasesLoaded = false;
     document.getElementById("notif-panel")?.remove();
     els.modalRoot.innerHTML = "";
@@ -1210,6 +1213,12 @@
           <h2>Form pengiriman SPDP</h2>
           <p>Isi data penyidik, data perkara, identitas tersangka, barang bukti, lalu unggah dokumen SPDP dalam format PDF atau DOCX.</p>
         </div>
+        ${buildSikordaPreSpdpUrl() ? `
+          <section class="koor-start compact">
+            <div class="koor-start-icon">⇄</div>
+            <div class="koor-start-copy"><strong>Perlu koordinasi dulu sebelum SPDP?</strong><p>Konsultasikan perkara dengan Jaksa melalui SIKORDA tanpa harus mengirim SPDP.</p></div>
+            <a class="case-primary-button" href="${escapeAttr(buildSikordaPreSpdpUrl())}" target="_blank" rel="noopener noreferrer">⇄ Ajukan Koordinasi</a>
+          </section>` : ""}
 
         <form id="spdp-form" novalidate>
           ${formSection("01", "Identitas Penyidik", "Data petugas yang menyampaikan SPDP.", `
@@ -4041,7 +4050,7 @@ function detectTeamRoleFromLabel(label) {
     ] });
     if (action === "listCaseAnalyses") return Promise.resolve({ analyses: [] });
     if (action === "syncKoordinasi") return Promise.resolve({ total: demoCases.length, changed: 0 });
-    if (action === "listMyCases") return Promise.resolve({ cases: demoCases });
+    if (action === "listMyCases") return Promise.resolve({ cases: demoCases, preSpdp: [{ idPermohonan: "BRIPKA_AHMAD-SATRESKRIM-0007", suspectName: "Terlapor A", jaksa: "Indra Thimoty, S.H., M.H.", createdAt: "04/10/2026 09:00:00", koordinasi: { state: "requested", requestCount: 1, latest: { id_permohonan: "BRIPKA_AHMAD-SATRESKRIM-0007", jenis_koordinasi: "Konsultasi tahap penyelidikan (sebelum SPDP)" } } }] });
     if (action === "getCase") {
       const found = demoCases.find((item) => item.caseId === payload.caseId);
       return found ? Promise.resolve({ case: { ...found, administrations: (found.administrations || []).filter((record) => !record.fileMissing) } }) : Promise.reject(new Error("Perkara tidak ditemukan."));
@@ -4274,6 +4283,20 @@ function detectTeamRoleFromLabel(label) {
     return `${base}/Form/permohonan.html?${params.toString()}`;
   }
 
+  /* Form SIKORDA untuk koordinasi SEBELUM SPDP (tahap penyelidikan). */
+  function buildSikordaPreSpdpUrl() {
+    const base = sikordaBaseUrl();
+    if (!base) return "";
+    const user = state.session?.user || {};
+    const params = new URLSearchParams();
+    params.set("src", "siap-pidum");
+    params.set("mode", "pra-spdp");
+    if (user.fullName) params.set("nama_penyidik", user.fullName);
+    if (user.unit) params.set("nama_satuan", user.unit);
+    params.set("return_url", window.location.origin + window.location.pathname);
+    return `${base}/Form/permohonan.html?${params.toString()}`;
+  }
+
   function describeKoordinasi(item) {
     const k = item?.koordinasi || { state: "none" };
     const meta = KOOR_STATE_META[k.state] || KOOR_STATE_META.none;
@@ -4299,7 +4322,7 @@ function detectTeamRoleFromLabel(label) {
   }
 
   function penyidikKoordinasiBadge() {
-    return state.myCases.filter((item) => item.koordinasi?.state === "scheduled" && describeKoordinasi(item).dayDiff <= 3).length;
+    return [...state.myCases, ...state.myPreSpdp].filter((item) => item.koordinasi?.state === "scheduled" && describeKoordinasi(item).dayDiff <= 3).length;
   }
 
   function renderKoordinasiChip(item) {
@@ -4311,7 +4334,7 @@ function detectTeamRoleFromLabel(label) {
     return `<span class="koor-chip tone-${info.meta.tone}" title="${escapeAttr(info.when || info.meta.label)}">⇄ ${escapeHtml(text)}</span>`;
   }
 
-  function renderKoordinasiCard(item, { forPenyidik = false } = {}) {
+  function renderKoordinasiCard(item, { forPenyidik = false, hideActions = false } = {}) {
     const info = describeKoordinasi(item);
     const k = info.k;
     const latest = k.latest || {};
@@ -4350,8 +4373,8 @@ function detectTeamRoleFromLabel(label) {
         </div>
         <div class="koor-card-actions">
           ${k.sf6Url ? `<a class="case-ghost-button small" href="${escapeAttr(k.sf6Url)}" target="_blank" rel="noopener noreferrer">SOP FORM-6</a>` : ""}
-          ${forPenyidik && formUrl ? `<a class="case-primary-button small" href="${escapeAttr(formUrl)}" target="_blank" rel="noopener noreferrer">⇄ ${k.state === "none" ? "Ajukan Koordinasi" : "Ajukan lagi"}</a>` : ""}
-          ${!forPenyidik && monitoringUrl ? `<a class="case-ghost-button small" href="${escapeAttr(monitoringUrl)}" target="_blank" rel="noopener noreferrer">${k.state === "requested" ? "Atur jadwal" : "Buka SIKORDA"}</a>` : ""}
+          ${forPenyidik && !hideActions && formUrl ? `<a class="case-primary-button small" href="${escapeAttr(formUrl)}" target="_blank" rel="noopener noreferrer">⇄ ${k.state === "none" ? "Ajukan Koordinasi" : "Ajukan lagi"}</a>` : ""}
+          ${!forPenyidik && !hideActions && monitoringUrl ? `<a class="case-ghost-button small" href="${escapeAttr(monitoringUrl)}" target="_blank" rel="noopener noreferrer">${k.state === "requested" ? "Atur jadwal" : "Buka SIKORDA"}</a>` : ""}
         </div>
       </section>`;
   }
@@ -4458,6 +4481,7 @@ function detectTeamRoleFromLabel(label) {
       try {
         const result = await gasRequest("listMyCases", {}, { retries: 1 });
         state.myCases = Array.isArray(result.cases) ? result.cases : [];
+        state.myPreSpdp = Array.isArray(result.preSpdp) ? result.preSpdp : [];
         state.myCasesLoaded = true;
         renderSidebar();
       } catch (error) {
@@ -4467,6 +4491,7 @@ function detectTeamRoleFromLabel(label) {
       if (state.activePage !== "penyidik-koordinasi") return;
     }
 
+    const preUrl = buildSikordaPreSpdpUrl();
     const cards = state.myCases.map((item) => `
       <article class="koor-case">
         <header>
@@ -4480,20 +4505,54 @@ function detectTeamRoleFromLabel(label) {
         ${renderKoordinasiCard(item, { forPenyidik: true })}
       </article>`).join("");
 
+    const preCards = state.myPreSpdp.map((entry) => `
+      <article class="koor-case pre">
+        <header>
+          <div>
+            <strong>${escapeHtml(entry.suspectName || "Terlapor belum diisi")}</strong>
+            <span>ID ${escapeHtml(entry.idPermohonan)}${entry.createdAt ? ` · diajukan ${escapeHtml(entry.createdAt)}` : ""}</span>
+          </div>
+          <span class="case-chip phase-pra">Sebelum SPDP</span>
+        </header>
+        <p class="koor-case-meta">${entry.spdpNumber ? `SPDP: ${escapeHtml(entry.spdpNumber)}<br>` : ""}Jaksa: ${escapeHtml(entry.jaksa || "-")}</p>
+        ${renderKoordinasiCard({ koordinasi: entry.koordinasi }, { forPenyidik: true, hideActions: true })}
+      </article>`).join("");
+
     els.pageContent.innerHTML = `
       <section class="koor-page">
         <header class="flow-hero">
           <div>
             <p class="case-eyebrow">SIKORDA · Sistem Koordinasi &amp; Konsultasi</p>
             <h2>Koordinasi dengan Jaksa Peneliti</h2>
-            <p>Pilih perkara yang SPDP-nya telah Anda kirim, lalu tekan <b>Ajukan Koordinasi</b>. Formulir SIKORDA akan terbuka dengan data perkara terisi otomatis. Jadwal koordinasi dari Jaksa akan tampil di halaman ini.</p>
+            <p>Koordinasi dapat diajukan <b>kapan saja</b> — termasuk pada tahap penyelidikan sebelum SPDP dikirim. Untuk perkara yang SPDP-nya sudah terkirim, gunakan tombol pada kartu perkara agar data terisi otomatis. Jadwal koordinasi dari Jaksa akan tampil di halaman ini.</p>
           </div>
           <div class="koor-hero-actions">
+            ${preUrl ? `<a class="case-primary-button" href="${escapeAttr(preUrl)}" target="_blank" rel="noopener noreferrer">⇄ Ajukan Koordinasi</a>` : ""}
+            <button type="button" id="koor-new-spdp" class="case-ghost-button">＋ Kirim SPDP</button>
             <button type="button" id="koor-refresh" class="case-ghost-button">↻ Muat ulang</button>
-            <button type="button" id="koor-new-spdp" class="case-primary-button">＋ Kirim SPDP baru</button>
           </div>
         </header>
-        ${state.myCases.length ? `<div class="koor-case-grid">${cards}</div>` : `<div class="panel">${emptyState("⇄", "Belum ada perkara", "Kirim SPDP terlebih dahulu. Setelah terkirim, tombol Ajukan Koordinasi akan muncul di sini.")}</div>`}
+
+        ${preUrl ? `
+          <section class="koor-start">
+            <div class="koor-start-icon">⇄</div>
+            <div class="koor-start-copy">
+              <strong>Belum mengirim SPDP?</strong>
+              <p>Ajukan konsultasi/koordinasi tahap penyelidikan (B-310 butir 1 · SOP FORM-6A). Nama dan satuan Anda terisi otomatis; nomor SPDP boleh dikosongkan. Setelah SPDP dikirim, koordinasi ini otomatis terhubung bila nomor SPDP atau nama tersangka sama.</p>
+            </div>
+            <a class="case-primary-button" href="${escapeAttr(preUrl)}" target="_blank" rel="noopener noreferrer">Ajukan koordinasi tanpa SPDP</a>
+          </section>` : ""}
+
+        ${state.myPreSpdp.length ? `
+          <section class="koor-group">
+            <header><h3>Koordinasi sebelum SPDP <i>${state.myPreSpdp.length}</i></h3><p>Permohonan yang belum terhubung ke perkara/SPDP.</p></header>
+            <div class="koor-case-grid">${preCards}</div>
+          </section>` : ""}
+
+        <section class="koor-group">
+          <header><h3>Perkara dengan SPDP <i>${state.myCases.length}</i></h3><p>Tekan “Ajukan Koordinasi” pada kartu perkara — data SPDP & tersangka terisi otomatis.</p></header>
+          ${state.myCases.length ? `<div class="koor-case-grid">${cards}</div>` : `<p class="case-muted koor-empty">Belum ada SPDP yang Anda kirim. Anda tetap dapat mengajukan koordinasi melalui tombol di atas.</p>`}
+        </section>
         ${sikordaBaseUrl() ? "" : `<p class="case-muted">Alamat SIKORDA belum diatur pada config.js (SIKORDA_APP_URL).</p>`}
       </section>`;
 
@@ -4507,7 +4566,9 @@ function detectTeamRoleFromLabel(label) {
   /* ---------- Lonceng notifikasi (topbar) ---------- */
   function buildNotifications() {
     const list = [];
-    const source = state.session?.user?.role === "jaksa" ? state.cases : state.myCases;
+    const source = state.session?.user?.role === "jaksa"
+      ? state.cases
+      : [...state.myCases, ...state.myPreSpdp.map((entry) => ({ caseId: entry.idPermohonan, suspectName: entry.suspectName || `Koordinasi ${entry.idPermohonan}`, koordinasi: entry.koordinasi }))];
     source.forEach((item) => {
       const info = describeKoordinasi(item);
       if (info.k.state === "scheduled" && info.dayDiff <= 7) {
