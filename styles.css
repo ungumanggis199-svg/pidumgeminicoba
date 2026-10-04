@@ -2516,3 +2516,13 @@ body.ai-docked .notif-panel { right: calc(var(--ai-w) + 18px); }
   .koor-start { grid-template-columns: auto minmax(0, 1fr); }
   .koor-start > .case-primary-button { grid-column: 1 / -1; }
 }
+
+/* V6 — hasil notifikasi WhatsApp P-16 */
+.wa-result { display: grid; gap: 4px; margin: 8px 0 0; padding: 0; list-style: none; }
+.wa-result li { padding: 6px 10px; border-radius: 8px; background: var(--v4-soft); color: var(--v4-text); font-size: 12px; }
+.wa-result li.sent { background: var(--v4-green-bg); }
+.wa-result li.sent b { color: var(--v4-green); }
+.wa-result li.failed { background: var(--v4-red-bg); }
+.wa-result li.failed b { color: var(--v4-red); }
+.wa-result li.skipped b { color: var(--v4-amber); }
+.wa-result small { display: block; margin-top: 2px; color: var(--v4-muted); font-size: 11px; }
