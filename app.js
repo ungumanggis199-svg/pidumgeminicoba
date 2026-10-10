@@ -3978,7 +3978,9 @@ function detectTeamRoleFromLabel(label) {
       let data;
       try { data = JSON.parse(text); }
       catch {
-        const invalid = new Error("Respons backend tidak valid. Pastikan deployment Apps Script menggunakan versi kode terbaru.");
+        const invalid = new Error(response.status === 404 || response.status === 405
+          ? `Proxy ${endpoint} tidak ditemukan (HTTP ${response.status}). Pastikan folder api/ (gas.js) ikut diunggah ke GitHub dan Vercel sudah deploy ulang.`
+          : `Respons backend tidak valid (HTTP ${response.status}). Pastikan deployment Apps Script menggunakan versi kode terbaru.`);
         invalid.transient = response.status >= 500;
         throw invalid;
       }
