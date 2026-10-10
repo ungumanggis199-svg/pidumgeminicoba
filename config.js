@@ -2,11 +2,11 @@ window.APP_CONFIG = Object.freeze({
   APP_NAME: "SIAP PIDUM Kejari Muna",
   APP_SUBTITLE: "Sistem Informasi Alur Administrasi Pidana Umum",
   OFFICE_NAME: "Kejaksaan Negeri Muna",
-  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwGoon2xWI_hvrdbxqo8cJps4_oXtHagRMNkOFp1YvgqgX2mvLMP1Rc4DlV_0TGqnh86w/exec",
-  SHEET_URL: "https://docs.google.com/spreadsheets/d/1OCCl_rOodETdsdQRuBwxBMWZWO7LvqYv6Kbyw__UiCg/edit?usp=sharing",
-  DRIVE_FOLDER_URL: "https://drive.google.com/drive/folders/1k4NiHI47evCnGZJSa4Z29zzU3dSDuKJm?usp=sharing",
+  // V7: browser hanya memanggil proxy di domain sendiri. URL Apps Script, ID Spreadsheet,
+  // dan ID folder Drive TIDAK lagi dicantumkan di sini (disimpan di Environment Variables Vercel).
+  API_ENDPOINT: "/api/gas",
   REQUEST_TIMEOUT_MS: 120000,
-  // Alamat aplikasi SIKORDA (frontend, mis. Vercel) — GANTI dengan URL SIKORDA Anda, tanpa "/" di akhir
+  // Alamat aplikasi SIKORDA (publik)
   SIKORDA_APP_URL: "https://sikordakejaksaan.vercel.app",
   DEMO_MODE: false
 });
