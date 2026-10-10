@@ -2528,3 +2528,24 @@ body.ai-docked .notif-panel { right: calc(var(--ai-w) + 18px); }
 .wa-result small { display: block; margin-top: 2px; color: var(--v4-muted); font-size: 11px; }
 .wa-diag-row { display: flex; gap: 8px; margin: 10px 0; }
 .wa-diag-row input { flex: 1; min-width: 0; min-height: 36px; padding: 0 10px; border: 1px solid var(--v4-line); border-radius: 9px; }
+
+/* ---------- V8: katalog format administrasi B-310 ---------- */
+.b310-catalog { margin-top: 14px; border: 1px solid var(--v4-line); border-radius: 12px; background: #fff; }
+.b310-catalog > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px; cursor: pointer; list-style: none; }
+.b310-catalog > summary::-webkit-details-marker { display: none; }
+.b310-catalog > summary strong { display: block; color: var(--v4-text); font-size: 13px; }
+.b310-catalog > summary small { display: block; margin-top: 2px; color: var(--v4-muted); font-size: 11px; line-height: 1.4; }
+.b310-chevron { color: var(--v4-muted); font-size: 16px; transition: transform .2s var(--v4-ease); }
+.b310-catalog[open] .b310-chevron { transform: rotate(180deg); }
+.b310-groups { display: grid; gap: 12px; padding: 4px 14px 14px; }
+.b310-group-title { margin-bottom: 6px; color: var(--v4-muted); font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.b310-group ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.b310-group li { display: grid; grid-template-columns: 138px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 9px; }
+.b310-group li:hover { background: var(--v4-soft); }
+.b310-group li .adm-code { justify-self: start; }
+.b310-title { color: var(--v4-text); font-size: 12.5px; line-height: 1.35; }
+.b310-group li.made .b310-title::after { content: " ✓"; color: var(--v4-green); font-weight: 800; }
+@media (max-width: 560px) {
+  .b310-group li { grid-template-columns: minmax(0, 1fr) auto; }
+  .b310-title { grid-column: 1 / -1; grid-row: 2; }
+}
