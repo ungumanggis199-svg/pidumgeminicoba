@@ -192,7 +192,7 @@
     }
   ]);
 
-  const ADMINISTRATION_STAGES = Object.freeze([
+  const CORE_ADMINISTRATION_STAGES = Object.freeze([
     {
       code: "P-16",
       title: "Penunjukan Penuntut Umum",
@@ -264,6 +264,19 @@
       prerequisites: []
     }
   ]);
+  // V8: format administrasi B-310 tambahan (administration-forms-b310.js). Tidak dihitung dalam progres utama.
+  const B310_STAGES = Object.freeze((window.SIAP_B310_STAGES || []).filter((stage) => !CORE_ADMINISTRATION_STAGES.some((core) => core.code === stage.code)));
+  const ADMINISTRATION_STAGES = Object.freeze([...CORE_ADMINISTRATION_STAGES, ...B310_STAGES]);
+  const B310_PHASE_ORDER = ["spdp", "koordinasi", "upaya_paksa", "prapid", "tahap1", "penelitian", "tahap2", "penuntutan"];
+  function groupB310Stages() {
+    const groups = new Map();
+    B310_STAGES.forEach((stage) => {
+      const key = stage.phase || "lain";
+      if (!groups.has(key)) groups.set(key, { label: stage.phaseLabel || key, stages: [] });
+      groups.get(key).stages.push(stage);
+    });
+    return [...groups.entries()].sort((a, b) => B310_PHASE_ORDER.indexOf(a[0]) - B310_PHASE_ORDER.indexOf(b[0])).map(([, group]) => group);
+  }
 
   const REMINDER_ADMIN_TYPES = Object.freeze([
     { code: "P-16", label: "P-16 — Penunjukan Penuntut Umum", defaultDays: 7, base: "received" },
@@ -508,6 +521,9 @@
   }
 
   function logout() {
+    if (state.session?.token && !CONFIG.DEMO_MODE) {
+      gasRequest("logout", {}, { silent: true, timeout: 10000 }).catch(() => {}); // cabut sesi di server
+    }
     localStorage.removeItem(STORAGE_KEY);
     state.session = null;
     state.cases = [];
@@ -1183,19 +1199,9 @@
     els.pageContent.innerHTML = `
       <div class="settings-grid">
         <section class="settings-card">
-          <h3>Google Apps Script</h3>
-          <p>Backend untuk autentikasi, penyimpanan data perkara, log aktivitas, dan unggah dokumen.</p>
-          <a class="integration-link" href="${escapeAttr(CONFIG.APPS_SCRIPT_URL)}" target="_blank" rel="noopener noreferrer">${escapeHtml(CONFIG.APPS_SCRIPT_URL)}</a>
-        </section>
-        <section class="settings-card">
-          <h3>Google Spreadsheet</h3>
-          <p>Basis data operasional sederhana yang berisi tabel Users, Cases, Documents, dan ActivityLog.</p>
-          <a class="integration-link" href="${escapeAttr(CONFIG.SHEET_URL)}" target="_blank" rel="noopener noreferrer">Buka Google Spreadsheet</a>
-        </section>
-        <section class="settings-card">
-          <h3>Google Drive</h3>
-          <p>Folder induk arsip SPDP. Backend membuat subfolder berdasarkan ID perkara.</p>
-          <a class="integration-link" href="${escapeAttr(CONFIG.DRIVE_FOLDER_URL)}" target="_blank" rel="noopener noreferrer">Buka folder Google Drive</a>
+          <h3>Koneksi backend</h3>
+          <p>Aplikasi terhubung melalui proxy aman <code>${escapeHtml(CONFIG.API_ENDPOINT || "/api/gas")}</code>. Alamat Google Apps Script, Spreadsheet, dan folder Drive disembunyikan di server dan tidak tampil di browser.</p>
+          <span class="case-chip tone-green">Terlindungi proxy</span>
         </section>
         <section class="settings-card wa-diag-card">
           <h3>Diagnosa WhatsApp (Fonnte)</h3>
@@ -1309,7 +1315,7 @@
               <input id="spdp-file" name="spdpFile" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
               <div class="upload-icon">⇧</div>
               <h4>Pilih atau tarik dokumen SPDP ke sini</h4>
-              <p>Format yang diterima: PDF atau DOCX. Antarmuka tidak menetapkan batas ukuran, tetapi unggahan tetap tunduk pada kuota dan batas eksekusi Google Apps Script/Google Drive.</p>
+              <p>Format yang diterima: PDF atau DOCX, maksimal 3 MB per file.</p>
               <button id="choose-file-button" class="secondary-button" type="button" style="margin-top:14px">Pilih dokumen</button>
               <div id="selected-file-card"></div>
               <div class="progress-bar"><span id="file-progress"></span></div>
@@ -1375,6 +1381,10 @@
     const extension = file.name.split(".").pop().toLowerCase();
     if (!["pdf", "docx"].includes(extension)) {
       toast("warning", "Format tidak didukung", "Gunakan dokumen PDF atau DOCX.");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      toast("warning", "File terlalu besar", "Ukuran maksimal 3 MB. Kompres PDF terlebih dahulu.");
       return;
     }
     state.selectedFile = file;
@@ -1759,7 +1769,10 @@
     const knownCodes = new Set(ADMINISTRATION_STAGES.map((stage) => stage.code));
     const done = [];
     const pending = [];
-    ADMINISTRATION_STAGES.forEach((stage) => (byType.has(stage.code) ? done : pending).push(stage));
+    ADMINISTRATION_STAGES.forEach((stage) => {
+      if (byType.has(stage.code)) done.push(stage);
+      else if (stage.core !== false) pending.push(stage);
+    });
     // Jenis administrasi lain yang tersimpan tetapi tidak ada di daftar tahapan
     byType.forEach((records, code) => {
       if (!knownCodes.has(code)) done.push({ code, title: records[0].title || code, detail: "" });
@@ -1801,8 +1814,9 @@
         <button type="button" class="case-primary-button small" data-create-administration="${escapeAttr(stage.code)}">＋ Buat</button>
       </li>`).join("");
 
-    const total = ADMINISTRATION_STAGES.length;
-    const doneKnown = ADMINISTRATION_STAGES.filter((stage) => byType.has(stage.code)).length;
+    const total = CORE_ADMINISTRATION_STAGES.length;
+    const doneKnown = CORE_ADMINISTRATION_STAGES.filter((stage) => byType.has(stage.code)).length;
+    const b310Catalog = renderB310Catalog(byType);
     const pct = Math.round((doneKnown / total) * 100);
     const folder = item.caseFolderUrl
       ? `<a class="case-ghost-button small" href="${escapeAttr(item.caseFolderUrl)}" target="_blank" rel="noopener noreferrer">Folder Drive</a>` : "";
@@ -1825,8 +1839,39 @@
         ${done.length ? `<div class="adm-grid">${doneCards}</div>` : `<p class="case-muted adm-empty">Belum ada administrasi yang dibuat untuk perkara ini.</p>`}
 
         <div class="adm-group-label">Belum dibuat <b>${pending.length}</b></div>
-        ${pending.length ? `<ul class="adm-pending-list">${pendingRows}</ul>` : `<p class="case-muted adm-empty">Semua jenis administrasi telah dibuat.</p>`}
+        ${pending.length ? `<ul class="adm-pending-list">${pendingRows}</ul>` : `<p class="case-muted adm-empty">Semua jenis administrasi utama telah dibuat.</p>`}
+        ${b310Catalog}
       </section>`;
+  }
+
+  /* V8: katalog format B-310 lain, dikelompokkan per tahap, dilipat agar ringkasan tetap rapi. */
+  function renderB310Catalog(byType) {
+    if (!B310_STAGES.length) return "";
+    const groups = groupB310Stages();
+    const doneCount = B310_STAGES.filter((stage) => byType && byType.has(stage.code)).length;
+    return `
+      <details class="b310-catalog">
+        <summary>
+          <span><strong>Format administrasi lain (B-310)</strong><small>${B310_STAGES.length} format · ${doneCount} sudah dibuat · Koordinasi, penahanan, praperadilan, Saksi Mahkota, Tahap II</small></span>
+          <span class="b310-chevron" aria-hidden="true">⌄</span>
+        </summary>
+        <div class="b310-groups">
+          ${groups.map((group) => `
+            <div class="b310-group">
+              <div class="b310-group-title">${escapeHtml(group.label)}</div>
+              <ul>
+                ${group.stages.map((stage) => {
+                  const made = byType && byType.has(stage.code);
+                  return `<li class="${made ? "made" : ""}">
+                    <span class="adm-code ${made ? "" : "muted"}">${escapeHtml(stage.code)}</span>
+                    <span class="b310-title">${escapeHtml(stage.title)}</span>
+                    <button type="button" class="${made ? "case-ghost-button" : "case-primary-button"} small" data-create-administration="${escapeAttr(stage.code)}">${made ? "Buat ulang" : "＋ Buat"}</button>
+                  </li>`;
+                }).join("")}
+              </ul>
+            </div>`).join("")}
+        </div>
+      </details>`;
   }
 
   function renderCaseFlowTimeline(item) {
@@ -2025,21 +2070,21 @@
       const previous = latestByType.get(key);
       if (!previous || dateValue(record.createdAt) >= dateValue(previous.createdAt)) latestByType.set(key, record);
     });
-    const resolvedCount = ADMINISTRATION_STAGES.filter((stage) => latestByType.has(stage.code)).length;
-    const percentage = Math.round((resolvedCount / ADMINISTRATION_STAGES.length) * 100);
+    const resolvedCount = CORE_ADMINISTRATION_STAGES.filter((stage) => latestByType.has(stage.code)).length;
+    const percentage = Math.round((resolvedCount / CORE_ADMINISTRATION_STAGES.length) * 100);
 
     return `
       <section class="administration-panel v4">
         <div class="administration-summary">
           <div>
-            <strong>${resolvedCount} dari ${ADMINISTRATION_STAGES.length} jenis administrasi dibuat</strong>
+            <strong>${resolvedCount} dari ${CORE_ADMINISTRATION_STAGES.length} jenis administrasi utama dibuat</strong>
             <small>Status perkara diperbarui otomatis setelah administrasi disimpan.</small>
           </div>
           <span>${percentage}%</span>
         </div>
         <div class="administration-progress" aria-label="Progres administrasi ${percentage}%"><span style="width:${percentage}%"></span></div>
         <div class="admin-rows">
-          ${ADMINISTRATION_STAGES.map((stage) => {
+          ${ADMINISTRATION_STAGES.filter((stage) => stage.core !== false || latestByType.has(stage.code)).map((stage) => {
             const record = latestByType.get(stage.code);
             return `
               <article class="admin-row ${record ? "done" : ""}">
@@ -2057,6 +2102,7 @@
               </article>`;
           }).join("")}
         </div>
+        ${renderB310Catalog(latestByType)}
       </section>`;
   }
 
@@ -2146,7 +2192,14 @@
   }
 
   function renderAdministrationTypeOptions(item, selectedType) {
-    return ADMINISTRATION_STAGES.map((stage) => {
+    const optionFor = (stage) => renderAdministrationTypeOption(item, stage, selectedType);
+    const core = `<optgroup label="Administrasi utama">${CORE_ADMINISTRATION_STAGES.map(optionFor).join("")}</optgroup>`;
+    const extra = groupB310Stages().map((group) => `<optgroup label="B-310 · ${escapeAttr(group.label)}">${group.stages.map(optionFor).join("")}</optgroup>`).join("");
+    return core + extra;
+  }
+
+  function renderAdministrationTypeOption(item, stage, selectedType) {
+    return [stage].map((stage) => {
       const availability = getAdministrationAvailability(item, stage);
       const suffix = availability.completed
         ? " — (Buat ulang)"
@@ -2191,8 +2244,9 @@
     const administrations = Array.isArray(item.administrations) ? item.administrations : [];
     const completedCodes = administrations.map((record) => String(record.type || "").toUpperCase());
     const p19ResolvedByP21 = completedCodes.includes("P-21") && !completedCodes.includes("P-19");
-    const resolved = completedCodes.length + (p19ResolvedByP21 ? 1 : 0);
-    const percentage = Math.min(100, Math.round((resolved / ADMINISTRATION_STAGES.length) * 100));
+    const coreCodes = new Set(CORE_ADMINISTRATION_STAGES.map((stage) => stage.code));
+    const resolved = new Set(completedCodes.filter((code) => coreCodes.has(code))).size + (p19ResolvedByP21 ? 1 : 0);
+    const percentage = Math.min(100, Math.round((resolved / CORE_ADMINISTRATION_STAGES.length) * 100));
 
     return `
       <div class="panel builder-case-card">
@@ -2210,7 +2264,7 @@
           ${detail("Pasal disangkakan", item.allegedArticle, true)}
         </div>
         <div class="administration-summary compact">
-          <div><strong>${resolved} dari ${ADMINISTRATION_STAGES.length} tahapan selesai</strong><small>Data form lama tetap dapat dipakai sebagai sumber isian otomatis.</small></div>
+          <div><strong>${resolved} dari ${CORE_ADMINISTRATION_STAGES.length} tahapan utama selesai</strong><small>Data form lama tetap dapat dipakai sebagai sumber isian otomatis.</small></div>
           <span>${percentage}%</span>
         </div>
         <div class="administration-progress"><span style="width:${percentage}%"></span></div>
@@ -2566,7 +2620,8 @@ function detectTeamRoleFromLabel(label) {
     "member1Name", "member1RankNip", "member1Position", "member2Name", "member2RankNip", "member2Position",
     "prosecutor1Name", "prosecutor1Rank", "prosecutor1Nip", "prosecutor2Name", "prosecutor2RankNip",
     "prosecutorRank", "prosecutorNip", "signatoryName", "signatoryRank", "signatoryTitle",
-    "evidenceHandoverPlace", "suspectHandoverPlace", "destination", "copies"
+    "evidenceHandoverPlace", "suspectHandoverPlace", "destination", "copies",
+    ...(window.SIAP_B310_SHARED_KEYS || [])
   ]);
 
   function autoFillHistoricalData(currentCase, type) {
@@ -2620,11 +2675,11 @@ function detectTeamRoleFromLabel(label) {
       toast("warning", "Format tidak didukung", "Lampiran administrasi harus PDF atau DOCX.");
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > 3 * 1024 * 1024) {
       state.selectedAdministrationFile = null;
       const input = document.getElementById("administration-file");
       if (input) input.value = "";
-      toast("warning", "Lampiran terlalu besar", "Ukuran lampiran maksimal 10 MB.");
+      toast("warning", "Lampiran terlalu besar", "Ukuran lampiran maksimal 3 MB.");
       return;
     }
     state.selectedAdministrationFile = file;
@@ -2687,7 +2742,7 @@ function detectTeamRoleFromLabel(label) {
 
       const statusNote = result.case
         ? (result.statusApplied === false
-          ? `Status perkara tetap ${getStatus(result.case.status).label} (tidak dimundurkan).`
+          ? `Status perkara tetap ${getStatus(result.case.status).label}.`
           : `Status perkara menjadi ${getStatus(result.case.status).label}.`)
         : "Administrasi manual tersimpan.";
       toast("success", `${type} berhasil dibuat`, statusNote);
@@ -2931,7 +2986,9 @@ function detectTeamRoleFromLabel(label) {
   }
 
   function appendTikFiles(fileList) {
-    const files = Array.from(fileList || []);
+    const all = Array.from(fileList || []);
+    const files = all.filter((file) => file.size <= 3 * 1024 * 1024);
+    if (files.length < all.length) toast("warning", "Sebagian file dilewati", "Ukuran maksimal 3 MB per file.");
     if (!files.length) return;
     state.tikSelectedFiles.push(...files);
     renderTikSelectedFiles();
@@ -3893,9 +3950,7 @@ function detectTeamRoleFromLabel(label) {
 
   async function gasRequestOnce(action, payload = {}, options = {}) {
     if (CONFIG.DEMO_MODE) return demoRequest(action, payload);
-    if (!CONFIG.APPS_SCRIPT_URL || !CONFIG.APPS_SCRIPT_URL.startsWith("https://script.google.com/")) {
-      throw new Error("URL Google Apps Script belum dikonfigurasi.");
-    }
+    const endpoint = CONFIG.API_ENDPOINT || "/api/gas";
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), options.timeout || CONFIG.REQUEST_TIMEOUT_MS || 120000);
@@ -3906,11 +3961,17 @@ function detectTeamRoleFromLabel(label) {
     };
 
     try {
-      const response = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      const serialized = JSON.stringify(body);
+      if (serialized.length > 4000000) {
+        const tooLarge = new Error("Ukuran file terlalu besar untuk dikirim (maksimal ±3 MB per file). Kompres PDF terlebih dahulu.");
+        tooLarge.backend = true;
+        throw tooLarge;
+      }
+      const response = await fetch(endpoint, {
         method: "POST",
-        redirect: "follow",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(body),
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: serialized,
         signal: controller.signal
       });
       const text = await response.text();
@@ -4014,7 +4075,7 @@ function detectTeamRoleFromLabel(label) {
         administrations: Array.isArray(item.administrations) ? item.administrations : [],
         administrationProgress: {
           completed: Array.isArray(item.administrations) ? item.administrations.length : 0,
-          total: ADMINISTRATION_STAGES.length
+          total: CORE_ADMINISTRATION_STAGES.length
         }
       }))
     });
@@ -4029,7 +4090,7 @@ function detectTeamRoleFromLabel(label) {
         updatedAt: now,
         deadlineDate: addDays(payload.receivedDate, 3),
         administrations: [],
-        administrationProgress: { completed: 0, total: ADMINISTRATION_STAGES.length }
+        administrationProgress: { completed: 0, total: CORE_ADMINISTRATION_STAGES.length }
       };
       demoCases.push(item);
       localStorage.setItem("siap_pidum_demo_cases", JSON.stringify(demoCases));
@@ -4096,8 +4157,8 @@ function detectTeamRoleFromLabel(label) {
 
       demoCases[index] = {
         ...demoCases[index],
-        status: stage.status,
-        statusUpdatedAt: now,
+        status: stage.status || demoCases[index].status,
+        statusUpdatedAt: stage.status ? now : demoCases[index].statusUpdatedAt,
         updatedAt: now,
         prosecutorName: payload.type === "P-16" || !demoCases[index].prosecutorName
           ? payload.responsibleOfficer
@@ -4105,11 +4166,11 @@ function detectTeamRoleFromLabel(label) {
         deadlineDate,
         deadlineType,
         administrations,
-        administrationProgress: { completed: administrations.length, total: ADMINISTRATION_STAGES.length }
+        administrationProgress: { completed: administrations.length, total: CORE_ADMINISTRATION_STAGES.length }
       };
 
       localStorage.setItem("siap_pidum_demo_cases", JSON.stringify(demoCases));
-      return Promise.resolve({ case: demoCases[index], administration: record });
+      return Promise.resolve({ case: demoCases[index], administration: record, statusApplied: Boolean(stage.status) });
     }
     if (action === "listProsecutors") return Promise.resolve({ prosecutors: [
       { id: "JAKSA-001", name: "Indra Thimoty, S.H., M.H.", nip: "198701012010011001", pangkat: "Jaksa Muda", jabatan: "Kasi Pidum" },
